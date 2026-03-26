@@ -1,0 +1,6 @@
+User-agent: *
+Disallow: /psicoapp-
+Disallow: /config.js
+Allow: /login.html
+Allow: /privacidad.html
+Sitemap: /sitemap.xml
