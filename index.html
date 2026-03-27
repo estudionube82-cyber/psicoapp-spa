@@ -1,8 +1,373 @@
 <!DOCTYPE html>
-<html>
+<html lang="es" data-theme="light">
 <head>
-  <meta charset="UTF-8"/>
-  <meta http-equiv="refresh" content="0;url=login.html"/>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>PsicoApp</title>
+
+<!-- Fuentes (una sola carga, compartida por todas las vistas) -->
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Fraunces:opsz,wght@9..144,300;9..144,600;9..144,700&display=swap" rel="stylesheet">
+
+<!-- Config y Supabase (una sola vez) -->
+<script src="/config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<style>
+/* ══════════════════════════════════════════
+   TOKENS GLOBALES — compartidos por todas las vistas
+   ══════════════════════════════════════════ */
+:root {
+  --v1: #5B2FA8; --v2: #7C3AED; --v3: #A78BFA; --v4: #EDE9FE; --v5: #F5F3FF;
+  --accent: #F472B6; --accent2: #34D399;
+  --radius: 16px; --radius-sm: 11px;
+  --font: 'Plus Jakarta Sans', sans-serif;
+  --font-display: 'Fraunces', serif;
+  --transition: 0.2s cubic-bezier(0.4,0,0.2,1);
+}
+[data-theme="light"] {
+  --bg: #F8F7FF; --surface: #FFFFFF; --surface2: #F3F0FF;
+  --border: #E5E2F5; --text: #1E1040; --text-muted: #7C6FAE;
+  --shadow-sm: 0 2px 8px rgba(108,63,197,0.07);
+  --shadow-md: 0 6px 24px rgba(108,63,197,0.12);
+  --primary: #5B2FA8; --primary-light: #EDE9FE; --primary-mid: #A78BFA;
+  --sb-bg: #1E1040; --sb-text: rgba(255,255,255,0.65);
+  --sb-active: rgba(255,255,255,0.1); --sb-border: rgba(255,255,255,0.08);
+  --accent-light: #FDE8F5; --danger: #E53E3E; --danger-light: #FFF5F5;
+}
+[data-theme="dark"] {
+  --bg: #0F0B1E; --surface: #1A1530; --surface2: #221D3A;
+  --border: #2E2850; --text: #EDE9FE; --text-muted: #9D8EC7;
+  --shadow-sm: 0 2px 12px rgba(0,0,0,0.25);
+  --shadow-md: 0 8px 32px rgba(0,0,0,0.4);
+  --primary: #7C3AED; --primary-light: rgba(124,58,237,0.15); --primary-mid: #A78BFA;
+  --sb-bg: #13102A; --sb-text: rgba(255,255,255,0.55);
+  --sb-active: rgba(124,58,237,0.2); --sb-border: rgba(255,255,255,0.06);
+  --accent-light: rgba(244,114,182,0.15); --danger: #FC8181; --danger-light: rgba(229,62,62,0.12);
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+body { font-family: var(--font); background: var(--bg); color: var(--text); min-height: 100vh; }
+
+/* ══════════════════════════════════════════
+   LAYOUT SHELL
+   ══════════════════════════════════════════ */
+
+/* Mobile: columna simple + bottom nav */
+#shell { display: flex; flex-direction: column; min-height: 100vh; }
+#view-container { flex: 1; padding-bottom: 72px; } /* espacio para bottom nav */
+
+/* Desktop 768px+: sidebar + contenido */
+@media (min-width: 768px) {
+  #shell { flex-direction: row; }
+  #view-container { flex: 1; max-width: none; padding-bottom: 0; overflow-y: auto; height: 100vh; }
+  .bottom-nav { display: none !important; }
+}
+
+/* ══════════════════════════════════════════
+   SIDEBAR (desktop)
+   ══════════════════════════════════════════ */
+.sidebar {
+  display: none; /* oculta en mobile */
+  flex-direction: column;
+  width: 240px; min-width: 240px;
+  height: 100vh;
+  position: sticky; top: 0;
+  background: var(--sb-bg);
+  padding: 28px 0 20px;
+  z-index: 100; overflow-y: auto;
+}
+@media (min-width: 768px) { .sidebar { display: flex; } }
+
+.sb-logo {
+  font-family: var(--font-display);
+  font-size: 22px; font-weight: 700; color: white;
+  padding: 0 24px 24px;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+  margin-bottom: 12px;
+}
+.sb-logo span { color: var(--v3); }
+
+.sb-section {
+  font-size: 10px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: .8px; color: rgba(255,255,255,0.3);
+  padding: 14px 26px 6px;
+}
+.sb-nav { flex: 1; display: flex; flex-direction: column; gap: 2px; padding: 0 12px; }
+.sb-item {
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 14px; border-radius: 12px;
+  color: rgba(255,255,255,0.7);
+  font-size: 14px; font-weight: 500;
+  cursor: pointer; border: none; background: transparent;
+  width: 100%; text-align: left;
+  transition: background .15s, color .15s;
+}
+.sb-item:hover { background: rgba(255,255,255,0.1); color: white; }
+.sb-item.sb-active { background: rgba(82,183,136,0.25); color: white; }
+.sb-icon { font-size: 18px; width: 24px; text-align: center; }
+
+.sb-footer {
+  padding: 16px 12px 0;
+  border-top: 1px solid rgba(255,255,255,0.1);
+  margin-top: 8px;
+}
+.sb-user {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 14px; border-radius: 12px;
+  color: rgba(255,255,255,0.7); cursor: pointer;
+  border: none; background: transparent; width: 100%;
+}
+.sb-user:hover { background: rgba(255,255,255,0.08); color: white; }
+.sb-avatar {
+  width: 32px; height: 32px; border-radius: 50%;
+  background: var(--v2); display: flex; align-items: center;
+  justify-content: center; font-size: 13px; font-weight: 700;
+  color: white; flex-shrink: 0;
+}
+.sb-user-name { font-size: 13px; font-weight: 600; color: white; }
+.sb-user-role { font-size: 11px; color: rgba(255,255,255,0.5); text-align: left; }
+
+/* ══════════════════════════════════════════
+   BOTTOM NAV (mobile)
+   ══════════════════════════════════════════ */
+.bottom-nav {
+  position: fixed; bottom: 0; left: 0; right: 0;
+  height: 64px;
+  background: var(--surface);
+  border-top: 1.5px solid var(--border);
+  display: flex; align-items: center;
+  z-index: 2147483647;
+  box-shadow: 0 -2px 12px rgba(0,0,0,0.09);
+}
+.bn-item {
+  flex: 1; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 2px;
+  color: #8A8FA8; cursor: pointer;
+  border: none; background: transparent; padding: 4px 0;
+  font-family: var(--font);
+}
+.bn-item .bn-icon { font-size: 22px; line-height: 1; display: block; }
+.bn-item .bn-label { font-size: 10px; font-weight: 700; display: block; }
+.bn-item.bn-active .bn-label { color: var(--primary); }
+.bn-item.bn-active .bn-icon { filter: drop-shadow(0 0 4px rgba(92,47,168,0.5)); }
+
+/* ══════════════════════════════════════════
+   TRANSICIÓN ENTRE VISTAS
+   ══════════════════════════════════════════ */
+#view-container { position: relative; }
+.view-section {
+  display: none;
+  animation: fadeIn 0.18s ease;
+}
+.view-section.view-active { display: block; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+
+/* ══════════════════════════════════════════
+   VISTA PLACEHOLDER — Pacientes
+   (reemplazá con tu psicoapp-pacientes.html adaptado)
+   ══════════════════════════════════════════ */
+.placeholder-view {
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  min-height: 60vh; gap: 12px;
+  color: var(--text-muted); font-size: 15px;
+}
+.placeholder-view .ph-icon { font-size: 48px; }
+.placeholder-view h2 { color: var(--text); font-size: 20px; }
+</style>
 </head>
-<body></body>
+<body>
+
+<div id="shell">
+
+  <!-- ── SIDEBAR (desktop) ── -->
+  <aside class="sidebar">
+    <div class="sb-logo">Psico<span>App</span></div>
+
+    <nav class="sb-nav">
+      <div class="sb-section">Principal</div>
+      <button class="sb-item sb-active" onclick="navigate('dashboard')" data-view="dashboard">
+        <span class="sb-icon">🏠</span> Inicio
+      </button>
+      <button class="sb-item" onclick="navigate('agenda')" data-view="agenda">
+        <span class="sb-icon">📅</span> Agenda
+      </button>
+
+      <div class="sb-section">Gestión</div>
+      <button class="sb-item" onclick="navigate('pacientes')" data-view="pacientes">
+        <span class="sb-icon">👥</span> Pacientes
+      </button>
+      <button class="sb-item" onclick="navigate('whatsapp')" data-view="whatsapp">
+        <span class="sb-icon">💬</span> WhatsApp
+      </button>
+      <button class="sb-item" onclick="navigate('pagos')" data-view="pagos">
+        <span class="sb-icon">💰</span> Pagos
+      </button>
+
+      <div class="sb-section">Cuenta</div>
+      <button class="sb-item" onclick="navigate('perfil')" data-view="perfil">
+        <span class="sb-icon">👤</span> Perfil
+      </button>
+    </nav>
+
+    <div class="sb-footer">
+      <button class="sb-user" onclick="navigate('perfil')">
+        <div class="sb-avatar" id="sb-avatar-initials">JG</div>
+        <div>
+          <div class="sb-user-name" id="sb-user-name">Cargando…</div>
+          <div class="sb-user-role">Psicólogo/a</div>
+        </div>
+      </button>
+    </div>
+  </aside>
+
+  <!-- ── CONTENEDOR DE VISTAS ── -->
+  <main id="view-container">
+
+    <!-- Vista: Dashboard -->
+    <section id="view-dashboard" class="view-section view-active">
+      <!-- Contenido inyectado por view-dashboard.js -->
+    </section>
+
+    <!-- Vista: Pacientes (placeholder — reemplazá con tu HTML adaptado) -->
+    <section id="view-pacientes" class="view-section">
+      <div class="placeholder-view">
+        <div class="ph-icon">👥</div>
+        <h2>Pacientes</h2>
+        <p>Integrá aquí tu <code>psicoapp-pacientes.html</code> adaptado.</p>
+      </div>
+    </section>
+
+    <!-- Agenda, WhatsApp, Pagos, Perfil — mismo patrón -->
+    <section id="view-agenda" class="view-section">
+      <div class="placeholder-view">
+        <div class="ph-icon">📅</div>
+        <h2>Agenda</h2>
+        <p>Integrá aquí tu <code>psicoapp-agenda.html</code> adaptado.</p>
+      </div>
+    </section>
+
+    <section id="view-whatsapp" class="view-section">
+      <div class="placeholder-view">
+        <div class="ph-icon">💬</div>
+        <h2>WhatsApp</h2>
+      </div>
+    </section>
+
+    <section id="view-pagos" class="view-section">
+      <div class="placeholder-view">
+        <div class="ph-icon">💰</div>
+        <h2>Pagos</h2>
+      </div>
+    </section>
+
+    <section id="view-perfil" class="view-section">
+      <div class="placeholder-view">
+        <div class="ph-icon">👤</div>
+        <h2>Perfil</h2>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ── BOTTOM NAV (mobile) ── -->
+  <nav class="bottom-nav">
+    <button class="bn-item bn-active" onclick="navigate('dashboard')" data-view="dashboard">
+      <span class="bn-icon">🏠</span><span class="bn-label">Inicio</span>
+    </button>
+    <button class="bn-item" onclick="navigate('agenda')" data-view="agenda">
+      <span class="bn-icon">📅</span><span class="bn-label">Agenda</span>
+    </button>
+    <button class="bn-item" onclick="navigate('pacientes')" data-view="pacientes">
+      <span class="bn-icon">👥</span><span class="bn-label">Pacientes</span>
+    </button>
+    <button class="bn-item" onclick="navigate('whatsapp')" data-view="whatsapp">
+      <span class="bn-icon">💬</span><span class="bn-label">WhatsApp</span>
+    </button>
+    <button class="bn-item" onclick="navigate('perfil')" data-view="perfil">
+      <span class="bn-icon">👤</span><span class="bn-label">Cuenta</span>
+    </button>
+  </nav>
+
+</div><!-- /#shell -->
+
+<!-- ══════════════════════════════════════════
+     SCRIPTS GLOBALES (una sola vez)
+     ══════════════════════════════════════════ -->
+<script>
+/* ── SUPABASE (instancia global única) ── */
+const { createClient } = supabase;
+const sb = createClient(PSICOAPP_CONFIG.SUPA_URL, PSICOAPP_CONFIG.SUPA_KEY);
+
+/* ── TEMA ── */
+(function() {
+  const saved = localStorage.getItem('psicoapp-theme') || 'light';
+  document.documentElement.setAttribute('data-theme', saved);
+})();
+
+function toggleTheme() {
+  const html = document.documentElement;
+  const next = html.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+  html.setAttribute('data-theme', next);
+  localStorage.setItem('psicoapp-theme', next);
+  const th = document.getElementById('toggle-thumb');
+  if (th) th.textContent = next === 'dark' ? '🌙' : '☀️';
+}
+
+/* ── AUTH GUARD ── */
+sb.auth.getSession().then(({ data }) => {
+  if (!data.session) window.location.href = 'login.html';
+});
+
+/* ── NAVIGATE ─────────────────────────────────────────────
+   navigate(viewId)
+   - Oculta la vista activa
+   - Muestra la vista con id="view-{viewId}"
+   - Actualiza estado activo en sidebar y bottom nav
+   - Llama onViewEnter_{viewId}() si existe (hook opcional por vista)
+   ────────────────────────────────────────────────────────── */
+let _currentView = 'dashboard';
+
+function navigate(viewId) {
+  if (viewId === _currentView) return;
+
+  // Ocultar vista actual
+  const prev = document.getElementById('view-' + _currentView);
+  if (prev) prev.classList.remove('view-active');
+
+  // Mostrar nueva vista
+  const next = document.getElementById('view-' + viewId);
+  if (!next) { console.warn('Vista no encontrada:', viewId); return; }
+  next.classList.add('view-active');
+
+  _currentView = viewId;
+
+  // Actualizar nav activo (sidebar + bottom nav)
+  document.querySelectorAll('[data-view]').forEach(el => {
+    el.classList.toggle('sb-active',  el.dataset.view === viewId);
+    el.classList.toggle('bn-active',  el.dataset.view === viewId);
+  });
+
+  // Hook opcional: cada vista puede definir onViewEnter_dashboard(), etc.
+  const hook = window['onViewEnter_' + viewId];
+  if (typeof hook === 'function') hook();
+
+  // Scroll al tope del contenedor
+  const container = document.getElementById('view-container');
+  if (container) container.scrollTop = 0;
+}
+</script>
+
+<!-- Vista dashboard (CSS + HTML + lógica propios, sin duplicar globales) -->
+<script src="view-dashboard.js"></script>
+
+<!-- Vista pacientes -->
+<script src="view-pacientes.js"></script>
+
+<!-- Cuando integrés más vistas, agregás un script por cada una:
+<script src="view-agenda.js"></script>
+<script src="view-perfil.js"></script>
+-->
+
+</body>
 </html>
