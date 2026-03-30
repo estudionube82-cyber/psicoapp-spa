@@ -794,7 +794,7 @@
                       tipo:        'confirmacion',
                       mensaje:     msgHistorial,
                     });
-                    if (waHErr) console.warn('[Agenda] wa_historial insert error:', waHErr.message);
+                    if (waHErr) console.warn('[Agenda] wa_historial error:', waHErr.message);
                     else console.log('%c✅ Historial guardado', 'color:green');
                   } catch(ex) {
                     console.warn('[Agenda] wa_historial excepción:', ex.message);
