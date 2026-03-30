@@ -2,6 +2,14 @@
 <html lang="es" data-theme="light">
 <head>
 <meta charset="UTF-8">
+<!-- PWA -->
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#5B2FA8">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="PsicoApp">
+<link rel="apple-touch-icon" href="/icon-192.png">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>PsicoApp</title>
 
@@ -103,7 +111,8 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); min-
   transition: background .15s, color .15s;
 }
 .sb-item:hover { background: rgba(255,255,255,0.1); color: white; }
-.sb-item.sb-active { background: rgba(82,183,136,0.25); color: white; }
+/* ✅ FIX: color violeta en vez del verde viejo */
+.sb-item.sb-active { background: rgba(124,58,237,0.3); color: white; }
 .sb-icon { font-size: 18px; width: 24px; text-align: center; }
 
 .sb-footer {
@@ -122,7 +131,7 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); min-
   width: 32px; height: 32px; border-radius: 50%;
   background: var(--v2); display: flex; align-items: center;
   justify-content: center; font-size: 13px; font-weight: 700;
-  color: white; flex-shrink: 0;
+  color: white; flex-shrink: 0; overflow: hidden;
 }
 .sb-user-name { font-size: 13px; font-weight: 600; color: white; }
 .sb-user-role { font-size: 11px; color: rgba(255,255,255,0.5); text-align: left; }
@@ -162,10 +171,6 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); min-
 .view-section.view-active { display: block; }
 @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
 
-/* ══════════════════════════════════════════
-   VISTA PLACEHOLDER — Pacientes
-   (reemplazá con tu psicoapp-pacientes.html adaptado)
-   ══════════════════════════════════════════ */
 .placeholder-view {
   display: flex; flex-direction: column;
   align-items: center; justify-content: center;
@@ -174,6 +179,31 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); min-
 }
 .placeholder-view .ph-icon { font-size: 48px; }
 .placeholder-view h2 { color: var(--text); font-size: 20px; }
+
+/* ── Menú hamburguesa (bottom nav móvil) ── */
+#bn-more-menu {
+  position: fixed; bottom: 68px; right: 12px;
+  background: var(--surface); border: 1.5px solid var(--border);
+  border-radius: 16px; padding: 8px 0;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.15);
+  z-index: 2147483647; min-width: 180px;
+  display: none; flex-direction: column;
+  animation: fadeIn .15s ease;
+}
+#bn-more-menu.open { display: flex; }
+.bn-more-item {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 18px; font-size: 14px; font-weight: 600;
+  color: var(--text); cursor: pointer; border: none;
+  background: transparent; font-family: var(--font); width: 100%;
+  text-align: left;
+}
+.bn-more-item:hover { background: var(--primary-light); }
+.bn-more-item .bm-icon { font-size: 18px; width: 24px; text-align: center; }
+#bn-more-overlay {
+  display: none; position: fixed; inset: 0; z-index: 2147483646;
+}
+#bn-more-overlay.open { display: block; }
 </style>
 </head>
 <body>
@@ -186,7 +216,7 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); min-
 
     <nav class="sb-nav">
       <div class="sb-section">Principal</div>
-      <button class="sb-item sb-active" onclick="navigate('dashboard')" data-view="dashboard">
+      <button class="sb-item" onclick="navigate('dashboard')" data-view="dashboard">
         <span class="sb-icon">🏠</span> Inicio
       </button>
       <button class="sb-item" onclick="navigate('agenda')" data-view="agenda">
@@ -206,13 +236,16 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); min-
 
       <div class="sb-section">Cuenta</div>
       <button class="sb-item" onclick="navigate('perfil')" data-view="perfil">
-        <span class="sb-icon">👤</span> Perfil
+        <span class="sb-icon">🪪</span> Perfil
+      </button>
+      <button class="sb-item" onclick="navigate('cuenta')" data-view="cuenta">
+        <span class="sb-icon">⭐</span> Suscripción
       </button>
     </nav>
 
     <div class="sb-footer">
       <button class="sb-user" onclick="navigate('perfil')">
-        <div class="sb-avatar" id="sb-avatar-initials">JG</div>
+        <div class="sb-avatar" id="sb-avatar-initials">?</div>
         <div>
           <div class="sb-user-name" id="sb-user-name">Cargando…</div>
           <div class="sb-user-role">Psicólogo/a</div>
@@ -224,55 +257,35 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); min-
   <!-- ── CONTENEDOR DE VISTAS ── -->
   <main id="view-container">
 
-    <!-- Vista: Dashboard -->
-    <section id="view-dashboard" class="view-section view-active">
-      <!-- Contenido inyectado por view-dashboard.js -->
-    </section>
-
-    <!-- Vista: Pacientes (placeholder — reemplazá con tu HTML adaptado) -->
-    <section id="view-pacientes" class="view-section">
-      <div class="placeholder-view">
-        <div class="ph-icon">👥</div>
-        <h2>Pacientes</h2>
-        <p>Integrá aquí tu <code>psicoapp-pacientes.html</code> adaptado.</p>
-      </div>
-    </section>
-
-    <!-- Agenda, WhatsApp, Pagos, Perfil — mismo patrón -->
-    <section id="view-agenda" class="view-section">
-      <div class="placeholder-view">
-        <div class="ph-icon">📅</div>
-        <h2>Agenda</h2>
-        <p>Integrá aquí tu <code>psicoapp-agenda.html</code> adaptado.</p>
-      </div>
-    </section>
-
-    <section id="view-whatsapp" class="view-section">
-      <div class="placeholder-view">
-        <div class="ph-icon">💬</div>
-        <h2>WhatsApp</h2>
-      </div>
-    </section>
-
-    <section id="view-pagos" class="view-section">
-      <div class="placeholder-view">
-        <div class="ph-icon">💰</div>
-        <h2>Pagos</h2>
-      </div>
-    </section>
-
-    <section id="view-perfil" class="view-section">
-      <div class="placeholder-view">
-        <div class="ph-icon">👤</div>
-        <h2>Perfil</h2>
-      </div>
-    </section>
+    <section id="view-dashboard" class="view-section"></section>
+    <section id="view-pacientes" class="view-section"></section>
+    <section id="view-agenda"    class="view-section"></section>
+    <section id="view-whatsapp"  class="view-section"></section>
+    <section id="view-pagos"     class="view-section"></section>
+    <section id="view-perfil"    class="view-section"></section>
+    <section id="view-cuenta"    class="view-section"></section>
 
   </main>
 
   <!-- ── BOTTOM NAV (mobile) ── -->
+  <!-- Overlay para cerrar menú -->
+  <div id="bn-more-overlay" onclick="closeBnMore()"></div>
+
+  <!-- Menú desplegable Más -->
+  <div id="bn-more-menu">
+    <button class="bn-more-item" onclick="closeBnMore();navigate('pagos')">
+      <span class="bm-icon">💰</span> Pagos
+    </button>
+    <button class="bn-more-item" onclick="closeBnMore();navigate('perfil')" data-view="perfil">
+      <span class="bm-icon">🪪</span> Perfil
+    </button>
+    <button class="bn-more-item" onclick="closeBnMore();navigate('cuenta')" data-view="cuenta">
+      <span class="bm-icon">⭐</span> Suscripción
+    </button>
+  </div>
+
   <nav class="bottom-nav">
-    <button class="bn-item bn-active" onclick="navigate('dashboard')" data-view="dashboard">
+    <button class="bn-item" onclick="navigate('dashboard')" data-view="dashboard">
       <span class="bn-icon">🏠</span><span class="bn-label">Inicio</span>
     </button>
     <button class="bn-item" onclick="navigate('agenda')" data-view="agenda">
@@ -284,18 +297,18 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); min-
     <button class="bn-item" onclick="navigate('whatsapp')" data-view="whatsapp">
       <span class="bn-icon">💬</span><span class="bn-label">WhatsApp</span>
     </button>
-    <button class="bn-item" onclick="navigate('perfil')" data-view="perfil">
-      <span class="bn-icon">👤</span><span class="bn-label">Cuenta</span>
+    <button class="bn-item" id="bn-btn-more" onclick="toggleBnMore()">
+      <span class="bn-icon">☰</span><span class="bn-label">Más</span>
     </button>
   </nav>
 
 </div><!-- /#shell -->
 
 <!-- ══════════════════════════════════════════
-     SCRIPTS GLOBALES (una sola vez)
+     SCRIPTS GLOBALES
      ══════════════════════════════════════════ -->
 <script>
-/* ── SUPABASE (instancia global única) ── */
+/* ── SUPABASE ── */
 const { createClient } = supabase;
 const sb = createClient(PSICOAPP_CONFIG.SUPA_URL, PSICOAPP_CONFIG.SUPA_KEY);
 
@@ -314,60 +327,160 @@ function toggleTheme() {
   if (th) th.textContent = next === 'dark' ? '🌙' : '☀️';
 }
 
-/* ── AUTH GUARD ── */
-sb.auth.getSession().then(({ data }) => {
-  if (!data.session) window.location.href = 'login.html';
+/* ── AUTH GUARD + CARGA DE SUSCRIPCIÓN ── */
+sb.auth.getSession().then(async ({ data }) => {
+  if (!data.session) { window.location.href = 'login.html'; return; }
+
+  // Cargar plan y usos desde Supabase y sincronizar localStorage
+  try {
+    const userId = data.session.user.id;
+    const { data: perfil } = await sb
+      .from('profiles')
+      .select('plan, wa_usos, wa_extra')
+      .eq('id', userId)
+      .maybeSingle();
+
+    if (perfil) {
+      // Preservar fechaInicio si ya existe en localStorage
+      let sus = {};
+      try { sus = JSON.parse(localStorage.getItem('suscripcion')) || {}; } catch {}
+
+      const planActual = perfil.plan || 'free';
+      localStorage.setItem('suscripcion', JSON.stringify({
+        plan:        planActual,
+        estado:      'activa',
+        fechaInicio: sus.fechaInicio || new Date().toISOString(),
+        usos:        { whatsapp: perfil.wa_usos || 0, informesIA: sus.usos?.informesIA || 0 },
+        extra:       { whatsapp: perfil.wa_extra || 0 },
+      }));
+    }
+  } catch(e) {
+    console.warn('[Auth] No se pudo sincronizar suscripción:', e.message);
+  }
 });
 
-/* ── NAVIGATE ─────────────────────────────────────────────
-   navigate(viewId)
-   - Oculta la vista activa
-   - Muestra la vista con id="view-{viewId}"
-   - Actualiza estado activo en sidebar y bottom nav
-   - Llama onViewEnter_{viewId}() si existe (hook opcional por vista)
-   ────────────────────────────────────────────────────────── */
-let _currentView = 'dashboard';
+/* ── SIDEBAR: cargar perfil ── */
+function syncSidebarPerfil() {
+  try {
+    const p = JSON.parse(localStorage.getItem('perfil')) || {};
+    const nameEl   = document.getElementById('sb-user-name');
+    const avatarEl = document.getElementById('sb-avatar-initials');
+    if (nameEl) nameEl.textContent = p.nombre || 'Mi perfil';
+    if (avatarEl) {
+      if (p.foto) {
+        avatarEl.innerHTML = `<img src="${p.foto}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`;
+      } else {
+        avatarEl.innerHTML = `<span>${p.nombre ? p.nombre.slice(0, 2).toUpperCase() : '👤'}</span>`;
+      }
+    }
+  } catch(e) {}
+}
+syncSidebarPerfil();
+window.addEventListener('perfilActualizado', syncSidebarPerfil);
+
+/* ── SINCRONIZAR wa_usos A SUPABASE ── */
+// Se llama desde view-agenda.js y view-whatsapp.js después de enviar WA
+window._syncWaUsos = async function() {
+  try {
+    const { data: { session } } = await sb.auth.getSession();
+    if (!session) return;
+    let sus = {};
+    try { sus = JSON.parse(localStorage.getItem('suscripcion')) || {}; } catch {}
+    const usos = sus.usos?.whatsapp || 0;
+    await sb.from('profiles').update({ wa_usos: usos }).eq('id', session.user.id);
+  } catch(e) {
+    console.warn('[WA] No se pudo sincronizar wa_usos:', e.message);
+  }
+};
+const VISTAS_VALIDAS = ['dashboard','agenda','pacientes','whatsapp','pagos','perfil','cuenta'];
+let _currentView = null;
 
 function navigate(viewId) {
+  if (!VISTAS_VALIDAS.includes(viewId)) viewId = 'dashboard';
   if (viewId === _currentView) return;
 
-  // Ocultar vista actual
-  const prev = document.getElementById('view-' + _currentView);
-  if (prev) prev.classList.remove('view-active');
+  /* Ocultar vista anterior */
+  if (_currentView) {
+    const prev = document.getElementById('view-' + _currentView);
+    if (prev) prev.classList.remove('view-active');
+  }
 
-  // Mostrar nueva vista
+  /* Mostrar nueva */
   const next = document.getElementById('view-' + viewId);
   if (!next) { console.warn('Vista no encontrada:', viewId); return; }
   next.classList.add('view-active');
 
   _currentView = viewId;
 
-  // Actualizar nav activo (sidebar + bottom nav)
+  /* Actualizar nav activo */
   document.querySelectorAll('[data-view]').forEach(el => {
-    el.classList.toggle('sb-active',  el.dataset.view === viewId);
-    el.classList.toggle('bn-active',  el.dataset.view === viewId);
+    el.classList.toggle('sb-active', el.dataset.view === viewId);
+    el.classList.toggle('bn-active', el.dataset.view === viewId);
   });
 
-  // Hook opcional: cada vista puede definir onViewEnter_dashboard(), etc.
+  /* Actualizar URL sin recargar */
+  history.pushState({ view: viewId }, '', '/?v=' + viewId);
+
+  /* Llamar hook de la vista */
   const hook = window['onViewEnter_' + viewId];
   if (typeof hook === 'function') hook();
 
-  // Scroll al tope del contenedor
+  /* Scroll arriba */
   const container = document.getElementById('view-container');
   if (container) container.scrollTop = 0;
 }
+
+/* Manejar botón Atrás del navegador */
+window.addEventListener('popstate', (e) => {
+  const viewId = e.state?.view || 'dashboard';
+  navigate(viewId);
+});
+
+/* ── INIT: leer vista desde URL o ir a dashboard ── */
+document.addEventListener('DOMContentLoaded', () => {
+  const params = new URLSearchParams(window.location.search);
+  const vistaUrl = params.get('v');
+  const vistaInicial = VISTAS_VALIDAS.includes(vistaUrl) ? vistaUrl : 'dashboard';
+  navigate(vistaInicial);
+});
 </script>
 
-<!-- Vista dashboard (CSS + HTML + lógica propios, sin duplicar globales) -->
-<script src="view-dashboard.js"></script>
+<!-- Scripts de vistas -->
+<script src="suscripcion-control.js"  onerror="console.warn('suscripcion-control.js no encontrado')"></script>
+<script src="view-dashboard.js"       onerror="console.warn('view-dashboard.js no encontrado')"></script>
+<script src="view-pacientes.js"       onerror="console.warn('view-pacientes.js no encontrado')"></script>
+<script src="view-agenda.js"          onerror="console.warn('view-agenda.js no encontrado')"></script>
+<script src="view-whatsapp.js"        onerror="console.warn('view-whatsapp.js no encontrado')"></script>
+<script src="view-pagos.js"           onerror="console.warn('view-pagos.js no encontrado')"></script>
+<script src="view-cuenta.js"          onerror="console.warn('view-cuenta.js no encontrado')"></script>
+<script src="view-perfil.js"          onerror="console.warn('view-perfil.js no encontrado')"></script>
 
-<!-- Vista pacientes -->
-<script src="view-pacientes.js"></script>
 
-<!-- Cuando integrés más vistas, agregás un script por cada una:
-<script src="view-agenda.js"></script>
-<script src="view-perfil.js"></script>
--->
+<script>
+  // Registro del Service Worker (PWA)
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/sw.js')
+        .then(reg => console.log('[SW] Registrado:', reg.scope))
+        .catch(e  => console.warn('[SW] Error:', e));
+    });
+  }
 
+  // Hamburguesa bottom nav
+  function toggleBnMore() {
+    const menu = document.getElementById('bn-more-menu');
+    const overlay = document.getElementById('bn-more-overlay');
+    const btn = document.getElementById('bn-btn-more');
+    const isOpen = menu.classList.contains('open');
+    menu.classList.toggle('open', !isOpen);
+    overlay.classList.toggle('open', !isOpen);
+    btn.classList.toggle('bn-active', !isOpen);
+  }
+  function closeBnMore() {
+    document.getElementById('bn-more-menu')?.classList.remove('open');
+    document.getElementById('bn-more-overlay')?.classList.remove('open');
+    document.getElementById('bn-btn-more')?.classList.remove('bn-active');
+  }
+</script>
 </body>
 </html>
