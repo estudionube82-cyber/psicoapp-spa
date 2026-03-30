@@ -1,10 +1,12 @@
+let whatsappInitialized = false;
 console.log("WhatsApp SPA OK");
 
 function initWhatsapp() {
   const container = document.getElementById('view-whatsapp');
   if (!container) return;
 
-  container.innerHTML = `
+  if (!whatsappInitialized) {
+    container.innerHTML = `
 <style>
 #view-whatsapp .wp-header{background:var(--surface);border-bottom:1px solid var(--border);box-shadow:var(--sh);}
 #view-whatsapp .wp-header-top{display:flex;align-items:center;padding:14px 18px 10px;gap:10px;}
@@ -36,13 +38,13 @@ function initWhatsapp() {
 #view-whatsapp .historial-header{padding:14px 16px 8px;display:flex;align-items:center;justify-content:space-between;}
 #view-whatsapp .hist-title{font-size:15px;font-weight:800;}
 #view-whatsapp .hist-filtros{display:flex;gap:6px;padding:0 16px 10px;overflow-x:auto;}
-#view-whatsapp .hist-filtro{flex-shrink:0;padding:6px 14px;border-radius:20px;font-size:12px;font-weight:700;border:1.5px solid #C4B5FD;background:#F5F3FF;color:#5B2FA8;cursor:pointer;transition:all 0.15s;}
-#view-whatsapp .hist-filtro.active{background:#5B2FA8;color:#fff;border-color:#5B2FA8;}
+#view-whatsapp .hist-filtro{flex-shrink:0;padding:5px 12px;border-radius:20px;font-size:12px;font-weight:700;border:1.5px solid var(--border);background:var(--surface);color:var(--muted);cursor:pointer;transition:all 0.15s;}
+#view-whatsapp .hist-filtro.active{background:var(--wp-dark);color:white;border-color:var(--wp-dark);}
 #view-whatsapp .hist-list{padding:0 16px;display:flex;flex-direction:column;gap:8px;}
-#view-whatsapp .hist-card{background:var(--surface);border-radius:14px;padding:13px 14px;box-shadow:var(--sh);border:1px solid var(--border,#E5E2F5);}
+#view-whatsapp .hist-card{background:var(--surface);border-radius:14px;padding:13px 14px;box-shadow:var(--sh);}
 #view-whatsapp .hist-top{display:flex;align-items:center;gap:10px;margin-bottom:6px;}
 #view-whatsapp .hist-avatar{width:36px;height:36px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;color:white;flex-shrink:0;}
-#view-whatsapp .hist-nombre{font-size:14px;font-weight:700;flex:1;color:var(--text,#1E1040);}
+#view-whatsapp .hist-nombre{font-size:14px;font-weight:700;flex:1;}
 #view-whatsapp .hist-hora{font-size:11px;color:var(--muted);}
 #view-whatsapp .hist-footer{display:flex;align-items:center;justify-content:space-between;}
 #view-whatsapp .hist-tipo{font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;}
@@ -54,15 +56,15 @@ function initWhatsapp() {
 #view-whatsapp .auto-section{padding:14px 16px;display:flex;flex-direction:column;gap:12px;}
 #view-whatsapp .auto-card{background:var(--surface);border-radius:var(--r,16px);padding:16px;box-shadow:var(--sh);}
 #view-whatsapp .auto-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;}
-#view-whatsapp .auto-titulo{font-size:14px;font-weight:800;color:var(--text,#1E1040);}
-#view-whatsapp .auto-sub{font-size:12px;color:#4B5563;margin-bottom:12px;line-height:1.4;}
+#view-whatsapp .auto-titulo{font-size:14px;font-weight:800;}
+#view-whatsapp .auto-sub{font-size:12px;color:var(--muted);margin-bottom:12px;line-height:1.4;}
 #view-whatsapp .wp-toggle{position:relative;width:44px;height:24px;flex-shrink:0;}
 #view-whatsapp .wp-toggle input{opacity:0;width:0;height:0;}
 #view-whatsapp .wp-toggle-slider{position:absolute;inset:0;background:var(--border);border-radius:24px;cursor:pointer;transition:0.3s;}
 #view-whatsapp .wp-toggle-slider::before{content:'';position:absolute;width:18px;height:18px;left:3px;top:3px;background:white;border-radius:50%;transition:0.3s;}
 #view-whatsapp .wp-toggle input:checked+.wp-toggle-slider{background:var(--wp);}
 #view-whatsapp .wp-toggle input:checked+.wp-toggle-slider::before{transform:translateX(20px);}
-#view-whatsapp .auto-info{background:#E8F8EE;border-radius:10px;padding:10px 12px;font-size:12px;color:#166534;margin-top:10px;line-height:1.5;}
+#view-whatsapp .auto-info{background:#E8F8EE;border-radius:10px;padding:10px 12px;font-size:12px;color:#5B2FA8;margin-top:10px;line-height:1.5;}
 #view-whatsapp .auto-info strong{font-weight:800;}
 #view-whatsapp .btn-probar{width:100%;background:var(--wp-dark);color:white;border:none;border-radius:11px;padding:12px;font-size:14px;font-weight:700;font-family:var(--font);cursor:pointer;margin-top:10px;display:flex;align-items:center;justify-content:center;gap:8px;}
 #view-whatsapp .btn-probar:active{opacity:0.85;}
@@ -219,6 +221,8 @@ function initWhatsapp() {
 
 <div id="wpToast" class="wp-toast"></div>
 `;
+    whatsappInitialized = true;
+  }
 
   // ── ESTADO LOCAL ──
   const WP_COLORES = ['#5B2FA8','#1976D2','#7B5EA7','#E65100','#388E3C','#C62828'];
@@ -408,14 +412,12 @@ function initWhatsapp() {
       const { data: { session } } = await sb.auth.getSession();
       if (session) wpUserId = session.user.id;
     }
-    const { error: _whErr } = await sb.from('wa_historial').insert({
+    await sb.from('wa_historial').insert({
       user_id:    wpUserId,
       paciente_id: paciente_id || null,
       tipo:       tipo || 'confirmacion',
       mensaje:    mensaje || '',
-    });
-    if (_whErr) console.warn('[WA Historial]', _whErr.message);
-    else console.log('%c✅ Historial guardado desde WA', 'color:green');
+    }).catch(e => console.warn('[WA Historial]', e.message));
   };
 
   // ── HISTORIAL ──

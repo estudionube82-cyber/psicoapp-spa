@@ -6,6 +6,7 @@
 // ============================================================
 
 (function () {
+  let agendaInitialized = false;
 
   // ── Estado del módulo ──────────────────────────────────────
   let _userId         = null;
@@ -128,7 +129,8 @@
     const container = document.getElementById('view-agenda');
     if (!container) return;
 
-    container.innerHTML = `
+    if (!agendaInitialized) {
+      container.innerHTML = `
       <style>
         #ag-wrap { font-family: var(--font, 'Plus Jakarta Sans', sans-serif); color: var(--text, #1E1040); }
         #ag-toolbar {
@@ -434,6 +436,8 @@
         </div>
       </div>
     `;
+      agendaInitialized = true;
+    }
 
     // ── Bind de eventos ────────────────────────────────────
     document.getElementById('ag-nav-back').addEventListener('click', navBack);
@@ -775,32 +779,6 @@
                   }),
                 }
               );
-
-              // ── Guardar en historial para que figure en la pestaña Historial ──
-              const msgHistorial = `Hola ${nombre}, te recuerdo tu turno para el día ${fechaLinda} a las ${horaLinda}. En caso de no poder asistir, por favor avisá con anticipación.`;
-              if (typeof window._wpGuardarEnHistorial === 'function') {
-                window._wpGuardarEnHistorial({
-                  paciente_id: insertData.paciente_id,
-                  tipo:        'confirmacion',
-                  mensaje:     msgHistorial,
-                });
-              } else {
-                // Fallback: guardar directo si view-whatsapp no está cargado aún
-                (async () => {
-                  try {
-                    const { error: waHErr } = await sb.from('wa_historial').insert({
-                      user_id:     sess.user.id,
-                      paciente_id: insertData.paciente_id || null,
-                      tipo:        'confirmacion',
-                      mensaje:     msgHistorial,
-                    });
-                    if (waHErr) console.warn('[Agenda] wa_historial error:', waHErr.message);
-                    else console.log('%c✅ Historial guardado', 'color:green');
-                  } catch(ex) {
-                    console.warn('[Agenda] wa_historial excepción:', ex.message);
-                  }
-                })();
-              }
             }
           }
         } catch (waErr) {
