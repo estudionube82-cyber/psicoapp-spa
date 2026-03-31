@@ -23,8 +23,8 @@ let cuentaInitialized = false;
 #view-cuenta .hb-max  { background:linear-gradient(135deg,rgba(190,24,93,.5),rgba(244,114,182,.4)); border:1px solid rgba(244,114,182,.4); color:#FDE8F5; }
 #view-cuenta .hb-free { background:rgba(255,255,255,.1); border:1px solid rgba(255,255,255,.15); color:rgba(255,255,255,.6); }
 
-#view-cuenta .vc-body { padding:0 16px 40px; margin-top:-28px; position:relative; z-index:5; display:flex; flex-direction:column; gap:16px; max-width:720px; margin-left:auto; margin-right:auto; }
-@media (min-width:768px) { #view-cuenta .vc-body { padding:0 40px 40px; } }
+#view-cuenta .vc-body { padding:0 16px 40px; margin-top:-28px; position:relative; z-index:5; display:flex; flex-direction:column; gap:16px; max-width:560px; margin-left:auto; margin-right:auto; }
+@media (min-width:768px) { #view-cuenta .vc-body { padding:0 28px 40px; } }
 
 #view-cuenta .vc-status-strip { background:var(--surface); border-radius:var(--radius); padding:14px 18px; display:flex; align-items:center; justify-content:space-between; box-shadow:var(--shadow-md); }
 #view-cuenta .vc-strip-left   { display:flex; align-items:center; gap:10px; }
@@ -48,7 +48,7 @@ let cuentaInitialized = false;
 #view-cuenta .vc-dias-badge { display:flex; align-items:center; gap:10px; border-radius:10px; padding:11px 14px; background:var(--surface2); }
 #view-cuenta .vc-dias-badge.alerta { background:rgba(239,68,68,.08); }
 
-#view-cuenta .vc-planes-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:12px; }
+#view-cuenta .vc-planes-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(145px,1fr)); gap:12px; }
 #view-cuenta .vc-plan-card { background:var(--surface); border-radius:var(--radius); padding:18px 14px 14px; border:2px solid var(--border); position:relative; display:flex; flex-direction:column; gap:10px; box-shadow:var(--shadow-sm); }
 #view-cuenta .vc-plan-card.plan-actual { border-color:var(--primary); box-shadow:0 0 0 3px var(--primary-light),var(--shadow-md); }
 #view-cuenta .plan-pro-card { background:linear-gradient(160deg,#1E1040,#2D1B69); border-color:rgba(167,139,250,.4); }
@@ -316,15 +316,7 @@ function renderCuenta() {
 
   </div>
 
-  ${plan === 'free' ? `
-  <div class="vc-yapague-card">
-    <div class="vc-yapague-title">¿Ya realizaste el pago?</div>
-    <div class="vc-yapague-sub">Una vez abonado, activá tu acceso desde acá.</div>
-    <div class="vc-btns-yapague">
-      <button class="vc-btn-yapague" id="vc-btn-yapague-pro">✅ Activar Pro</button>
-      <button class="vc-btn-yapague vc-btn-yapague-max" id="vc-btn-yapague-max">💎 Activar Max</button>
-    </div>
-  </div>` : ''}
+
 
   <div class="vc-logout-wrap">
     <button class="vc-btn-logout" id="vc-btn-logout">🚪 Cerrar sesión</button>
@@ -339,12 +331,20 @@ function renderCuenta() {
   const q = id => container.querySelector(id);
   const on = (id, fn) => { const el = q(id); if (el) el.addEventListener('click', fn); };
 
-  on('#vc-btn-upgrade-pro',  () => window.open(linkPagoPro,   '_blank'));
-  on('#vc-btn-upgrade-max',  () => window.open(linkPagoMax,   '_blank'));
-  on('#vc-btn-yapague-pro',  () => activarSuscripcion('pro'));
-  on('#vc-btn-yapague-max',  () => activarSuscripcion('max'));
-  on('#vc-btn-extra-wa',     () => window.open(linkPagoExtra, '_blank'));
-  on('#vc-btn-logout',       async () => { await sb.auth.signOut(); window.location.href = 'login.html'; });
+  on('#vc-btn-upgrade-pro', () => {
+    const retorno = encodeURIComponent(window.location.origin + '/?plan=pro');
+    window.location.href = linkPagoPro + '?back_url=' + retorno;
+  });
+  on('#vc-btn-upgrade-max', () => {
+    const retorno = encodeURIComponent(window.location.origin + '/?plan=max');
+    window.location.href = linkPagoMax + '?back_url=' + retorno;
+  });
+  on('#vc-btn-extra-wa',    () => window.open(linkPagoExtra, '_blank'));
+  on('#vc-btn-logout',      async () => {
+    window._psicoSigningOut = true;
+    try { await sb.auth.signOut(); } catch(e) {}
+    window.location.replace('/login.html');
+  });
 }
 
 window.addEventListener('perfilActualizado', () => {
