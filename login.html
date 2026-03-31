@@ -277,6 +277,22 @@
     </button>
   </div>
 
+  <!-- RECOVERY (nueva contraseña) -->
+  <div id="form-recovery" style="display:none">
+    <div class="field">
+      <label>Nueva contraseña</label>
+      <input id="rec-pass" type="password" placeholder="Mínimo 6 caracteres" autocomplete="new-password"/>
+    </div>
+    <div class="field">
+      <label>Confirmá la nueva contraseña</label>
+      <input id="rec-pass2" type="password" placeholder="Repetí la contraseña" autocomplete="new-password"/>
+    </div>
+    <button class="btn btn-primary" id="btn-rec" onclick="doResetPassword()">
+      <span class="spinner" id="spin-rec"></span>
+      <span id="lbl-rec">Guardar nueva contraseña</span>
+    </button>
+  </div>
+
   <p class="divider">PsicoApp © 2026 · <a href="/privacidad.html" style="color:var(--muted);text-decoration:none;font-size:.75rem;font-weight:600;">Privacidad</a></p>
 </div>
 
@@ -284,9 +300,44 @@
   const { createClient } = supabase;
   const sb = createClient(PSICOAPP_CONFIG.SUPA_URL, PSICOAPP_CONFIG.SUPA_KEY);
 
-  // redirect if already logged in
+  /* ── Modo recuperación de contraseña ──────────────────────────
+   * Supabase puede entregar el token de recovery de dos formas:
+   *   a) Hash fragment: #access_token=...&type=recovery  (implicit flow)
+   *   b) Evento onAuthStateChange con event === 'PASSWORD_RECOVERY' (PKCE)
+   * Manejamos ambos para máxima compatibilidad.
+   * ─────────────────────────────────────────────────────────── */
+  let _isRecoveryMode = false;
+
+  function showRecoveryForm() {
+    if (_isRecoveryMode) return;
+    _isRecoveryMode = true;
+    document.querySelector('.tabs').style.display    = 'none';
+    document.getElementById('form-login').style.display    = 'none';
+    document.getElementById('form-register').style.display = 'none';
+    document.querySelector('h1').textContent         = 'Nueva contraseña';
+    document.querySelector('.subtitle').textContent  = 'Elegí una contraseña segura para tu cuenta.';
+    document.getElementById('form-recovery').style.display = '';
+    hideMsg();
+  }
+
+  // a) Hash fragment (implicit flow)
+  function checkHashRecovery() {
+    const params = new URLSearchParams(window.location.hash.substring(1));
+    if (params.get('type') === 'recovery' && params.get('access_token')) {
+      showRecoveryForm();
+      history.replaceState(null, '', window.location.pathname + window.location.search);
+    }
+  }
+  checkHashRecovery();
+
+  // b) Evento auth (PKCE flow)
+  sb.auth.onAuthStateChange((event) => {
+    if (event === 'PASSWORD_RECOVERY') showRecoveryForm();
+  });
+
+  // Redirect si ya hay sesión activa (solo si NO es modo recovery)
   sb.auth.getSession().then(({ data }) => {
-    if (data.session) window.location.href = 'psicoapp-agenda.html';
+    if (data.session && !_isRecoveryMode) window.location.href = '/?v=agenda';
   });
 
   function switchTab(t) {
@@ -335,7 +386,7 @@
     setLoading('btn-login','spin-login','lbl-login', false, 'Ingresar');
 
     if (error) { showMsg(translateError(error.message), 'error'); return; }
-    window.location.href = 'psicoapp-agenda.html';
+    window.location.href = '/?v=agenda';
   }
 
   async function doForgotPassword() {
@@ -390,9 +441,38 @@
     setTimeout(() => switchTab('login'), 4500);
   }
 
+  async function doResetPassword() {
+    hideMsg();
+    const pass  = document.getElementById('rec-pass').value;
+    const pass2 = document.getElementById('rec-pass2').value;
+    if (!pass || !pass2) { showMsg('Completá ambos campos.', 'error'); return; }
+    if (pass.length < 6) { showMsg('La contraseña debe tener al menos 6 caracteres.', 'error'); return; }
+    if (pass !== pass2)  { showMsg('Las contraseñas no coinciden.', 'error'); return; }
+
+    setLoading('btn-rec', 'spin-rec', 'lbl-rec', true, 'Guardar nueva contraseña');
+    let error;
+    try {
+      ({ error } = await withTimeout(sb.auth.updateUser({ password: pass }), 12000));
+    } catch(e) {
+      setLoading('btn-rec', 'spin-rec', 'lbl-rec', false, 'Guardar nueva contraseña');
+      showMsg(e.message === 'timeout'
+        ? 'La conexión tardó demasiado. Verificá tu internet e intentá de nuevo.'
+        : 'Error inesperado: ' + e.message, 'error');
+      return;
+    }
+    setLoading('btn-rec', 'spin-rec', 'lbl-rec', false, 'Guardar nueva contraseña');
+
+    if (error) { showMsg(translateError(error.message), 'error'); return; }
+
+    showMsg('✅ ¡Contraseña actualizada! Redirigiendo…', 'success');
+    await sb.auth.signOut();
+    setTimeout(() => window.location.href = '/?v=agenda', 2000);
+  }
+
   // allow Enter key
   document.addEventListener('keydown', e => {
     if (e.key !== 'Enter') return;
+    if (_isRecoveryMode) { doResetPassword(); return; }
     const loginVisible = document.getElementById('form-login').style.display !== 'none';
     if (loginVisible) doLogin(); else doRegister();
   });
