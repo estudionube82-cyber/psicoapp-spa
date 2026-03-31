@@ -61,7 +61,7 @@ Los extras de WhatsApp se compran desde la vista Suscripción (+100 msg por bloq
 - `mensajes_wa` — `id, user_id, paciente_id, tipo, texto, created_at`
 - `pericias` — `id, user_id, expediente, tribunal, estado, ...`
 
-## Seguridad importante
+## Seguridad importante /
 
 - Los planes se sincronizan desde Supabase al login (no solo localStorage).
 - El campo `plan` en `profiles` debe estar protegido con RLS en Supabase: solo el backend/admin puede modificarlo.
