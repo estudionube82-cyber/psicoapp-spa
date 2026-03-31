@@ -2,14 +2,6 @@
 <html lang="es" data-theme="light">
 <head>
 <meta charset="UTF-8">
-<!-- PWA -->
-<link rel="manifest" href="/manifest.json">
-<meta name="theme-color" content="#5B2FA8">
-<meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="PsicoApp">
-<link rel="apple-touch-icon" href="/icon-192.png">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>PsicoApp</title>
 
@@ -179,31 +171,6 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); min-
 }
 .placeholder-view .ph-icon { font-size: 48px; }
 .placeholder-view h2 { color: var(--text); font-size: 20px; }
-
-/* ── Menú hamburguesa (bottom nav móvil) ── */
-#bn-more-menu {
-  position: fixed; bottom: 68px; right: 12px;
-  background: var(--surface); border: 1.5px solid var(--border);
-  border-radius: 16px; padding: 8px 0;
-  box-shadow: 0 8px 32px rgba(0,0,0,0.15);
-  z-index: 2147483647; min-width: 180px;
-  display: none; flex-direction: column;
-  animation: fadeIn .15s ease;
-}
-#bn-more-menu.open { display: flex; }
-.bn-more-item {
-  display: flex; align-items: center; gap: 12px;
-  padding: 12px 18px; font-size: 14px; font-weight: 600;
-  color: var(--text); cursor: pointer; border: none;
-  background: transparent; font-family: var(--font); width: 100%;
-  text-align: left;
-}
-.bn-more-item:hover { background: var(--primary-light); }
-.bn-more-item .bm-icon { font-size: 18px; width: 24px; text-align: center; }
-#bn-more-overlay {
-  display: none; position: fixed; inset: 0; z-index: 2147483646;
-}
-#bn-more-overlay.open { display: block; }
 </style>
 </head>
 <body>
@@ -227,11 +194,22 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); min-
       <button class="sb-item" onclick="navigate('pacientes')" data-view="pacientes">
         <span class="sb-icon">👥</span> Pacientes
       </button>
+      <button class="sb-item" onclick="navigate('historia')" data-view="historia">
+        <span class="sb-icon">📋</span> Historia Clínica
+      </button>
       <button class="sb-item" onclick="navigate('whatsapp')" data-view="whatsapp">
         <span class="sb-icon">💬</span> WhatsApp
       </button>
       <button class="sb-item" onclick="navigate('pagos')" data-view="pagos">
         <span class="sb-icon">💰</span> Pagos
+      </button>
+
+      <div class="sb-section">Herramientas</div>
+      <button class="sb-item" onclick="navigate('informes')" data-view="informes">
+        <span class="sb-icon">🤖</span> Informes IA
+      </button>
+      <button class="sb-item" onclick="navigate('pericias')" data-view="pericias">
+        <span class="sb-icon">⚖️</span> Pericias
       </button>
 
       <div class="sb-section">Cuenta</div>
@@ -260,30 +238,17 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); min-
     <section id="view-dashboard" class="view-section"></section>
     <section id="view-pacientes" class="view-section"></section>
     <section id="view-agenda"    class="view-section"></section>
+    <section id="view-historia"  class="view-section"></section>
     <section id="view-whatsapp"  class="view-section"></section>
     <section id="view-pagos"     class="view-section"></section>
+    <section id="view-informes"  class="view-section"></section>
+    <section id="view-pericias"  class="view-section"></section>
     <section id="view-perfil"    class="view-section"></section>
     <section id="view-cuenta"    class="view-section"></section>
 
   </main>
 
   <!-- ── BOTTOM NAV (mobile) ── -->
-  <!-- Overlay para cerrar menú -->
-  <div id="bn-more-overlay" onclick="closeBnMore()"></div>
-
-  <!-- Menú desplegable Más -->
-  <div id="bn-more-menu">
-    <button class="bn-more-item" onclick="closeBnMore();navigate('pagos')">
-      <span class="bm-icon">💰</span> Pagos
-    </button>
-    <button class="bn-more-item" onclick="closeBnMore();navigate('perfil')" data-view="perfil">
-      <span class="bm-icon">🪪</span> Perfil
-    </button>
-    <button class="bn-more-item" onclick="closeBnMore();navigate('cuenta')" data-view="cuenta">
-      <span class="bm-icon">⭐</span> Suscripción
-    </button>
-  </div>
-
   <nav class="bottom-nav">
     <button class="bn-item" onclick="navigate('dashboard')" data-view="dashboard">
       <span class="bn-icon">🏠</span><span class="bn-label">Inicio</span>
@@ -297,8 +262,8 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); min-
     <button class="bn-item" onclick="navigate('whatsapp')" data-view="whatsapp">
       <span class="bn-icon">💬</span><span class="bn-label">WhatsApp</span>
     </button>
-    <button class="bn-item" id="bn-btn-more" onclick="toggleBnMore()">
-      <span class="bn-icon">☰</span><span class="bn-label">Más</span>
+    <button class="bn-item" onclick="navigate('perfil')" data-view="perfil">
+      <span class="bn-icon">👤</span><span class="bn-label">Perfil</span>
     </button>
   </nav>
 
@@ -392,95 +357,30 @@ window._syncWaUsos = async function() {
     console.warn('[WA] No se pudo sincronizar wa_usos:', e.message);
   }
 };
-const VISTAS_VALIDAS = ['dashboard','agenda','pacientes','whatsapp','pagos','perfil','cuenta'];
-let _currentView = null;
-
-function navigate(viewId) {
-  if (!VISTAS_VALIDAS.includes(viewId)) viewId = 'dashboard';
-  if (viewId === _currentView) return;
-
-  /* Ocultar vista anterior */
-  if (_currentView) {
-    const prev = document.getElementById('view-' + _currentView);
-    if (prev) prev.classList.remove('view-active');
-  }
-
-  /* Mostrar nueva */
-  const next = document.getElementById('view-' + viewId);
-  if (!next) { console.warn('Vista no encontrada:', viewId); return; }
-  next.classList.add('view-active');
-
-  _currentView = viewId;
-
-  /* Actualizar nav activo */
-  document.querySelectorAll('[data-view]').forEach(el => {
-    el.classList.toggle('sb-active', el.dataset.view === viewId);
-    el.classList.toggle('bn-active', el.dataset.view === viewId);
-  });
-
-  /* Actualizar URL sin recargar */
-  history.pushState({ view: viewId }, '', '/?v=' + viewId);
-
-  /* Llamar hook de la vista */
-  const hook = window['onViewEnter_' + viewId];
-  if (typeof hook === 'function') hook();
-
-  /* Scroll arriba */
-  const container = document.getElementById('view-container');
-  if (container) container.scrollTop = 0;
-}
-
-/* Manejar botón Atrás del navegador */
-window.addEventListener('popstate', (e) => {
-  const viewId = e.state?.view || 'dashboard';
-  navigate(viewId);
-});
-
-/* ── INIT: leer vista desde URL o ir a dashboard ── */
-document.addEventListener('DOMContentLoaded', () => {
-  const params = new URLSearchParams(window.location.search);
-  const vistaUrl = params.get('v');
-  const vistaInicial = VISTAS_VALIDAS.includes(vistaUrl) ? vistaUrl : 'dashboard';
-  navigate(vistaInicial);
-});
+/* ── navigate() y router — gestionados por app-router.js ──
+   app-router.js define navigate() globalmente y maneja:
+   - ciclo de vida init/onEnter/onLeave por vista
+   - popstate (botón Atrás)
+   - DOMContentLoaded (vista inicial desde URL)
+   - store global de datos (pacientes, perfil)
+*/
 </script>
+
+<!-- Router central — debe cargarse ANTES que los view scripts -->
+<script src="app-router.js" onerror="console.error('app-router.js no encontrado')"></script>
 
 <!-- Scripts de vistas -->
 <script src="suscripcion-control.js"  onerror="console.warn('suscripcion-control.js no encontrado')"></script>
 <script src="view-dashboard.js"       onerror="console.warn('view-dashboard.js no encontrado')"></script>
 <script src="view-pacientes.js"       onerror="console.warn('view-pacientes.js no encontrado')"></script>
 <script src="view-agenda.js"          onerror="console.warn('view-agenda.js no encontrado')"></script>
+<script src="view-historia.js"        onerror="console.warn('view-historia.js no encontrado')"></script>
 <script src="view-whatsapp.js"        onerror="console.warn('view-whatsapp.js no encontrado')"></script>
 <script src="view-pagos.js"           onerror="console.warn('view-pagos.js no encontrado')"></script>
+<script src="view-informes.js"        onerror="console.warn('view-informes.js no encontrado')"></script>
+<script src="view-pericias.js"        onerror="console.warn('view-pericias.js no encontrado')"></script>
 <script src="view-cuenta.js"          onerror="console.warn('view-cuenta.js no encontrado')"></script>
 <script src="view-perfil.js"          onerror="console.warn('view-perfil.js no encontrado')"></script>
 
-
-<script>
-  // Registro del Service Worker (PWA)
-  if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-      navigator.serviceWorker.register('/sw.js')
-        .then(reg => console.log('[SW] Registrado:', reg.scope))
-        .catch(e  => console.warn('[SW] Error:', e));
-    });
-  }
-
-  // Hamburguesa bottom nav
-  function toggleBnMore() {
-    const menu = document.getElementById('bn-more-menu');
-    const overlay = document.getElementById('bn-more-overlay');
-    const btn = document.getElementById('bn-btn-more');
-    const isOpen = menu.classList.contains('open');
-    menu.classList.toggle('open', !isOpen);
-    overlay.classList.toggle('open', !isOpen);
-    btn.classList.toggle('bn-active', !isOpen);
-  }
-  function closeBnMore() {
-    document.getElementById('bn-more-menu')?.classList.remove('open');
-    document.getElementById('bn-more-overlay')?.classList.remove('open');
-    document.getElementById('bn-btn-more')?.classList.remove('bn-active');
-  }
-</script>
 </body>
 </html>
