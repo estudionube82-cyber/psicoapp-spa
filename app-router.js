@@ -26,12 +26,16 @@ const PsicoRouter = (() => {
   /* ── Store global mínimo ─────────────────────────────────── */
   // Cachés compartidos entre vistas para evitar re-fetches
   const store = {
-    userId:     null,
+    userId:     window._psicoUserId || null,
     pacientes:  null,   // null = no cargado; [] = cargado pero vacío
     perfil:     null,
     // Helpers de acceso
     async ensureUserId() {
       if (this.userId) return this.userId;
+      if (window._psicoUserId) {
+        this.userId = window._psicoUserId;
+        return this.userId;
+      }
       const { data: { user } } = await sb.auth.getUser();
       this.userId = user?.id || null;
       return this.userId;
@@ -71,8 +75,8 @@ const PsicoRouter = (() => {
 
   /* ── Navegar ─────────────────────────────────────────────── */
   async function navigate(viewName) {
-    // Bloquear cualquier navegación si se está cerrando sesión
-    if (window._psicoSigningOut) return;
+    // Bloquear navegación durante cierre de sesión o boot inicial
+    if (window._psicoSigningOut || window._psicoBooting) return;
     if (!VALID_VIEWS.includes(viewName)) viewName = 'dashboard';
     if (viewName === _current) return;
 
