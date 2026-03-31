@@ -373,16 +373,22 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); min-
     sus.fechaInicio = sus.fechaInicio || new Date().toISOString();
     localStorage.setItem('suscripcion', JSON.stringify(sus));
 
-    // Navegar a cuenta y mostrar confirmación
-    setTimeout(() => {
-      if (typeof navigate === 'function') navigate('cuenta');
-      const t = document.getElementById('vc-toast-global');
-      if (t) {
-        t.textContent = '🎉 ¡Plan ' + planParam.toUpperCase() + ' activado correctamente!';
-        t.classList.add('show');
-        setTimeout(() => t.classList.remove('show'), 4000);
+    // Navegar a cuenta cuando el router esté listo
+    const planActivado = planParam;
+    const esperarRouter = setInterval(() => {
+      if (typeof navigate === 'function') {
+        clearInterval(esperarRouter);
+        navigate('cuenta');
+        setTimeout(() => {
+          const t = document.getElementById('vc-toast-global');
+          if (t) {
+            t.textContent = '🎉 ¡Plan ' + planActivado.toUpperCase() + ' activado correctamente!';
+            t.classList.add('show');
+            setTimeout(() => t.classList.remove('show'), 4000);
+          }
+        }, 400);
       }
-    }, 800);
+    }, 100);
 
   } catch(e) {
     console.warn('[PsicoApp] No se pudo activar plan:', e.message);
