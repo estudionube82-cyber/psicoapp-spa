@@ -232,8 +232,8 @@
   <p class="subtitle" style="text-align:center">Tu consultorio, siempre organizado.</p>
 
   <div class="tabs">
-    <button class="tab active" id="tab-login">Ingresar</button>
-    <button class="tab" id="tab-register">Registrarse</button>
+    <button class="tab active" id="tab-login" onclick="switchTab('login')">Ingresar</button>
+    <button class="tab" id="tab-register" onclick="switchTab('register')">Registrarse</button>
   </div>
 
   <div id="msg" class="msg"></div>
@@ -248,12 +248,12 @@
       <label>Contraseña</label>
       <input id="login-pass" type="password" placeholder="••••••••" autocomplete="current-password"/>
     </div>
-    <button class="btn btn-primary" id="btn-login">
+    <button class="btn btn-primary" id="btn-login" onclick="doLogin()">
       <span class="spinner" id="spin-login"></span>
       <span id="lbl-login">Ingresar</span>
     </button>
     <p style="text-align:center;margin-top:1rem;">
-      <a id="link-forgot" href="#" style="font-size:.82rem;color:var(--muted);text-decoration:none;font-weight:600;">¿Olvidaste tu contraseña?</a>
+      <a href="#" onclick="doForgotPassword()" style="font-size:.82rem;color:var(--muted);text-decoration:none;font-weight:600;">¿Olvidaste tu contraseña?</a>
     </p>
   </div>
 
@@ -271,25 +271,9 @@
       <label>Confirmá la contraseña</label>
       <input id="reg-pass2" type="password" placeholder="Repetí la contraseña" autocomplete="new-password"/>
     </div>
-    <button class="btn btn-primary" id="btn-reg">
+    <button class="btn btn-primary" id="btn-reg" onclick="doRegister()">
       <span class="spinner" id="spin-reg"></span>
       <span id="lbl-reg">Crear cuenta</span>
-    </button>
-  </div>
-
-  <!-- RECOVERY (nueva contraseña) -->
-  <div id="form-recovery" style="display:none">
-    <div class="field">
-      <label>Nueva contraseña</label>
-      <input id="rec-pass" type="password" placeholder="Mínimo 6 caracteres" autocomplete="new-password"/>
-    </div>
-    <div class="field">
-      <label>Confirmá la nueva contraseña</label>
-      <input id="rec-pass2" type="password" placeholder="Repetí la contraseña" autocomplete="new-password"/>
-    </div>
-    <button class="btn btn-primary" id="btn-rec">
-      <span class="spinner" id="spin-rec"></span>
-      <span id="lbl-rec">Guardar nueva contraseña</span>
     </button>
   </div>
 
@@ -297,73 +281,13 @@
 </div>
 
 <script>
-  /* ── Validación de config ───────────────────────────────────
-   * PSICOAPP_CONFIG debe estar definido por /config.js antes de
-   * que este script se ejecute. Fallamos rápido si no está.
-   * ─────────────────────────────────────────────────────────── */
-  if (!window.PSICOAPP_CONFIG?.SUPA_URL || !window.PSICOAPP_CONFIG?.SUPA_KEY) {
-    document.body.innerHTML = '<p style="padding:2rem;color:red;font-family:sans-serif">Error: configuración no encontrada. Verificá que config.js esté cargando correctamente.</p>';
-    throw new Error('[PsicoApp] PSICOAPP_CONFIG no está definido.');
-  }
-
   const { createClient } = supabase;
   const sb = createClient(PSICOAPP_CONFIG.SUPA_URL, PSICOAPP_CONFIG.SUPA_KEY);
 
-  /* ── Modo recuperación de contraseña ──────────────────────────
-   * Supabase puede entregar el token de recovery de dos formas:
-   *   a) Hash fragment: #access_token=...&type=recovery  (implicit flow)
-   *   b) Evento onAuthStateChange con event === 'PASSWORD_RECOVERY' (PKCE)
-   * Manejamos ambos para máxima compatibilidad.
-   * ─────────────────────────────────────────────────────────── */
-  let _isRecoveryMode = false;
-
-  function showRecoveryForm() {
-    if (_isRecoveryMode) return;
-    _isRecoveryMode = true;
-    document.querySelector('.tabs').style.display          = 'none';
-    document.getElementById('form-login').style.display    = 'none';
-    document.getElementById('form-register').style.display = 'none';
-    document.querySelector('h1').textContent               = 'Nueva contraseña';
-    document.querySelector('.subtitle').textContent        = 'Elegí una contraseña segura para tu cuenta.';
-    document.getElementById('form-recovery').style.display = '';
-    hideMsg();
-  }
-
-  // a) Hash fragment (implicit flow)
-  function checkHashRecovery() {
-    const params = new URLSearchParams(window.location.hash.substring(1));
-    if (params.get('type') === 'recovery' && params.get('access_token')) {
-      showRecoveryForm();
-      history.replaceState(null, '', window.location.pathname + window.location.search);
-    }
-  }
-  checkHashRecovery();
-
-  // b) Evento auth (PKCE flow)
-  sb.auth.onAuthStateChange((event) => {
-    if (event === 'PASSWORD_RECOVERY') showRecoveryForm();
-  });
-
-  // Redirect si ya hay sesión activa (solo si NO es modo recovery)
+  // redirect if already logged in
   sb.auth.getSession().then(({ data }) => {
-    if (data.session && !_isRecoveryMode) window.location.href = '/';
+    if (data.session) window.location.href = 'psicoapp-agenda.html';
   });
-
-  /* ── Helpers UI ─────────────────────────────────────────── */
-  function showMsg(text, type) {
-    const el = document.getElementById('msg');
-    el.textContent = text;
-    el.className = 'msg ' + type;
-    el.style.display = 'block';
-  }
-  function hideMsg() {
-    document.getElementById('msg').style.display = 'none';
-  }
-  function setLoading(btnId, spinId, lblId, loading, label) {
-    document.getElementById(btnId).disabled = loading;
-    document.getElementById(spinId).style.display = loading ? 'block' : 'none';
-    document.getElementById(lblId).textContent = loading ? '' : label;
-  }
 
   function switchTab(t) {
     const isLogin = t === 'login';
@@ -374,63 +298,44 @@
     hideMsg();
   }
 
-  /* ── Utilidades ─────────────────────────────────────────── */
-  function withTimeout(promise, ms) {
-    return Promise.race([
-      promise,
-      new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), ms))
-    ]);
+  function showMsg(text, type) {
+    const el = document.getElementById('msg');
+    el.textContent = text;
+    el.className = 'msg ' + type;
+    el.style.display = 'block';
+  }
+  function hideMsg() {
+    const el = document.getElementById('msg');
+    el.style.display = 'none';
   }
 
-  function translateError(msg) {
-    if (msg.includes('Invalid login'))       return 'Email o contraseña incorrectos.';
-    if (msg.includes('Email not confirmed')) return 'Confirmá tu email antes de ingresar.';
-    if (msg.includes('already registered')) return 'Este email ya está registrado. Ingresá en lugar de registrarte.';
-    if (msg.includes('Password should'))    return 'La contraseña debe tener al menos 6 caracteres.';
-    return msg;
+  function setLoading(btnId, spinId, lblId, loading, label) {
+    document.getElementById(btnId).disabled = loading;
+    document.getElementById(spinId).style.display = loading ? 'block' : 'none';
+    document.getElementById(lblId).textContent = loading ? '' : label;
   }
 
-  /* ── upsertProfile ──────────────────────────────────────────
-   * Crea o actualiza la fila en `profiles` para el usuario.
-   * Se llama después de login exitoso y después de registro
-   * con confirmación automática (identities.length > 0).
-   * Falla silenciosamente para no bloquear el redirect.
-   * ─────────────────────────────────────────────────────────── */
-  async function upsertProfile(user) {
-    try {
-      await sb.from('profiles').upsert(
-        { id: user.id, email: user.email },
-        { onConflict: 'id', ignoreDuplicates: false }
-      );
-    } catch(e) {
-      console.warn('[PsicoApp] upsertProfile falló (no crítico):', e.message);
-    }
-  }
-
-  /* ── Acciones de autenticación ──────────────────────────── */
   async function doLogin() {
     hideMsg();
     const email = document.getElementById('login-email').value.trim();
     const pass  = document.getElementById('login-pass').value;
     if (!email || !pass) { showMsg('Completá email y contraseña.', 'error'); return; }
 
-    setLoading('btn-login', 'spin-login', 'lbl-login', true, 'Ingresar');
-    let data, error;
+    setLoading('btn-login','spin-login','lbl-login', true, 'Ingresar');
+    let error;
     try {
-      ({ data, error } = await withTimeout(sb.auth.signInWithPassword({ email, password: pass }), 12000));
+      ({ error } = await withTimeout(sb.auth.signInWithPassword({ email, password: pass }), 12000));
     } catch(e) {
-      setLoading('btn-login', 'spin-login', 'lbl-login', false, 'Ingresar');
+      setLoading('btn-login','spin-login','lbl-login', false, 'Ingresar');
       showMsg(e.message === 'timeout'
         ? 'La conexión tardó demasiado. Verificá tu internet e intentá de nuevo.'
         : 'Error inesperado: ' + e.message, 'error');
       return;
     }
-    setLoading('btn-login', 'spin-login', 'lbl-login', false, 'Ingresar');
+    setLoading('btn-login','spin-login','lbl-login', false, 'Ingresar');
 
     if (error) { showMsg(translateError(error.message), 'error'); return; }
-
-    if (data?.user) await upsertProfile(data.user);
-    window.location.href = '/';
+    window.location.href = 'psicoapp-agenda.html';
   }
 
   async function doForgotPassword() {
@@ -444,27 +349,35 @@
     showMsg('Te enviamos un email para restablecer tu contraseña. Revisá tu bandeja.', 'success');
   }
 
+  // Race promise vs timeout
+  function withTimeout(promise, ms) {
+    return Promise.race([
+      promise,
+      new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), ms))
+    ]);
+  }
+
   async function doRegister() {
     hideMsg();
     const email = document.getElementById('reg-email').value.trim();
     const pass  = document.getElementById('reg-pass').value;
     const pass2 = document.getElementById('reg-pass2').value;
     if (!email || !pass || !pass2) { showMsg('Completá todos los campos.', 'error'); return; }
-    if (pass.length < 6) { showMsg('La contraseña debe tener al menos 6 caracteres.', 'error'); return; }
-    if (pass !== pass2)  { showMsg('Las contraseñas no coinciden.', 'error'); return; }
+    if (pass.length < 6)  { showMsg('La contraseña debe tener al menos 6 caracteres.', 'error'); return; }
+    if (pass !== pass2)   { showMsg('Las contraseñas no coinciden.', 'error'); return; }
 
-    setLoading('btn-reg', 'spin-reg', 'lbl-reg', true, 'Crear cuenta');
+    setLoading('btn-reg','spin-reg','lbl-reg', true, 'Crear cuenta');
     let data, error;
     try {
       ({ data, error } = await withTimeout(sb.auth.signUp({ email, password: pass }), 12000));
     } catch(e) {
-      setLoading('btn-reg', 'spin-reg', 'lbl-reg', false, 'Crear cuenta');
+      setLoading('btn-reg','spin-reg','lbl-reg', false, 'Crear cuenta');
       showMsg(e.message === 'timeout'
         ? 'La conexión tardó demasiado. Verificá tu internet e intentá de nuevo.'
         : 'Error inesperado: ' + e.message, 'error');
       return;
     }
-    setLoading('btn-reg', 'spin-reg', 'lbl-reg', false, 'Crear cuenta');
+    setLoading('btn-reg','spin-reg','lbl-reg', false, 'Crear cuenta');
 
     if (error) { showMsg(translateError(error.message), 'error'); return; }
 
@@ -473,67 +386,24 @@
       return;
     }
 
-    // Si confirmación de email está desactivada en Supabase, el usuario ya tiene sesión
-    if (data?.user?.confirmed_at || data?.session) {
-      await upsertProfile(data.user);
-      window.location.href = '/';
-      return;
-    }
-
     showMsg('✅ ¡Cuenta creada! Revisá tu bandeja (y el spam) y hacé clic en el enlace para activar tu cuenta.', 'success');
     setTimeout(() => switchTab('login'), 4500);
   }
 
-  async function doResetPassword() {
-    hideMsg();
-    const pass  = document.getElementById('rec-pass').value;
-    const pass2 = document.getElementById('rec-pass2').value;
-    if (!pass || !pass2) { showMsg('Completá ambos campos.', 'error'); return; }
-    if (pass.length < 6) { showMsg('La contraseña debe tener al menos 6 caracteres.', 'error'); return; }
-    if (pass !== pass2)  { showMsg('Las contraseñas no coinciden.', 'error'); return; }
-
-    setLoading('btn-rec', 'spin-rec', 'lbl-rec', true, 'Guardar nueva contraseña');
-    let error;
-    try {
-      ({ error } = await withTimeout(sb.auth.updateUser({ password: pass }), 12000));
-    } catch(e) {
-      setLoading('btn-rec', 'spin-rec', 'lbl-rec', false, 'Guardar nueva contraseña');
-      showMsg(e.message === 'timeout'
-        ? 'La conexión tardó demasiado. Verificá tu internet e intentá de nuevo.'
-        : 'Error inesperado: ' + e.message, 'error');
-      return;
-    }
-    setLoading('btn-rec', 'spin-rec', 'lbl-rec', false, 'Guardar nueva contraseña');
-
-    if (error) { showMsg(translateError(error.message), 'error'); return; }
-
-    showMsg('✅ ¡Contraseña actualizada! Redirigiendo…', 'success');
-    await sb.auth.signOut();
-    setTimeout(() => window.location.href = '/', 2000);
-  }
-
-  /* ── Event listeners centralizados ─────────────────────────
-   * Sin onclick en HTML. Todo el binding aquí, en DOMContentLoaded.
-   * ─────────────────────────────────────────────────────────── */
-  document.addEventListener('DOMContentLoaded', () => {
-    document.getElementById('tab-login').addEventListener('click',    () => switchTab('login'));
-    document.getElementById('tab-register').addEventListener('click', () => switchTab('register'));
-    document.getElementById('btn-login').addEventListener('click',    doLogin);
-    document.getElementById('btn-reg').addEventListener('click',      doRegister);
-    document.getElementById('btn-rec').addEventListener('click',      doResetPassword);
-    document.getElementById('link-forgot').addEventListener('click', (e) => {
-      e.preventDefault();
-      doForgotPassword();
-    });
-
-    // Enter key
-    document.addEventListener('keydown', (e) => {
-      if (e.key !== 'Enter') return;
-      if (_isRecoveryMode) { doResetPassword(); return; }
-      const loginVisible = document.getElementById('form-login').style.display !== 'none';
-      if (loginVisible) doLogin(); else doRegister();
-    });
+  // allow Enter key
+  document.addEventListener('keydown', e => {
+    if (e.key !== 'Enter') return;
+    const loginVisible = document.getElementById('form-login').style.display !== 'none';
+    if (loginVisible) doLogin(); else doRegister();
   });
+
+  function translateError(msg) {
+    if (msg.includes('Invalid login'))      return 'Email o contraseña incorrectos.';
+    if (msg.includes('Email not confirmed')) return 'Confirmá tu email antes de ingresar.';
+    if (msg.includes('already registered')) return 'Este email ya está registrado. Ingresá en lugar de registrarte.';
+    if (msg.includes('Password should'))    return 'La contraseña debe tener al menos 6 caracteres.';
+    return msg;
+  }
 </script>
 </body>
 </html>
