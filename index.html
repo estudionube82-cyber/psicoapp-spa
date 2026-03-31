@@ -152,6 +152,36 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); min-
 .bn-item.bn-active .bn-label { color: var(--primary); }
 .bn-item.bn-active .bn-icon { filter: drop-shadow(0 0 4px rgba(92,47,168,0.5)); }
 
+/* ── MENÚ MÁS (mobile) ── */
+.bn-more-overlay {
+  display: none; position: fixed; inset: 0; z-index: 2147483640;
+  background: rgba(0,0,0,0.45);
+}
+.bn-more-overlay.open { display: block; }
+.bn-more-sheet {
+  position: fixed; bottom: 64px; left: 0; right: 0;
+  background: var(--surface); border-radius: 20px 20px 0 0;
+  padding: 16px 12px 8px; z-index: 2147483646;
+  box-shadow: 0 -4px 24px rgba(0,0,0,0.15);
+  transform: translateY(100%);
+  transition: transform .25s cubic-bezier(0.4,0,0.2,1);
+}
+.bn-more-sheet.open { transform: translateY(0); }
+.bn-more-title {
+  font-size: 11px; font-weight: 800; color: var(--text-muted);
+  text-transform: uppercase; letter-spacing: .8px; padding: 0 8px 10px;
+}
+.bn-more-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; }
+.bn-more-item {
+  display: flex; flex-direction: column; align-items: center;
+  justify-content: center; gap: 4px; padding: 12px 4px;
+  border: none; background: transparent; border-radius: 12px;
+  cursor: pointer; font-family: var(--font); transition: background .15s;
+}
+.bn-more-item:active { background: var(--primary-light); }
+.bn-more-item .bm-icon { font-size: 24px; line-height: 1; }
+.bn-more-item .bm-label { font-size: 10px; font-weight: 700; color: var(--text-muted); }
+
 /* ══════════════════════════════════════════
    TRANSICIÓN ENTRE VISTAS
    ══════════════════════════════════════════ */
@@ -249,6 +279,32 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); min-
   </main>
 
   <!-- ── BOTTOM NAV (mobile) ── -->
+  <!-- Overlay + sheet para menú Más -->
+  <div class="bn-more-overlay" id="bn-more-overlay"></div>
+  <div class="bn-more-sheet" id="bn-more-sheet">
+    <div class="bn-more-title">Más opciones</div>
+    <div class="bn-more-grid">
+      <button class="bn-more-item" onclick="bnMoreNav('historia')">
+        <span class="bm-icon">📋</span><span class="bm-label">Historia</span>
+      </button>
+      <button class="bn-more-item" onclick="bnMoreNav('pagos')">
+        <span class="bm-icon">💰</span><span class="bm-label">Pagos</span>
+      </button>
+      <button class="bn-more-item" onclick="bnMoreNav('informes')">
+        <span class="bm-icon">🤖</span><span class="bm-label">Informes</span>
+      </button>
+      <button class="bn-more-item" onclick="bnMoreNav('pericias')">
+        <span class="bm-icon">⚖️</span><span class="bm-label">Pericias</span>
+      </button>
+      <button class="bn-more-item" onclick="bnMoreNav('perfil')">
+        <span class="bm-icon">👤</span><span class="bm-label">Perfil</span>
+      </button>
+      <button class="bn-more-item" onclick="bnMoreNav('cuenta')">
+        <span class="bm-icon">⭐</span><span class="bm-label">Suscripción</span>
+      </button>
+    </div>
+  </div>
+
   <nav class="bottom-nav">
     <button class="bn-item" onclick="navigate('dashboard')" data-view="dashboard">
       <span class="bn-icon">🏠</span><span class="bn-label">Inicio</span>
@@ -262,8 +318,8 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); min-
     <button class="bn-item" onclick="navigate('whatsapp')" data-view="whatsapp">
       <span class="bn-icon">💬</span><span class="bn-label">WhatsApp</span>
     </button>
-    <button class="bn-item" onclick="navigate('perfil')" data-view="perfil">
-      <span class="bn-icon">👤</span><span class="bn-label">Perfil</span>
+    <button class="bn-item" id="bn-mas-btn">
+      <span class="bn-icon">⋯</span><span class="bn-label">Más</span>
     </button>
   </nav>
 
@@ -389,6 +445,24 @@ window._syncWaUsos = async function() {
     console.warn('[WA] No se pudo sincronizar wa_usos:', e.message);
   }
 };
+/* ── Menú Más (mobile) ── */
+function bnMoreOpen() {
+  document.getElementById('bn-more-overlay').classList.add('open');
+  document.getElementById('bn-more-sheet').classList.add('open');
+}
+function bnMoreClose() {
+  document.getElementById('bn-more-overlay').classList.remove('open');
+  document.getElementById('bn-more-sheet').classList.remove('open');
+}
+function bnMoreNav(view) {
+  bnMoreClose();
+  navigate(view);
+}
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('bn-mas-btn').addEventListener('click', bnMoreOpen);
+  document.getElementById('bn-more-overlay').addEventListener('click', bnMoreClose);
+});
+
 /* ── navigate() y router — gestionados por app-router.js ──
    app-router.js define navigate() globalmente y maneja:
    - ciclo de vida init/onEnter/onLeave por vista
