@@ -273,6 +273,23 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); min-
      SCRIPTS GLOBALES
      ══════════════════════════════════════════ -->
 <script>
+/* ── REDIRECCIÓN AUTOMÁTICA DE RUTAS LEGACY ── */
+// Si alguien entra directamente a /psicoapp-historia.html, etc.,
+// se lo redirige a la SPA con la vista correcta.
+(function() {
+  const path = window.location.pathname;
+  const match = path.match(/\/psicoapp-([a-z]+)\.html/i);
+  if (match) {
+    const viewName = match[1].toLowerCase();
+    const validViews = [
+      'dashboard','agenda','pacientes','historia',
+      'whatsapp','pagos','informes','pericias','perfil','cuenta'
+    ];
+    const dest = validViews.includes(viewName) ? viewName : 'dashboard';
+    window.location.replace('/?v=' + dest);
+  }
+})();
+
 /* ── SUPABASE ── */
 const { createClient } = supabase;
 const sb = createClient(PSICOAPP_CONFIG.SUPA_URL, PSICOAPP_CONFIG.SUPA_KEY);
