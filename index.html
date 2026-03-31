@@ -346,6 +346,49 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); min-
   }
 })();
 
+/* ── ACTIVACIÓN AUTOMÁTICA DE PLAN POR RETORNO DE MERCADO PAGO ──
+ * Cuando el usuario paga, MP redirige a /?plan=pro o /?plan=max.
+ * Este bloque detecta el parámetro y activa el plan automáticamente.
+ * ─────────────────────────────────────────────────────────── */
+(async function() {
+  const params    = new URLSearchParams(window.location.search);
+  const planParam = params.get('plan');
+  if (!planParam || !['pro','max'].includes(planParam)) return;
+
+  // Limpiar el parámetro de la URL sin recargar
+  history.replaceState({}, '', '/');
+
+  try {
+    const { data: { session } } = await sb.auth.getSession();
+    if (!session) return;
+
+    // Actualizar plan en Supabase
+    await sb.from('profiles').update({ plan: planParam }).eq('id', session.user.id);
+
+    // Actualizar localStorage
+    let sus = {};
+    try { sus = JSON.parse(localStorage.getItem('suscripcion')) || {}; } catch {}
+    sus.plan        = planParam;
+    sus.estado      = 'activa';
+    sus.fechaInicio = sus.fechaInicio || new Date().toISOString();
+    localStorage.setItem('suscripcion', JSON.stringify(sus));
+
+    // Navegar a cuenta y mostrar confirmación
+    setTimeout(() => {
+      if (typeof navigate === 'function') navigate('cuenta');
+      const t = document.getElementById('vc-toast-global');
+      if (t) {
+        t.textContent = '🎉 ¡Plan ' + planParam.toUpperCase() + ' activado correctamente!';
+        t.classList.add('show');
+        setTimeout(() => t.classList.remove('show'), 4000);
+      }
+    }, 800);
+
+  } catch(e) {
+    console.warn('[PsicoApp] No se pudo activar plan:', e.message);
+  }
+})();
+
 /* ── SUPABASE ── */
 const { createClient } = supabase;
 const sb = createClient(PSICOAPP_CONFIG.SUPA_URL, PSICOAPP_CONFIG.SUPA_KEY);
