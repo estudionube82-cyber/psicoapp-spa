@@ -463,10 +463,17 @@ const _PerfilView = (() => {
       saveProfile(container);
     });
 
-    /* Cerrar sesión */
+    /* Cerrar sesión
+     * Solo llama signOut(). El listener onAuthStateChange de index.html
+     * detecta SIGNED_OUT y hace el redirect, evitando race conditions
+     * con el router o vistas que aún estén cargando datos.
+     */
     container.querySelector('#vp-btn-logout').addEventListener('click', async () => {
+      const btn = container.querySelector('#vp-btn-logout');
+      btn.disabled = true;
+      btn.textContent = 'Cerrando sesión…';
       await sb.auth.signOut();
-      window.location.href = '/login.html';
+      // El redirect lo maneja onAuthStateChange en index.html
     });
   }
 

@@ -310,6 +310,12 @@ function toggleTheme() {
 }
 
 /* ── AUTH GUARD + CARGA DE SUSCRIPCIÓN ── */
+
+// Escucha cierre de sesión en cualquier momento (signOut desde cualquier vista)
+sb.auth.onAuthStateChange((event) => {
+  if (event === 'SIGNED_OUT') window.location.href = 'login.html';
+});
+
 sb.auth.getSession().then(async ({ data }) => {
   if (!data.session) { window.location.href = 'login.html'; return; }
 
