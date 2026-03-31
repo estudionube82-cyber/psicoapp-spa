@@ -309,36 +309,27 @@ function toggleTheme() {
   if (th) th.textContent = next === 'dark' ? '🌙' : '☀️';
 }
 
-/* ── AUTH GUARD + CARGA DE SUSCRIPCIÓN ──────────────────────
- * Usamos getSession() + 50ms de estabilización en lugar de
- * onAuthStateChange para evitar el loop login ↔ index.
- * onAuthStateChange puede disparar eventos con tokens residuales
- * justo después de signOut(), causando redirects incorrectos.
- * getSession() lee el estado real del storage una sola vez.
- * ─────────────────────────────────────────────────────────── */
-window._psicoBooting = true;
-(async () => {
-  const { data } = await sb.auth.getSession();
-  await new Promise(r => setTimeout(r, 50));
-  const session = data?.session;
+/* ── AUTH GUARD + CARGA DE SUSCRIPCIÓN ── */
 
-  if (!session && !window._psicoSigningOut) {
-    window.location.replace('/login.html');
-    return;
-  }
+// Escucha cierre de sesión en cualquier momento (signOut desde cualquier vista)
+sb.auth.onAuthStateChange((event) => {
+  if (event === 'SIGNED_OUT') window.location.href = 'login.html';
+});
 
-  // Guardar userId en el store del router para que las vistas lo usen
-  window._psicoUserId = session.user.id;
+sb.auth.getSession().then(async ({ data }) => {
+  if (!data.session) { window.location.href = 'login.html'; return; }
 
   // Cargar plan y usos desde Supabase y sincronizar localStorage
   try {
+    const userId = data.session.user.id;
     const { data: perfil } = await sb
       .from('profiles')
       .select('plan, wa_usos, wa_extra')
-      .eq('id', session.user.id)
+      .eq('id', userId)
       .maybeSingle();
 
     if (perfil) {
+      // Preservar fechaInicio si ya existe en localStorage
       let sus = {};
       try { sus = JSON.parse(localStorage.getItem('suscripcion')) || {}; } catch {}
 
@@ -354,8 +345,7 @@ window._psicoBooting = true;
   } catch(e) {
     console.warn('[Auth] No se pudo sincronizar suscripción:', e.message);
   }
-  window._psicoBooting = false;
-})();
+});
 
 /* ── SIDEBAR: cargar perfil ── */
 function syncSidebarPerfil() {

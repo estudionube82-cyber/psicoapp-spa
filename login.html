@@ -329,7 +329,7 @@
     hideMsg();
   }
 
-  // a) Hash fragment (implicit flow) — detección de recovery
+  // a) Hash fragment (implicit flow)
   function checkHashRecovery() {
     const params = new URLSearchParams(window.location.hash.substring(1));
     if (params.get('type') === 'recovery' && params.get('access_token')) {
@@ -339,26 +339,15 @@
   }
   checkHashRecovery();
 
-  // b) PKCE flow — solo para recovery, nunca para redirects de sesión
+  // b) Evento auth (PKCE flow)
   sb.auth.onAuthStateChange((event) => {
     if (event === 'PASSWORD_RECOVERY') showRecoveryForm();
   });
 
-  /* ── Guard de sesión ─────────────────────────────────────────
-   * Lock global: evita que dos ejecuciones concurrentes (por
-   * doble carga de script o hot-reload) disparen el redirect
-   * simultáneamente.
-   * ─────────────────────────────────────────────────────────── */
-  window._psicoRedirecting = window._psicoRedirecting || false;
-  (async () => {
-    if (window._psicoRedirecting) return;
-    const { data } = await sb.auth.getSession();
-    await new Promise(r => setTimeout(r, 50));
-    if (data?.session && !_isRecoveryMode) {
-      window._psicoRedirecting = true;
-      window.location.replace('/');
-    }
-  })();
+  // Redirect si ya hay sesión activa (solo si NO es modo recovery)
+  sb.auth.getSession().then(({ data }) => {
+    if (data.session && !_isRecoveryMode) window.location.href = '/';
+  });
 
   /* ── Helpers UI ─────────────────────────────────────────── */
   function showMsg(text, type) {
@@ -441,7 +430,7 @@
     if (error) { showMsg(translateError(error.message), 'error'); return; }
 
     if (data?.user) await upsertProfile(data.user);
-    window.location.replace('/');
+    window.location.href = '/';
   }
 
   async function doForgotPassword() {
@@ -487,7 +476,7 @@
     // Si confirmación de email está desactivada en Supabase, el usuario ya tiene sesión
     if (data?.user?.confirmed_at || data?.session) {
       await upsertProfile(data.user);
-      window.location.replace('/');
+      window.location.href = '/';
       return;
     }
 
@@ -518,9 +507,9 @@
 
     if (error) { showMsg(translateError(error.message), 'error'); return; }
 
-    showMsg('✅ ¡Contraseña actualizada! Ingresá con tu nueva contraseña.', 'success');
+    showMsg('✅ ¡Contraseña actualizada! Redirigiendo…', 'success');
     await sb.auth.signOut();
-    setTimeout(() => window.location.replace('/login.html'), 2000);
+    setTimeout(() => window.location.href = '/', 2000);
   }
 
   /* ── Event listeners centralizados ─────────────────────────
