@@ -2,11 +2,11 @@
   "name": "PsicoApp",
   "short_name": "PsicoApp",
   "description": "Gestión de consultorio psicológico",
-  "start_url": "/login.html",
+  "start_url": "/",
   "scope": "/",
   "display": "standalone",
-  "background_color": "#F4F1ED",
-  "theme_color": "#2D6A4F",
+  "background_color": "#F5F3FF",
+  "theme_color": "#5B2FA8",
   "orientation": "portrait",
   "icons": [
     {
@@ -43,6 +43,9 @@
       "label": "PsicoApp - Dashboard principal"
     }
   ],
-  "categories": ["medical", "productivity"],
+  "categories": [
+    "medical",
+    "productivity"
+  ],
   "lang": "es-AR"
 }
