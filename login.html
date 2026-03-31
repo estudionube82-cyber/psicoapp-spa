@@ -286,7 +286,7 @@
 
   // redirect if already logged in
   sb.auth.getSession().then(({ data }) => {
-    if (data.session) window.location.href = 'psicoapp-agenda.html';
+    if (data.session) window.location.href = '/';
   });
 
   function switchTab(t) {
@@ -335,7 +335,7 @@
     setLoading('btn-login','spin-login','lbl-login', false, 'Ingresar');
 
     if (error) { showMsg(translateError(error.message), 'error'); return; }
-    window.location.href = 'psicoapp-agenda.html';
+    window.location.href = '/';
   }
 
   async function doForgotPassword() {
