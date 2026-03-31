@@ -61,6 +61,8 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); min-
   #shell { flex-direction: row; }
   #view-container { flex: 1; max-width: none; padding-bottom: 0; overflow-y: auto; height: 100vh; }
   .bottom-nav { display: none !important; }
+  .bn-more-overlay { display: none !important; }
+  .bn-more-sheet { display: none !important; }
 }
 
 /* ══════════════════════════════════════════
@@ -348,24 +350,29 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); min-
 
 /* ── ACTIVACIÓN AUTOMÁTICA DE PLAN POR RETORNO DE MERCADO PAGO ──
  * Cuando el usuario paga, MP redirige a /?plan=pro o /?plan=max.
- * Este bloque detecta el parámetro y activa el plan automáticamente.
+ * Guardamos el plan en sessionStorage ANTES de limpiar la URL,
+ * así el router no lo pierde al navegar a dashboard.
  * ─────────────────────────────────────────────────────────── */
-(async function() {
+(function() {
   const params    = new URLSearchParams(window.location.search);
   const planParam = params.get('plan');
   if (!planParam || !['pro','max'].includes(planParam)) return;
-
-  // Limpiar el parámetro de la URL sin recargar
+  // Guardar antes de limpiar URL
+  sessionStorage.setItem('_psicoActivarPlan', planParam);
   history.replaceState({}, '', '/');
+})();
+
+async function _activarPlanPendiente() {
+  const planParam = sessionStorage.getItem('_psicoActivarPlan');
+  if (!planParam) return;
+  sessionStorage.removeItem('_psicoActivarPlan');
 
   try {
     const { data: { session } } = await sb.auth.getSession();
     if (!session) return;
 
-    // Actualizar plan en Supabase
     await sb.from('profiles').update({ plan: planParam }).eq('id', session.user.id);
 
-    // Actualizar localStorage
     let sus = {};
     try { sus = JSON.parse(localStorage.getItem('suscripcion')) || {}; } catch {}
     sus.plan        = planParam;
@@ -373,27 +380,20 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); min-
     sus.fechaInicio = sus.fechaInicio || new Date().toISOString();
     localStorage.setItem('suscripcion', JSON.stringify(sus));
 
-    // Navegar a cuenta cuando el router esté listo
-    const planActivado = planParam;
-    const esperarRouter = setInterval(() => {
-      if (typeof navigate === 'function') {
-        clearInterval(esperarRouter);
-        navigate('cuenta');
-        setTimeout(() => {
-          const t = document.getElementById('vc-toast-global');
-          if (t) {
-            t.textContent = '🎉 ¡Plan ' + planActivado.toUpperCase() + ' activado correctamente!';
-            t.classList.add('show');
-            setTimeout(() => t.classList.remove('show'), 4000);
-          }
-        }, 400);
+    navigate('cuenta');
+    setTimeout(() => {
+      const t = document.getElementById('vc-toast-global');
+      if (t) {
+        t.textContent = '🎉 ¡Plan ' + planParam.toUpperCase() + ' activado correctamente!';
+        t.classList.add('show');
+        setTimeout(() => t.classList.remove('show'), 4000);
       }
-    }, 100);
+    }, 500);
 
   } catch(e) {
     console.warn('[PsicoApp] No se pudo activar plan:', e.message);
   }
-})();
+}
 
 /* ── SUPABASE ── */
 const { createClient } = supabase;
@@ -510,6 +510,8 @@ function bnMoreNav(view) {
 document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('bn-mas-btn').addEventListener('click', bnMoreOpen);
   document.getElementById('bn-more-overlay').addEventListener('click', bnMoreClose);
+  // Activar plan pendiente si el usuario viene de Mercado Pago
+  if (sessionStorage.getItem('_psicoActivarPlan')) _activarPlanPendiente();
 });
 
 /* ── navigate() y router — gestionados por app-router.js ──
