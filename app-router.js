@@ -71,6 +71,8 @@ const PsicoRouter = (() => {
 
   /* ── Navegar ─────────────────────────────────────────────── */
   async function navigate(viewName) {
+    // Bloquear cualquier navegación si se está cerrando sesión
+    if (window._psicoSigningOut) return;
     if (!VALID_VIEWS.includes(viewName)) viewName = 'dashboard';
     if (viewName === _current) return;
 

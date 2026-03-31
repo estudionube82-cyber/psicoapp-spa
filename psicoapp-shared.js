@@ -60,8 +60,9 @@ function closeDrawer() {
 async function doLogout() {
   const {createClient} = supabase;
   const sb = createClient(PSICOAPP_CONFIG.SUPA_URL, PSICOAPP_CONFIG.SUPA_KEY);
-  await sb.auth.signOut();
-  window.location.href = 'login.html';
+  window._psicoSigningOut = true;
+  try { await sb.auth.signOut(); } catch(e) {}
+  window.location.replace('/login.html');
 }
 
 // ── OFFLINE BANNER ─────────────────────────────────────────────

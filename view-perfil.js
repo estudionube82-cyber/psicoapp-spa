@@ -464,16 +464,22 @@ const _PerfilView = (() => {
     });
 
     /* Cerrar sesión
-     * Solo llama signOut(). El listener onAuthStateChange de index.html
-     * detecta SIGNED_OUT y hace el redirect, evitando race conditions
-     * con el router o vistas que aún estén cargando datos.
+     * Usamos window._psicoSigningOut = true ANTES de llamar signOut()
+     * para que el router no intente navegar ni cargar datos mientras
+     * Supabase procesa el cierre de sesión internamente.
+     * Usamos location.replace() para no dejar la SPA en el historial.
      */
     container.querySelector('#vp-btn-logout').addEventListener('click', async () => {
       const btn = container.querySelector('#vp-btn-logout');
       btn.disabled = true;
       btn.textContent = 'Cerrando sesión…';
-      await sb.auth.signOut();
-      // El redirect lo maneja onAuthStateChange en index.html
+      window._psicoSigningOut = true;
+      try {
+        await sb.auth.signOut();
+      } catch(e) {
+        console.warn('[Perfil] signOut error:', e.message);
+      }
+      window.location.replace('/login.html');
     });
   }
 
