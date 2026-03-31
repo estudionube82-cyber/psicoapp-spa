@@ -309,42 +309,51 @@ function toggleTheme() {
   if (th) th.textContent = next === 'dark' ? '🌙' : '☀️';
 }
 
-/* ── AUTH GUARD + CARGA DE SUSCRIPCIÓN ── */
+/* ── AUTH GUARD + CARGA DE SUSCRIPCIÓN ──────────────────────
+ * _psicoAuthReady es una Promise que se resuelve solo cuando
+ * getSession() confirma sesión válida. El router la espera
+ * antes de navegar, eliminando la race condition que causaba
+ * el loop login ↔ dashboard.
+ * ─────────────────────────────────────────────────────────── */
+window._psicoAuthReady = new Promise((resolve) => {
+  sb.auth.getSession().then(async ({ data }) => {
+    const session = data?.session;
 
-// Escucha cierre de sesión en cualquier momento (signOut desde cualquier vista)
-sb.auth.onAuthStateChange((event) => {
-  if (event === 'SIGNED_OUT') window.location.href = 'login.html';
-});
-
-sb.auth.getSession().then(async ({ data }) => {
-  if (!data.session) { window.location.href = 'login.html'; return; }
-
-  // Cargar plan y usos desde Supabase y sincronizar localStorage
-  try {
-    const userId = data.session.user.id;
-    const { data: perfil } = await sb
-      .from('profiles')
-      .select('plan, wa_usos, wa_extra')
-      .eq('id', userId)
-      .maybeSingle();
-
-    if (perfil) {
-      // Preservar fechaInicio si ya existe en localStorage
-      let sus = {};
-      try { sus = JSON.parse(localStorage.getItem('suscripcion')) || {}; } catch {}
-
-      const planActual = perfil.plan || 'free';
-      localStorage.setItem('suscripcion', JSON.stringify({
-        plan:        planActual,
-        estado:      'activa',
-        fechaInicio: sus.fechaInicio || new Date().toISOString(),
-        usos:        { whatsapp: perfil.wa_usos || 0, informesIA: sus.usos?.informesIA || 0 },
-        extra:       { whatsapp: perfil.wa_extra || 0 },
-      }));
+    if (!session) {
+      window.location.replace('/login.html');
+      return; // no resolver — la página cambia de todas formas
     }
-  } catch(e) {
-    console.warn('[Auth] No se pudo sincronizar suscripción:', e.message);
-  }
+
+    // Exponer userId para el store del router
+    window._psicoUserId = session.user.id;
+
+    // Cargar plan y usos desde Supabase y sincronizar localStorage
+    try {
+      const { data: perfil } = await sb
+        .from('profiles')
+        .select('plan, wa_usos, wa_extra')
+        .eq('id', session.user.id)
+        .maybeSingle();
+
+      if (perfil) {
+        let sus = {};
+        try { sus = JSON.parse(localStorage.getItem('suscripcion')) || {}; } catch {}
+
+        const planActual = perfil.plan || 'free';
+        localStorage.setItem('suscripcion', JSON.stringify({
+          plan:        planActual,
+          estado:      'activa',
+          fechaInicio: sus.fechaInicio || new Date().toISOString(),
+          usos:        { whatsapp: perfil.wa_usos || 0, informesIA: sus.usos?.informesIA || 0 },
+          extra:       { whatsapp: perfil.wa_extra || 0 },
+        }));
+      }
+    } catch(e) {
+      console.warn('[Auth] No se pudo sincronizar suscripción:', e.message);
+    }
+
+    resolve(); // auth confirmado → el router puede navegar
+  });
 });
 
 /* ── SIDEBAR: cargar perfil ── */

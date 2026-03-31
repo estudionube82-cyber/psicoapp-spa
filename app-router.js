@@ -26,12 +26,16 @@ const PsicoRouter = (() => {
   /* ── Store global mínimo ─────────────────────────────────── */
   // Cachés compartidos entre vistas para evitar re-fetches
   const store = {
-    userId:     null,
+    userId:     window._psicoUserId || null,
     pacientes:  null,   // null = no cargado; [] = cargado pero vacío
     perfil:     null,
     // Helpers de acceso
     async ensureUserId() {
       if (this.userId) return this.userId;
+      if (window._psicoUserId) {
+        this.userId = window._psicoUserId;
+        return this.userId;
+      }
       const { data: { user } } = await sb.auth.getUser();
       this.userId = user?.id || null;
       return this.userId;
@@ -129,11 +133,16 @@ const PsicoRouter = (() => {
       navigate(e.state?.view || 'dashboard');
     });
 
-    /* Primera vista desde URL */
+    /* Primera vista desde URL — espera a que auth esté confirmado */
     document.addEventListener('DOMContentLoaded', () => {
       const params  = new URLSearchParams(window.location.search);
       const initial = VALID_VIEWS.includes(params.get('v')) ? params.get('v') : 'dashboard';
-      navigate(initial);
+
+      // _psicoAuthReady es una Promise creada en index.html que se resuelve
+      // solo cuando getSession() confirmó sesión válida. Esto elimina la
+      // race condition: el router nunca navega antes de que auth esté listo.
+      const authReady = window._psicoAuthReady || Promise.resolve();
+      authReady.then(() => navigate(initial));
     });
   }
 
