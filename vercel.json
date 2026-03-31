@@ -1,21 +1,9 @@
 {
   "routes": [
-    { "src": "/psicoapp-.*", "dest": "/index.html" },
+    { "src": "/(.+\\.js)", "dest": "/$1" },
+    { "src": "/(.+\\.css)", "dest": "/$1" },
+    { "src": "/(.+\\.png)", "dest": "/$1" },
+    { "src": "/(.+\\.json)", "dest": "/$1" },
     { "src": "/(.*)", "dest": "/index.html" }
-  ],
-  "headers": [
-    {
-      "source": "/(.*)\\.js",
-      "headers": [
-        { "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" },
-        { "key": "Surrogate-Control", "value": "no-store" }
-      ]
-    },
-    {
-      "source": "/(.*)\\.css",
-      "headers": [
-        { "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" }
-      ]
-    }
   ]
 }
