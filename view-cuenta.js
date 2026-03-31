@@ -186,9 +186,12 @@ function renderCuenta() {
   const lim         = getPlanLimits(plan);
   const usos        = sus?.usos  || { whatsapp:0, informesIA:0 };
   const ext         = sus?.extra || { whatsapp:0 };
-  const linkPago    = (typeof PSICOAPP_CONFIG !== 'undefined' && PSICOAPP_CONFIG.LINK_PAGO)
-    ? PSICOAPP_CONFIG.LINK_PAGO
-    : 'https://mpago.la/TU_LINK_AQUI'; // ⚠️ Configurar en config.js
+  const linkPagoPro   = (typeof PSICOAPP_CONFIG !== 'undefined' && PSICOAPP_CONFIG.LINK_PAGO_PRO)
+    ? PSICOAPP_CONFIG.LINK_PAGO_PRO   : 'https://mpago.la/TU_LINK_PRO';
+  const linkPagoMax   = (typeof PSICOAPP_CONFIG !== 'undefined' && PSICOAPP_CONFIG.LINK_PAGO_MAX)
+    ? PSICOAPP_CONFIG.LINK_PAGO_MAX   : 'https://mpago.la/TU_LINK_MAX';
+  const linkPagoExtra = (typeof PSICOAPP_CONFIG !== 'undefined' && PSICOAPP_CONFIG.LINK_PAGO_EXTRA)
+    ? PSICOAPP_CONFIG.LINK_PAGO_EXTRA : 'https://mpago.la/TU_LINK_EXTRA';
 
   const nombre    = perfil.nombre || 'Profesional';
   const email     = perfil.email  || '';
@@ -282,7 +285,7 @@ function renderCuenta() {
         <span class="vc-badge badge-recomendado">⭐ Recomendado</span>
         ${plan === 'pro' ? '<span class="vc-badge badge-actual">✓ Actual</span>' : ''}
       </div>
-      <div><div class="vc-plan-name">Pro</div><div class="vc-plan-price">Mensual</div></div>
+      <div><div class="vc-plan-name">Pro</div><div class="vc-plan-price">$18.000 / mes</div></div>
       <div class="vc-plan-features">
         <div class="vc-pf"><span class="vc-pf-icon">✅</span>100 msj WhatsApp</div>
         <div class="vc-pf"><span class="vc-pf-icon">✅</span>3 informes IA</div>
@@ -299,7 +302,7 @@ function renderCuenta() {
         <span class="vc-badge badge-max">💎 Max</span>
         ${plan === 'max' ? '<span class="vc-badge badge-actual">✓ Actual</span>' : ''}
       </div>
-      <div><div class="vc-plan-name">Max</div><div class="vc-plan-price">Mensual</div></div>
+      <div><div class="vc-plan-name">Max</div><div class="vc-plan-price">$24.000 / mes</div></div>
       <div class="vc-plan-features">
         <div class="vc-pf"><span class="vc-pf-icon">✅</span>250 msj WhatsApp</div>
         <div class="vc-pf"><span class="vc-pf-icon">✅</span>25 informes IA</div>
@@ -336,11 +339,11 @@ function renderCuenta() {
   const q = id => container.querySelector(id);
   const on = (id, fn) => { const el = q(id); if (el) el.addEventListener('click', fn); };
 
-  on('#vc-btn-upgrade-pro',  () => window.open(linkPago, '_blank'));
-  on('#vc-btn-upgrade-max',  () => window.open(linkPago, '_blank'));
+  on('#vc-btn-upgrade-pro',  () => window.open(linkPagoPro,   '_blank'));
+  on('#vc-btn-upgrade-max',  () => window.open(linkPagoMax,   '_blank'));
   on('#vc-btn-yapague-pro',  () => activarSuscripcion('pro'));
   on('#vc-btn-yapague-max',  () => activarSuscripcion('max'));
-  on('#vc-btn-extra-wa',     comprarExtraWhatsapp);
+  on('#vc-btn-extra-wa',     () => window.open(linkPagoExtra, '_blank'));
   on('#vc-btn-logout',       async () => { await sb.auth.signOut(); window.location.href = 'login.html'; });
 }
 
