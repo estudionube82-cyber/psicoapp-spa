@@ -692,33 +692,47 @@
     // ── 2. Limpiar línea previa ───────────────────────────────────────────
     overlay.querySelectorAll('.current-time-line').forEach(el => el.remove());
 
-    // ── 3. Calcular posición exacta ───────────────────────────────────────
-    // El overlay tiene top:0 relativo al parent del container.
-    // topVisible = posición dentro del parent = containerOffsetTop + topDentroDelContainer - scrollTop
+    // ── 3. Cálculo definitivo de posición ─────────────────────────────────
+    // La línea vive en el overlay (position:absolute, top:0 relativo al parent).
+    // El parent NO scrollea — solo el container scrollea dentro de él.
+    // Por eso topVisible debe ser relativo al parent, no al container.
+    //
+    // Fórmula:
+    //   topVisible = container.offsetTop           ← dónde empieza el container dentro del parent
+    //              + posición de la fila dentro del container (sin scroll)
+    //              - container.scrollTop           ← descontar lo que ya scrolleó
+    //
+    // Para medir la posición de la fila dentro del container SIN scroll usamos
+    // getBoundingClientRect de la fila y del container, cuya diferencia da la
+    // posición visible, y luego sumamos scrollTop para obtener la posición absoluta.
+
     const selector = container.id === 'ag-time-grid' ? '.ag-time-row' : '.ag-week-row';
     const filas    = container.querySelectorAll(selector);
     if (filas.length < 13) return;
-
-    // getBoundingClientRect da posición real en viewport — la diferencia entre
-    // dos elementos cancela cualquier scroll/offset externo y da la distancia
-    // relativa entre ellos, que es lo único que necesitamos.
-    const containerRect = container.getBoundingClientRect();
-    const fila0Rect     = filas[0].getBoundingClientRect();
-    const fila12Rect    = filas[12].getBoundingClientRect();
-
-    // Posición de inicio/fin de las filas dentro del contenido scrollable
-    const startTop    = fila0Rect.top    - containerRect.top + container.scrollTop;
-    const endTop      = fila12Rect.bottom - containerRect.top + container.scrollTop;
-    const totalHeight = endTop - startTop;
 
     const now              = new Date();
     const minutesFromStart = (now.getHours() - 8) * 60 + now.getMinutes();
     if (minutesFromStart < 0 || minutesFromStart > 720) return;
 
-    // Posición dentro del contenido (absoluta, sin considerar scroll)
-    const topEnContenido = startTop + (minutesFromStart / 720) * totalHeight;
-    // Posición visible en el overlay (descuenta el scroll actual)
-    const topVisible     = topEnContenido - container.scrollTop;
+    // Altura real de UNA fila medida en el viewport (no depende de scroll ni offsetParent)
+    const r0  = filas[0].getBoundingClientRect();
+    const r1  = filas[1].getBoundingClientRect();
+    const rowH = r1.top - r0.top;   // distancia entre tops consecutivos = altura real de fila
+    if (rowH <= 0) return;
+
+    // Total de 12 horas × altura de fila = rango completo 08:00→20:00
+    const totalHeight = rowH * 12;
+
+    // Posición de la fila 08:00 dentro del contenido scrollable:
+    // top visible de fila0 + scrollTop = top absoluto dentro del container
+    const cRect    = container.getBoundingClientRect();
+    const fila0Top = r0.top - cRect.top + container.scrollTop;  // abs dentro del container
+
+    // Posición de la línea dentro del contenido
+    const topEnContenido = fila0Top + (minutesFromStart / 720) * totalHeight;
+
+    // Para el overlay (relativo al parent): container.offsetTop + topEnContenido - scrollTop
+    const topVisible = container.offsetTop + topEnContenido - container.scrollTop;
 
     // ── 4. Crear y posicionar la línea ────────────────────────────────────
     const linea = document.createElement('div');
