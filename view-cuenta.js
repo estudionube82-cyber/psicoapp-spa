@@ -257,8 +257,7 @@ function renderCuenta() {
         <div style="font-size:11px;color:var(--text-muted);">Período de prueba de 15 días</div>
       </div>
     </div>` : ''}
-    ${_usageBar(usos.whatsapp || 0, topeWA, '💬 Mensajes WhatsApp', '#7C3AED')}
-    ${_usageBar(usos.informesIA || 0, topeIA, '🤖 Informes IA', '#A78BFA')}
+    <div id="vc-usage-bars"></div>
     ${plan === 'pro' ? `<button class="vc-btn-extra" id="vc-btn-extra-wa">➕ Comprar 100 mensajes WhatsApp extra ($5.000)</button>` : ''}
   </div>
 
@@ -326,6 +325,16 @@ function renderCuenta() {
 </div>
   `;
     cuentaInitialized = true;
+  }
+
+  // ── Siempre actualizar barras de uso (desktop Y mobile, primer render y re-renders) ──
+  const usageBarsEl = container.querySelector('#vc-usage-bars');
+  if (usageBarsEl) {
+    const usadoWA = usos.whatsapp   ?? 0;   // ?? evita que 0 sea reemplazado por otro valor
+    const usadoIA = usos.informesIA ?? 0;
+    usageBarsEl.innerHTML =
+      _usageBar(usadoWA, topeWA, '💬 Mensajes WhatsApp', '#7C3AED') +
+      _usageBar(usadoIA, topeIA, '🤖 Informes IA',       '#A78BFA');
   }
 
   const q = id => container.querySelector(id);
