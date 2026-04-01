@@ -692,18 +692,16 @@
     // ── 2. Limpiar línea previa ───────────────────────────────────────────
     overlay.querySelectorAll('.current-time-line').forEach(el => el.remove());
 
-    // ── 3. Calcular posición real con getBoundingClientRect ──────────────
+    // ── 3. Calcular posición usando altura real de una fila × 12 horas ────
+    // El grid tiene 13 filas (08–20) pero el rango horario es 12h (08:00–20:00).
+    // La fila data-hour="8" marca el inicio de las 08:00.
+    // Altura de 12 filas = totalidad del rango horario útil.
     const firstHour = container.querySelector('[data-hour="8"]');
-    const lastHour  = container.querySelector('[data-hour="20"]');
-    if (!firstHour || !lastHour) return;
+    if (!firstHour) return;
 
-    const containerRect = container.getBoundingClientRect();
-    const firstRect     = firstHour.getBoundingClientRect();
-    const lastRect      = lastHour.getBoundingClientRect();
-
-    const startTop    = firstRect.top    - containerRect.top + container.scrollTop;
-    const endTop      = lastRect.bottom  - containerRect.top + container.scrollTop;
-    const totalHeight = endTop - startTop;
+    const rowHeight   = firstHour.getBoundingClientRect().height;
+    const startTop    = firstHour.offsetTop;          // inicio absoluto de las 08:00
+    const totalHeight = rowHeight * 12;               // 12 horas × altura real de fila
 
     const now              = new Date();
     const minutesFromStart = (now.getHours() - 8) * 60 + now.getMinutes();
