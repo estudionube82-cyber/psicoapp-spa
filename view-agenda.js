@@ -204,11 +204,40 @@
 
       /* Week grid */
       #ag-week-header { display: flex; background: var(--surface,#fff); border-bottom: 2px solid var(--border,#E5E2F5); overflow-x: auto; }
-      .ag-wh-col { flex:1; min-width: 44px; text-align:center; padding:9px 4px; border-left:1px solid var(--border,#E5E2F5); }
+      .ag-wh-col {
+        flex:1; min-width: 44px; text-align:center;
+        padding: 14px 6px;
+        border-left:1px solid var(--border,#E5E2F5);
+        transition: all 0.15s ease;
+      }
       .ag-wh-col:first-child { flex: 0 0 46px; border-left: none; }
-      .ag-wh-day { font-size:9px; font-weight:800; text-transform:uppercase; color:var(--text-muted,#7C6FAE); }
-      .ag-wh-num { font-size:17px; font-weight:800; }
+      .ag-wh-col:not(.dia-hoy-header) {
+        opacity: 0.75;
+      }
+      .ag-wh-col:not(.dia-hoy-header):hover {
+        opacity: 1;
+        background: rgba(124,58,237,0.06);
+        border-radius: 10px;
+      }
+      .ag-wh-day {
+        font-size: 9px; font-weight: 800;
+        text-transform: uppercase; color: var(--text-muted,#7C6FAE);
+        margin-bottom: 4px; opacity: 0.7;
+      }
+      .ag-wh-num { font-size: 18px; font-weight: 800; }
       .ag-wh-num.today { color: var(--primary,#5B2FA8); }
+      /* ── Día actual en header semana ── */
+      .ag-wh-col.dia-hoy-header {
+        background: linear-gradient(135deg, #7c3aed, #a855f7);
+        border-radius: 14px;
+        padding: 16px 8px;
+        color: white;
+        font-weight: 800;
+        transform: scale(1.05);
+        box-shadow: 0 10px 25px rgba(124,58,237,0.35);
+      }
+      .ag-wh-col.dia-hoy-header .ag-wh-day { color: white; opacity: 1; font-weight: 700; }
+      .ag-wh-col.dia-hoy-header .ag-wh-num { color: white; font-size: 20px; }
       #ag-week-grid { overflow-y:auto; overflow-x:auto; max-height:calc(100vh - 280px); padding-bottom:80px; position:relative; }
       .ag-week-row { display:flex; border-bottom:1px solid var(--border,#E5E2F5); min-height:46px; }
       .ag-week-time { flex:0 0 46px; padding:6px 6px 0 8px; font-size:10px; font-weight:600; color:var(--text-muted,#7C6FAE); border-right:1px solid var(--border,#E5E2F5); }
@@ -228,13 +257,25 @@
       #ag-month-grid { display:grid; grid-template-columns:repeat(7,1fr); padding-bottom:80px; }
       .ag-mc {
         border-right:1px solid var(--border,#E5E2F5); border-bottom:1px solid var(--border,#E5E2F5);
-        min-height:68px; padding:5px 3px; cursor:pointer; transition:background .12s;
+        min-height:68px; padding:5px 3px; cursor:pointer; transition: all 0.15s ease;
       }
       .ag-mc:hover { background:var(--primary-light,#EDE9FE); }
       .ag-mc.other { opacity:.35; }
-      .ag-mc.today-cell { background:var(--primary-light,#EDE9FE); }
+      .ag-mc.today-cell {
+        background: linear-gradient(135deg, rgba(168,85,247,0.18), rgba(236,72,153,0.18));
+        border: 1.5px solid rgba(168,85,247,0.35);
+        border-radius: 12px;
+      }
+      .ag-mc.today-cell:hover {
+        transform: scale(1.02);
+        box-shadow: 0 8px 20px rgba(124,58,237,0.25);
+      }
       .ag-mc-num { font-size:12px; font-weight:800; width:22px; height:22px; border-radius:50%; display:flex; align-items:center; justify-content:center; margin-bottom:3px; }
-      .ag-mc.today-cell .ag-mc-num { background:var(--primary,#5B2FA8); color:#fff; }
+      .ag-mc.today-cell .ag-mc-num {
+        background: linear-gradient(135deg, #7c3aed, #ec4899);
+        color: #fff;
+        box-shadow: 0 4px 12px rgba(124,58,237,0.4);
+      }
       .ag-mc-pill { font-size:9px; font-weight:700; padding:2px 4px; border-radius:4px; margin-bottom:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 
       /* Empty */
@@ -304,18 +345,6 @@
       .ag-badge.conf   { background:#D1FAE5; color:#065F46; }
       .ag-badge.done   { background:var(--bg,#F8F7FF); color:var(--text-muted,#7C6FAE); }
       .ag-badge.cancel { background:#FEE2E2; color:#B91C1C; }
-
-      /* ── Día actual ── */
-      .ag-wh-col.dia-hoy-header {
-        background: linear-gradient(135deg, #ff4fa3, #c94fff);
-        border-radius: 12px;
-        color: white;
-        font-weight: 800;
-        box-shadow: 0 6px 18px rgba(255, 79, 163, 0.35);
-        transform: scale(1.02);
-      }
-      .ag-wh-col.dia-hoy-header .ag-wh-day,
-      .ag-wh-col.dia-hoy-header .ag-wh-num { color: white; }
 
       /* ── Header vista día cuando es HOY ── */
       #ag-title.ag-dia-hoy-header {
