@@ -26,33 +26,35 @@ const PsicoRouter = (() => {
   /* ── Store global mínimo ─────────────────────────────────── */
   // Cachés compartidos entre vistas para evitar re-fetches
   const store = {
-    userId:     window._psicoUserId || null,
-    pacientes:  null,   // null = no cargado; [] = cargado pero vacío
-    perfil:     null,
-    // Helpers de acceso
+    userId:    window._psicoUserId || null,
+    pacientes: null,  // null = no cargado; [] = cargado pero vacío
+    perfil:    null,
+
     async ensureUserId() {
       if (this.userId) return this.userId;
-      if (window._psicoUserId) {
-        this.userId = window._psicoUserId;
-        return this.userId;
-      }
+      if (window._psicoUserId) { this.userId = window._psicoUserId; return this.userId; }
       const { data: { user } } = await sb.auth.getUser();
       this.userId = user?.id || null;
       return this.userId;
     },
+
     async ensurePacientes() {
       if (this.pacientes !== null) return this.pacientes;
       const uid = await this.ensureUserId();
       if (!uid) return [];
       const { data } = await sb.from('pacientes')
-        .select('id,nombre,apellido,telefono,email')
+        .select('*')
         .eq('user_id', uid)
-        .neq('archivado', true)
+        .eq('activo', true)
         .order('apellido');
       this.pacientes = data || [];
       return this.pacientes;
     },
-    invalidatePacientes() { this.pacientes = null; },
+    invalidatePacientes() {
+      this.pacientes = null;
+      window.dispatchEvent(new CustomEvent('storeUpdated', { detail: { key: 'pacientes' } }));
+    },
+
     async ensurePerfil() {
       if (this.perfil !== null) return this.perfil;
       const uid = await this.ensureUserId();
@@ -61,7 +63,36 @@ const PsicoRouter = (() => {
       this.perfil = data || {};
       return this.perfil;
     },
-    invalidatePerfil() { this.perfil = null; },
+    invalidatePerfil() {
+      this.perfil = null;
+      window.dispatchEvent(new CustomEvent('storeUpdated', { detail: { key: 'perfil' } }));
+    },
+
+    /* ── Turnos: cache por rango de fechas ───────────────────
+     * ensureTurnos({ desde, hasta }) → solo carga el rango pedido.
+     * invalidateTurnos() → limpia todo el cache (tras crear/editar/borrar).
+     * ─────────────────────────────────────────────────────── */
+    _turnosCache: {},
+    async ensureTurnos({ desde, hasta }) {
+      const uid = await this.ensureUserId();
+      if (!uid) return [];
+      if (!this._turnosCache) this._turnosCache = {};
+      const key = `${desde}_${hasta}`;
+      if (this._turnosCache[key]) return this._turnosCache[key];
+      const { data } = await sb.from('turnos')
+        .select('*')
+        .eq('user_id', uid)
+        .gte('fecha', desde)
+        .lte('fecha', hasta)
+        .order('fecha', { ascending: true })
+        .order('hora',  { ascending: true });
+      this._turnosCache[key] = data || [];
+      return this._turnosCache[key];
+    },
+    invalidateTurnos() {
+      this._turnosCache = {};
+      window.dispatchEvent(new CustomEvent('storeUpdated', { detail: { key: 'turnos' } }));
+    },
   };
 
   /* ── Registrar una vista ─────────────────────────────────── */

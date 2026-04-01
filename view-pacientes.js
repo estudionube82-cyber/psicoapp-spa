@@ -422,18 +422,22 @@ const PAC_COLORES = ['av-green','av-blue','av-purple','av-orange','av-teal'];
 
 /* ── Carga ── */
 async function pacCargar() {
-  const { data, error } = await sb
-    .from('pacientes')
-    .select('*')
-    .eq('activo', true)
-    .order('apellido', { ascending: true });
-
   const list = document.getElementById('pac-patientList');
-  if (error) { list.innerHTML = '<div class="pac-loading-state">Error al cargar pacientes.</div>'; return; }
-  _pacTodos = data || [];
-  pacActualizarStats();
-  pacRenderLista(_pacTodos);
+  list.innerHTML = '<div class="pac-loading-state">Cargando pacientes...</div>';
+  try {
+    const data = await PsicoRouter.store.ensurePacientes();
+    _pacTodos = data || [];
+    pacActualizarStats();
+    pacRenderLista(_pacTodos);
+  } catch(e) {
+    list.innerHTML = '<div class="pac-loading-state">Error al cargar pacientes.</div>';
+  }
 }
+
+// Refrescar automáticamente si otra vista modifica pacientes
+window.addEventListener('storeUpdated', (e) => {
+  if (e.detail?.key === 'pacientes') pacCargar();
+});
 
 function pacActualizarStats() {
   const total = _pacTodos.length;
@@ -531,6 +535,7 @@ async function pacCrearPaciente() {
     user_id:          session.user.id,
     nombre,
     apellido,
+    activo:           true,
     telefono:         document.getElementById('pac-f-telefono').value.trim() || null,
     email:            document.getElementById('pac-f-email').value.trim() || null,
     dni:              document.getElementById('pac-f-dni').value.trim() || null,
@@ -542,6 +547,7 @@ async function pacCrearPaciente() {
 
   btn.disabled = false; btn.textContent = '✓ Crear paciente';
   if (error) { pacMostrarError('Error al guardar. Intentá de nuevo.'); return; }
+  PsicoRouter.store.invalidatePacientes();
   pacCerrarModal();
   await pacCargar();
 }
@@ -620,6 +626,7 @@ async function pacEliminarPaciente() {
   if (!_pacSeleccionado) return;
   if (!confirm(`¿Eliminar a ${_pacSeleccionado.nombre} ${_pacSeleccionado.apellido}?`)) return;
   await sb.from('pacientes').update({ activo: false }).eq('id', _pacSeleccionado.id);
+  PsicoRouter.store.invalidatePacientes();
   pacCerrarDetalle();
   await pacCargar();
 }
