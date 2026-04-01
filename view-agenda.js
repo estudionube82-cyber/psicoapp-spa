@@ -550,9 +550,25 @@
     <div class="ag-overlay" id="ag-overlay">
       <div class="ag-modal">
         <div class="ag-modal-handle"></div>
-        <div class="ag-modal-title" id="ag-modal-title">📅 Nuevo turno</div>
-        <div class="ag-modal-sub"   id="ag-modal-sub">Agendá un turno con un paciente.</div>
+        <div class="ag-modal-title" id="ag-modal-title">📅 Nuevo registro</div>
+        <div class="ag-modal-sub"   id="ag-modal-sub"></div>
         <div class="ag-msg-error"   id="ag-msg-error"></div>
+
+        <!-- Selector tipo: TABS VISIBLES -->
+        <div style="display:flex;gap:8px;margin-bottom:16px;">
+          <button id="ag-tab-sesion"
+            style="flex:1;padding:10px;border-radius:10px;border:2px solid var(--primary,#5B2FA8);
+                   background:var(--primary,#5B2FA8);color:#fff;font-size:13px;font-weight:800;
+                   font-family:inherit;cursor:pointer;">
+            📅 Sesión
+          </button>
+          <button id="ag-tab-evento"
+            style="flex:1;padding:10px;border-radius:10px;border:2px solid var(--border,#E5E2F5);
+                   background:var(--bg,#F8F7FF);color:var(--text-muted,#7C6FAE);font-size:13px;font-weight:800;
+                   font-family:inherit;cursor:pointer;">
+            🗓 Evento
+          </button>
+        </div>
 
         <div class="ag-field" id="ag-sec-paciente">
           <label>Paciente <span style="color:#E53935">*</span></label>
@@ -668,6 +684,10 @@
     agQ('ag-btn-crear').addEventListener('click', crearTurno);
     agQ('ag-btn-cancelar').addEventListener('click', cerrarModal);
     agQ('ag-overlay').addEventListener('click', e => { if (e.target.id === 'ag-overlay') cerrarModal(); });
+
+    // Tabs de tipo de registro
+    agQ('ag-tab-sesion').addEventListener('click', () => { _modoModal = 'turno';  _syncModalModo(); });
+    agQ('ag-tab-evento').addEventListener('click', () => { _modoModal = 'evento'; _syncModalModo(); });
 
     agQ('ag-det-confirmar').addEventListener('click', () => cambiarEstado('confirmado'));
     agQ('ag-det-realizada').addEventListener('click', () => cambiarEstado('realizado'));
@@ -1217,17 +1237,39 @@
   }
 
   // ────────────────────────────────────────────────────────
-  //  MODAL NUEVO TURNO / EVENTO
+  //  MODAL NUEVO REGISTRO (sesión o evento)
   // ────────────────────────────────────────────────────────
+
+  /** Aplica el estado visual del modal según el modo activo (_modoModal) */
+  function _syncModalModo() {
+    console.log('MODAL NUEVO ACTIVO');
+    const esTurno = _modoModal !== 'evento';
+
+    // Tabs: resaltar el activo
+    const tabS = agQ('ag-tab-sesion');
+    const tabE = agQ('ag-tab-evento');
+    if (tabS && tabE) {
+      const activo   = 'border:2px solid var(--primary,#5B2FA8);background:var(--primary,#5B2FA8);color:#fff;';
+      const inactivo = 'border:2px solid var(--border,#E5E2F5);background:var(--bg,#F8F7FF);color:var(--text-muted,#7C6FAE);';
+      tabS.style.cssText = `flex:1;padding:10px;border-radius:10px;font-size:13px;font-weight:800;font-family:inherit;cursor:pointer;${esTurno ? activo : inactivo}`;
+      tabE.style.cssText = `flex:1;padding:10px;border-radius:10px;font-size:13px;font-weight:800;font-family:inherit;cursor:pointer;${!esTurno ? activo : inactivo}`;
+    }
+
+    agQ('ag-modal-sub').textContent      = esTurno ? 'Completá los datos de la sesión.' : 'Agregá un evento personal a tu agenda.';
+    agQ('ag-btn-crear').textContent      = esTurno ? '✓ Agendar sesión' : '✓ Guardar evento';
+    agQ('ag-sec-paciente').style.display = esTurno ? '' : 'none';
+    agQ('ag-sec-tipo').style.display     = esTurno ? '' : 'none';
+    agQ('ag-sec-titulo').style.display   = esTurno ? 'none' : '';
+  }
+
   function abrirModal(modo, fecha, hora) {
-    _modoModal = modo || 'turno';
-    const esTurno = _modoModal === 'turno';
-    agQ('ag-modal-title').textContent              = esTurno ? '📅 Nuevo turno' : '🗓 Nuevo evento';
-    agQ('ag-modal-sub').textContent                = esTurno ? 'Agendá un turno con un paciente.' : 'Agregá un evento a tu agenda.';
-    agQ('ag-btn-crear').textContent                = esTurno ? '✓ Agendar turno' : '✓ Guardar evento';
-    agQ('ag-sec-paciente').style.display           = esTurno ? '' : 'none';
-    agQ('ag-sec-tipo').style.display               = esTurno ? '' : 'none';
-    agQ('ag-sec-titulo').style.display             = esTurno ? 'none' : '';
+    // Resolver modo: explícito > localStorage > default sesion
+    const ultimoModo = localStorage.getItem('ag_ultimo_modo') || 'sesion';
+    _modoModal = modo === 'evento' ? 'evento'
+               : modo === 'turno' ? 'turno'
+               : (ultimoModo === 'evento' ? 'evento' : 'turno');
+
+    _syncModalModo();
 
     agQ('ag-f-fecha').value    = fecha || fmtDate(_fechaActual);
     agQ('ag-f-hora').value     = hora  || (String(new Date().getHours()).padStart(2,'0') + ':00');
@@ -1298,6 +1340,7 @@
       }
 
       cerrarModal();
+      localStorage.setItem('ag_ultimo_modo', _modoModal === 'evento' ? 'evento' : 'sesion');
       toast(_modoModal === 'evento' ? '✅ Evento guardado' : '✅ Turno agendado');
       await cargarTurnos();
       buildDayStrip();
@@ -1427,8 +1470,8 @@
   //  (deben vivir en window — no cambiar nombres)
   // ────────────────────────────────────────────────────────
   window._agDetalle        = (id)          => abrirDetalle(id);
-  window._agModalHora      = (hora)        => abrirModal('turno', null, hora);
-  window._agModalFechaHora = (fecha, hora) => abrirModal('turno', fecha, hora);
+  window._agModalHora      = (hora)        => abrirModal(null, null, hora);
+  window._agModalFechaHora = (fecha, hora) => abrirModal(null, fecha, hora);
 
   // ────────────────────────────────────────────────────────
   //  REGISTRO EN EL ROUTER
