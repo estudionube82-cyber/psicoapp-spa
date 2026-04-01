@@ -382,7 +382,7 @@ function _dashRenderAlertas(sesionSinCobro, pacUnicos, pagos, pagosPendientes) {
 
   if (pagosPendientes > 0) {
     items.push(`
-      <div class="dash-alert dash-alert-yellow" onclick="navigate('pagos')">
+      <div class="dash-alert dash-alert-yellow" onclick="_irPagosPendientes()">
         <div class="dash-alert-icon">⏳</div>
         <div class="dash-alert-text">
           <div class="dash-alert-title">${pagosPendientes} pago${pagosPendientes > 1 ? 's' : ''} pendiente${pagosPendientes > 1 ? 's' : ''} de cobro</div>
@@ -394,7 +394,7 @@ function _dashRenderAlertas(sesionSinCobro, pacUnicos, pagos, pagosPendientes) {
 
   if (sesionSinCobro > 0) {
     items.push(`
-      <div class="dash-alert dash-alert-yellow" onclick="navigate('pagos')">
+      <div class="dash-alert dash-alert-yellow" onclick="_irPagosPendientes()">
         <div class="dash-alert-icon">⚠️</div>
         <div class="dash-alert-text">
           <div class="dash-alert-title">${sesionSinCobro} sesión${sesionSinCobro > 1 ? 'es realizadas' : ' realizada'} sin cobro registrado</div>
