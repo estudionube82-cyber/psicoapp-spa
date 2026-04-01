@@ -445,7 +445,7 @@ function _dashRenderStats(cobrado, pendiente, pacUnicos, turnosHoy) {
       <div class="dash-stat-num">${_dashFmt(cobrado)}</div>
       <div class="dash-stat-label">Cobrado</div>
     </div>
-    <div class="dash-stat" onclick="navigate('agenda')">
+    <div class="dash-stat" onclick="_irPagosPendientes()">
       <div class="dash-stat-top">
         <div class="dash-stat-icon dsi-orange">⏳</div>
         <div class="dash-stat-badge dsb-neu">Pendiente</div>
@@ -577,6 +577,12 @@ function _dashRenderNombre() {
 /* ══════════════════════════════════════════
    REGISTRO EN EL ROUTER
    ══════════════════════════════════════════ */
+/* Navega a pagos activando el filtro pendiente automáticamente */
+window._irPagosPendientes = function() {
+  localStorage.setItem('pv_filtro_default', 'pendiente');
+  navigate('pagos');
+};
+
 PsicoRouter.register('dashboard', {
 
   /* init — monta el HTML y la estructura estática UNA SOLA VEZ */

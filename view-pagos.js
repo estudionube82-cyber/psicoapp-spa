@@ -458,6 +458,20 @@ PsicoRouter.register('pagos', {
   },
 
   async onEnter() {
+    /* Leer filtro default si viene desde dashboard (Por cobrar) */
+    const filtroDefault = localStorage.getItem('pv_filtro_default');
+    if (filtroDefault) {
+      _pv.filtro = filtroDefault;
+      localStorage.removeItem('pv_filtro_default');
+    } else {
+      _pv.filtro = 'todos';
+    }
+
+    /* Sincronizar chip visual */
+    _pv.container?.querySelectorAll('.pv-fchip').forEach(c => {
+      c.classList.toggle('on', c.dataset.filtro === _pv.filtro);
+    });
+
     /* Siempre re-carga pagos frescos; usa caché de pacientes del store */
     await _pvCargarTodo();
   },
