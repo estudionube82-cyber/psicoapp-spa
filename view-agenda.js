@@ -692,13 +692,17 @@
     // ── 2. Limpiar línea previa ───────────────────────────────────────────
     overlay.querySelectorAll('.current-time-line').forEach(el => el.remove());
 
-    // ── 3. Calcular posición con anchors data-hour reales ─────────────────
+    // ── 3. Calcular posición real con getBoundingClientRect ──────────────
     const firstHour = container.querySelector('[data-hour="8"]');
     const lastHour  = container.querySelector('[data-hour="20"]');
     if (!firstHour || !lastHour) return;
 
-    const startTop    = firstHour.offsetTop;
-    const endTop      = lastHour.offsetTop + lastHour.offsetHeight;
+    const containerRect = container.getBoundingClientRect();
+    const firstRect     = firstHour.getBoundingClientRect();
+    const lastRect      = lastHour.getBoundingClientRect();
+
+    const startTop    = firstRect.top    - containerRect.top + container.scrollTop;
+    const endTop      = lastRect.bottom  - containerRect.top + container.scrollTop;
     const totalHeight = endTop - startTop;
 
     const now              = new Date();
