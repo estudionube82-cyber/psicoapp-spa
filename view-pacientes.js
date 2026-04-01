@@ -84,16 +84,16 @@
   font-size: 15px; font-weight: 800; flex-shrink: 0;
 }
 #view-pacientes .av-green  { background: var(--primary-light); color: var(--primary); }
-#view-pacientes .av-blue   { background: #E3F2FD; color: #1565C0; }
-#view-pacientes .av-purple { background: #EDE9FE; color: #5B21B6; }
+#view-pacientes .av-blue   { background: rgba(124,58,237,0.12); color: #7C3AED; }
+#view-pacientes .av-purple { background: rgba(124,58,237,0.15); color: var(--primary); }
 #view-pacientes .av-orange { background: var(--accent-light,#FDE8F5); color: #9A3412; }
-#view-pacientes .av-teal   { background: #E0F2F1; color: #00695C; }
+#view-pacientes .av-teal   { background: rgba(124,58,237,0.10); color: #7C3AED; }
 #view-pacientes .pac-patient-info { flex: 1; min-width: 0; }
 #view-pacientes .pac-patient-name { font-size: 15px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 #view-pacientes .pac-patient-meta { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
 #view-pacientes .pac-patient-right { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; flex-shrink: 0; }
 #view-pacientes .pac-patient-badge { font-size: 9px; font-weight: 700; padding: 2px 7px; border-radius: 20px; white-space: nowrap; }
-#view-pacientes .pb-os         { background: #EDE9FE; color: #5B21B6; }
+#view-pacientes .pb-os         { background: rgba(124,58,237,0.15); color: var(--primary); }
 #view-pacientes .pb-particular { background: var(--bg); color: var(--text-muted); border: 1px solid var(--border); }
 
 /* ── EMPTY / LOADING ── */
@@ -228,7 +228,7 @@
     <div class="pac-stat-mini-label">Activos</div>
   </div>
   <div class="pac-stat-mini">
-    <div class="pac-stat-mini-num" id="pac-stat-os" style="color:#7B5EA7">—</div>
+    <div class="pac-stat-mini-num" id="pac-stat-os" style="color:var(--primary)">—</div>
     <div class="pac-stat-mini-label">Obra social</div>
   </div>
   <div class="pac-stat-mini">
