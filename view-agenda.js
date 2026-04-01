@@ -49,11 +49,11 @@
   }
   function evBg(tipo) {
     return {sesion:'#E8F5EE',online:'#E3F2FD',evaluacion:'#FFF8E1',
-            judicial:'#EDE9FE',evento:'#FEF0E6',otro:'#F3F4F6'}[tipo] || '#E8F5EE';
+            judicial:'#EDE9FE',evento:'#FEF3E7',otro:'#F3F4F6'}[tipo] || '#E8F5EE';
   }
   function evBorder(tipo) {
     return {sesion:'#2D6A4F',online:'#1976D2',evaluacion:'#F9A825',
-            judicial:'#7B5EA7',evento:'#E8873A',otro:'#9CA3AF'}[tipo] || '#2D6A4F';
+            judicial:'#7B5EA7',evento:'#F97316',otro:'#9CA3AF'}[tipo] || '#2D6A4F';
   }
   function turnosDeFecha(fecha) {
     const key = fmtDate(fecha);
@@ -63,6 +63,11 @@
     const p = _todosPacientes.find(x => x.id === t.paciente_id);
     if (p) return `${p.nombre || ''} ${p.apellido || ''}`.trim();
     return t.notas || tipoLabel(t.tipo);
+  }
+  /** Nombre a mostrar en el bloque del grid: título para eventos, paciente para turnos */
+  function nombreDisplay(t) {
+    if (t.tipo === 'evento') return t.notas || 'Evento';
+    return nombrePaciente(t);
   }
   function lunesDe(d) {
     const lunes = new Date(d);
@@ -199,6 +204,7 @@
         transition: transform .12s; border-left: 4px solid;
       }
       .ag-ev-block:active { transform: scale(.98); }
+      .ag-ev-block.ag-ev-evento { border-left-width: 5px; }
       .ag-ev-name { font-size: 13px; font-weight: 700; }
       .ag-ev-meta { font-size: 11px; margin-top: 2px; opacity: .75; }
 
@@ -1000,10 +1006,11 @@
                  <div class="ag-time-lbl">${horaStr}</div>
                  <div class="ag-slot-area">`;
       if (turno) {
-        const bg  = evBg(turno.tipo);
-        const brd = evBorder(turno.tipo);
-        const nom = nombrePaciente(turno);
-        html += `<div class="ag-ev-block" style="background:${bg};border-left-color:${brd}"
+        const bg      = evBg(turno.tipo);
+        const brd     = evBorder(turno.tipo);
+        const nom     = nombreDisplay(turno);
+        const esEvento = turno.tipo === 'evento';
+        html += `<div class="ag-ev-block${esEvento ? ' ag-ev-evento' : ''}" style="background:${bg};border-left-color:${brd}"
                       onclick="window._agDetalle('${turno.id}')">
                    <div class="ag-ev-name">${tipoEmoji(turno.tipo)} ${nom}</div>
                    <div class="ag-ev-meta">${horaStr} · ${turno.duracion || 50} min · ${tipoLabel(turno.tipo)}</div>
@@ -1053,7 +1060,7 @@
         if (turno) {
           const bg  = evBg(turno.tipo);
           const brd = evBorder(turno.tipo);
-          const nom = nombrePaciente(turno);
+          const nom = nombreDisplay(turno);
           rows += `<div class="ag-week-cell has-turno">
                      <div class="ag-week-ev" style="background:${bg};border-left-color:${brd};color:${brd}"
                           onclick="window._agDetalle('${turno.id}')">${nom}</div>
@@ -1194,7 +1201,7 @@
       }
 
       cerrarModal();
-      toast('✅ Turno agendado');
+      toast(_modoModal === 'evento' ? '✅ Evento guardado' : '✅ Turno agendado');
       await cargarTurnos();
       buildDayStrip();
       setView(_currentView);
