@@ -190,8 +190,7 @@ function renderCuenta() {
     ? PSICOAPP_CONFIG.LINK_PAGO_PRO   : 'https://mpago.la/TU_LINK_PRO';
   const linkPagoMax   = (typeof PSICOAPP_CONFIG !== 'undefined' && PSICOAPP_CONFIG.LINK_PAGO_MAX)
     ? PSICOAPP_CONFIG.LINK_PAGO_MAX   : 'https://mpago.la/TU_LINK_MAX';
-  const linkPagoExtra = (typeof PSICOAPP_CONFIG !== 'undefined' && PSICOAPP_CONFIG.LINK_PAGO_EXTRA)
-    ? PSICOAPP_CONFIG.LINK_PAGO_EXTRA : 'https://mpago.la/23Lff3N';
+  const linkPagoExtra = 'https://mpago.la/23Lff3N';
 
   const nombre    = perfil.nombre || 'Profesional';
   const email     = perfil.email  || '';
@@ -340,9 +339,7 @@ function renderCuenta() {
   // ── Botón extra WhatsApp: visible solo en plan pro, siempre actualizado ──
   const extraWaWrap = container.querySelector('#vc-extra-wa-wrap');
   if (extraWaWrap) {
-    extraWaWrap.innerHTML = plan === 'pro'
-      ? `<button class="vc-btn-extra" id="vc-btn-extra-wa">➕ Comprar 100 mensajes WhatsApp extra ($5.000)</button>`
-      : '';
+    extraWaWrap.innerHTML = `<button class="vc-btn-extra" id="vc-btn-extra-wa">➕ Comprar 100 mensajes WhatsApp extra ($5.000)</button>`;
   }
 
   const q = id => container.querySelector(id);
@@ -356,7 +353,7 @@ function renderCuenta() {
     const retorno = encodeURIComponent(window.location.origin + '/?plan=max');
     window.location.href = linkPagoMax + '?back_url=' + retorno;
   });
-  on('#vc-btn-extra-wa',    () => window.open(linkPagoExtra, '_blank'));
+  on('#vc-btn-extra-wa',    () => { window.location.href = linkPagoExtra; });
   on('#vc-btn-logout',      async () => {
     window._psicoSigningOut = true;
     try { await sb.auth.signOut(); } catch(e) {}
