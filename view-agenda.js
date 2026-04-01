@@ -349,10 +349,11 @@
         position: absolute;
         left: 0;
         width: 100%;
-        height: 2px;
-        background: #E53935;
-        z-index: 10;
+        height: 3px;
+        background: #ff3b3b;
+        z-index: 999;
         pointer-events: none;
+        box-shadow: 0 0 6px 1px rgba(255,59,59,0.55);
       }
       .current-time-line::before {
         content: '';
@@ -360,10 +361,11 @@
         left: 44px;
         top: 50%;
         transform: translateY(-50%);
-        width: 10px;
-        height: 10px;
+        width: 12px;
+        height: 12px;
         border-radius: 50%;
-        background: #E53935;
+        background: #ff3b3b;
+        box-shadow: 0 0 8px 3px rgba(255,59,59,0.7);
       }
       /* En semana: el círculo va pegado al borde izquierdo de la columna */
       #ag-week-grid .current-time-line::before {
@@ -776,6 +778,7 @@
         // ── Línea hora actual + auto scroll ──
         actualizarLineaHoraActualDia();
         scrollAHoraActual('ag-time-grid');
+        setTimeout(() => { actualizarLineaHoraActual(); }, 100);
         iniciarLineaHoraActual();
       }));
     }
@@ -785,6 +788,7 @@
       requestAnimationFrame(() => requestAnimationFrame(() => {
         actualizarLineaHoraActualSemana();
         scrollAHoraActual('ag-week-grid');
+        setTimeout(() => { actualizarLineaHoraActual(); }, 100);
         iniciarLineaHoraActual();
       }));
     }
