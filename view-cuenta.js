@@ -29,7 +29,7 @@ let cuentaInitialized = false;
 #view-cuenta .vc-status-strip { background:var(--surface); border-radius:var(--radius); padding:14px 18px; display:flex; align-items:center; justify-content:space-between; box-shadow:var(--shadow-md); }
 #view-cuenta .vc-strip-left   { display:flex; align-items:center; gap:10px; }
 #view-cuenta .vc-strip-dot    { width:10px; height:10px; border-radius:50%; flex-shrink:0; }
-#view-cuenta .dot-activa   { background:#10B981; box-shadow:0 0 8px rgba(16,185,129,.5); }
+#view-cuenta .dot-activa   { background:#7C3AED; box-shadow:0 0 8px rgba(124,58,237,.5); }
 #view-cuenta .dot-inactiva { background:#9CA3AF; }
 #view-cuenta .vc-strip-label { font-size:13px; font-weight:600; color:var(--text-muted); }
 #view-cuenta .vc-strip-val   { font-size:14px; font-weight:800; color:var(--text); }
@@ -56,7 +56,7 @@ let cuentaInitialized = false;
 
 #view-cuenta .vc-plan-badge-wrap { display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
 #view-cuenta .vc-badge { font-size:10px; font-weight:800; padding:3px 9px; border-radius:20px; }
-#view-cuenta .badge-actual      { background:rgba(16,185,129,.15); color:#10B981; border:1px solid rgba(16,185,129,.3); }
+#view-cuenta .badge-actual      { background:rgba(124,58,237,.15); color:#7C3AED; border:1px solid rgba(124,58,237,.3); }
 #view-cuenta .badge-recomendado { background:linear-gradient(135deg,#5B2FA8,#7C3AED); color:white; }
 #view-cuenta .badge-max         { background:linear-gradient(135deg,#BE185D,#F472B6); color:white; }
 #view-cuenta .badge-free-tag    { background:var(--surface2); color:var(--text-muted); }
@@ -85,9 +85,9 @@ let cuentaInitialized = false;
 #view-cuenta .vc-yapague-title { font-size:14px; font-weight:700; color:var(--text); }
 #view-cuenta .vc-yapague-sub   { font-size:12px; color:var(--text-muted); line-height:1.5; }
 #view-cuenta .vc-btns-yapague  { display:flex; gap:10px; }
-#view-cuenta .vc-btn-yapague { flex:1; padding:12px; border-radius:var(--radius-sm); background:rgba(16,185,129,.1); color:#059669; border:1.5px solid rgba(16,185,129,.25); font-family:var(--font); font-size:13px; font-weight:800; cursor:pointer; transition:transform .12s; }
+#view-cuenta .vc-btn-yapague { flex:1; padding:12px; border-radius:var(--radius-sm); background:rgba(124,58,237,.1); color:#7C3AED; border:1.5px solid rgba(124,58,237,.25); font-family:var(--font); font-size:13px; font-weight:800; cursor:pointer; transition:transform .12s; }
 #view-cuenta .vc-btn-yapague:hover { transform:translateY(-1px); }
-#view-cuenta .vc-btn-yapague-max { background:rgba(244,114,182,.1); color:#BE185D; border-color:rgba(244,114,182,.25); }
+#view-cuenta .vc-btn-yapague-max { background:rgba(124,58,237,.12); color:#5B2FA8; border-color:rgba(124,58,237,.25); }
 #view-cuenta .vc-btn-extra { width:100%; padding:12px; border-radius:var(--radius-sm); background:linear-gradient(135deg,rgba(92,47,168,.1),rgba(124,58,237,.08)); border:1.5px dashed rgba(124,58,237,.35); color:var(--primary); font-family:var(--font); font-size:12px; font-weight:800; cursor:pointer; transition:transform .12s; }
 #view-cuenta .vc-btn-extra:hover { transform:translateY(-1px); }
 #view-cuenta .vc-logout-wrap { display:flex; flex-direction:column; gap:8px; }
