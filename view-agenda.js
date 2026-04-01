@@ -23,7 +23,7 @@
   let _hoy         = new Date();
   let _turnoSel    = null;
   let _modoModal   = 'turno';   // 'turno' | 'evento'
-  let _currentView = 'semana';
+  let _currentView = 'dia';
 
   // ── Constantes ───────────────────────────────────────────
   const DIAS  = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
@@ -501,8 +501,8 @@
 
       <!-- VIEW TOGGLE -->
       <div class="ag-view-toggle">
-        <button class="ag-vbtn" id="ag-btn-dia"    data-view="dia">Día</button>
-        <button class="ag-vbtn active" id="ag-btn-semana" data-view="semana">Semana</button>
+        <button class="ag-vbtn active" id="ag-btn-dia"    data-view="dia">Día</button>
+        <button class="ag-vbtn"        id="ag-btn-semana" data-view="semana">Semana</button>
         <button class="ag-vbtn" id="ag-btn-mes"    data-view="mes">Mes</button>
       </div>
 
@@ -1441,7 +1441,7 @@
     async onEnter() {
       _hoy         = new Date();
       _fechaActual = new Date();
-      _currentView = 'semana';
+      _currentView = 'dia';
 
       // userId desde store (sin getSession adicional)
       _userId = await PsicoRouter.store.ensureUserId();
@@ -1455,7 +1455,7 @@
 
       // Restaurar vista semana centrada en hoy
       actualizarHeader();
-      setView('semana');
+      setView('dia');
       // setView ya dispara rAF internamente vía posicionarColumnaHoy
     },
 
