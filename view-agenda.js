@@ -317,12 +317,21 @@
       .ag-wh-col.dia-hoy-header .ag-wh-day,
       .ag-wh-col.dia-hoy-header .ag-wh-num { color: white; }
 
+      /* ── Header vista día cuando es HOY ── */
+      #ag-title.ag-dia-hoy-header {
+        background: linear-gradient(135deg, #7c3aed, #a855f7);
+        color: white;
+        padding: 8px 12px;
+        border-radius: 10px;
+      }
+      #ag-title.ag-dia-hoy-header .ag-t-main,
+      #ag-title.ag-dia-hoy-header .ag-t-sub { color: white; }
+
       /* today-column: overlay unificado para semana/día — sin bottom:0, usa --agenda-height */
       .today-column {
         position: absolute;
         top: 0;
         height: var(--agenda-height, 100%);
-        /* Sutil: tinte lila muy tenue, no saturado, no tapa eventos */
         background: linear-gradient(to bottom,
           rgba(139,92,246,0.06) 0%,
           rgba(139,92,246,0.03) 60%,
@@ -332,11 +341,24 @@
         pointer-events: none;
         z-index: 1;
       }
+      /* Vista día: today-column más prominente cuando es hoy */
+      #ag-time-grid .today-column {
+        background: linear-gradient(to bottom,
+          rgba(168,85,247,0.10) 0%,
+          rgba(168,85,247,0.05) 60%,
+          rgba(168,85,247,0.02) 100%);
+        border-left: 3px solid #a855f7;
+      }
       /* Eventos y slots siempre encima del overlay */
       .ag-week-ev,
       .ag-ev-block,
       .ag-free-slot,
       .ag-slot-area { position: relative; z-index: 2; }
+
+      /* ── Fila de hora actual (match visual con línea roja) ── */
+      .ag-time-row.current-hour {
+        background: rgba(255, 59, 59, 0.05);
+      }
 
       /* Mobile: contenedor scrollable flexible */
       #ag-week-grid, #ag-time-grid {
@@ -870,10 +892,16 @@
   }
 
   function actualizarHeader() {
-    const d  = _fechaActual;
-    const el = agQ('ag-t-main');
-    const es = agQ('ag-t-sub');
+    const d     = _fechaActual;
+    const el    = agQ('ag-t-main');
+    const es    = agQ('ag-t-sub');
+    const title = agQ('ag-title');
     if (!el) return;
+
+    // Header highlight: solo en vista día cuando es HOY
+    const esHoyDia = _currentView === 'dia' && fmtDate(_fechaActual) === fmtDate(_hoy);
+    title?.classList.toggle('ag-dia-hoy-header', esHoyDia);
+
     if (_currentView === 'dia') {
       el.textContent = `${DIAS[d.getDay()]} ${d.getDate()} de ${MESES[d.getMonth()]}`;
       es.textContent = d.getFullYear();
@@ -931,12 +959,15 @@
   function renderDia() {
     const grid = agQ('ag-time-grid');
     if (!grid) return;
-    const turnos = turnosDeFecha(_fechaActual);
+    const turnos  = turnosDeFecha(_fechaActual);
+    const esHoy   = fmtDate(_fechaActual) === fmtDate(_hoy);
+    const horaAct = esHoy ? new Date().getHours() : -1;
     let html = '';
     HORAS.forEach(h => {
-      const horaStr = String(h).padStart(2,'0') + ':00';
-      const turno   = turnos.find(t => parseInt((t.hora||'0').split(':')[0]) === h);
-      html += `<div class="ag-time-row" data-hour="${h}">
+      const horaStr    = String(h).padStart(2,'0') + ':00';
+      const turno      = turnos.find(t => parseInt((t.hora||'0').split(':')[0]) === h);
+      const esCurrHour = esHoy && h === horaAct;
+      html += `<div class="ag-time-row${esCurrHour ? ' current-hour' : ''}" data-hour="${h}">
                  <div class="ag-time-lbl">${horaStr}</div>
                  <div class="ag-slot-area">`;
       if (turno) {
