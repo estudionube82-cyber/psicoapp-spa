@@ -692,21 +692,13 @@
     // ── 2. Limpiar línea previa ───────────────────────────────────────────
     overlay.querySelectorAll('.current-time-line').forEach(el => el.remove());
 
-    // ── 3. Calcular posición: offsetTop real - scroll actual ──────────────
-    const ahora   = new Date();
-    const hActual = ahora.getHours();
-    const mActual = ahora.getMinutes();
+    // ── 3. Calcular posición: proporción real del grid ────────────────────
+    const ahora = new Date();
+    const minutosDesdeInicio = (ahora.getHours() - 8) * 60 + ahora.getMinutes();
+    if (minutosDesdeInicio < 0 || minutosDesdeInicio > 720) return;
 
-    if (hActual < HORA_INICIO || hActual >= HORA_FIN) return;
-
-    const filaIdx = hActual - HORA_INICIO;
-    const filas   = container.id === 'ag-time-grid'
-      ? container.querySelectorAll('.ag-time-row')
-      : container.querySelectorAll('.ag-week-row');
-    if (!filas.length || !filas[filaIdx]) return;
-
-    const filaEl     = filas[filaIdx];
-    const topReal    = filaEl.offsetTop + filaEl.offsetHeight * (mActual / 60);
+    const pct      = minutosDesdeInicio / 720;
+    const topReal  = pct * container.scrollHeight;
     const topVisible = topReal - container.scrollTop;
 
     // ── 4. Crear y posicionar la línea ────────────────────────────────────
