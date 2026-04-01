@@ -75,7 +75,7 @@
 #view-dashboard .dash-hero-sub { font-size:12px; color:var(--text-muted); margin-top:4px; }
 #view-dashboard .dash-hero-badge {
   padding:5px 12px; border-radius:20px; font-size:11px; font-weight:800;
-  background:rgba(52,211,153,0.15); color:#059669; white-space:nowrap;
+  background:rgba(124,58,237,0.15); color:#7C3AED; white-space:nowrap;
 }
 
 /* ── ALERTAS ── */
@@ -86,7 +86,7 @@
 }
 #view-dashboard .dash-alert:hover { transform:translateX(2px); }
 #view-dashboard .dash-alert-yellow { background:rgba(251,191,36,0.08); border:1.5px solid rgba(251,191,36,0.25); }
-#view-dashboard .dash-alert-green  { background:rgba(52,211,153,0.08);  border:1.5px solid rgba(52,211,153,0.25); }
+#view-dashboard .dash-alert-green  { background:rgba(124,58,237,0.08);  border:1.5px solid rgba(124,58,237,0.25); }
 #view-dashboard .dash-alert-icon   { font-size:20px; flex-shrink:0; }
 #view-dashboard .dash-alert-text   { flex:1; }
 #view-dashboard .dash-alert-title  { font-size:13px; font-weight:700; color:var(--text); }
@@ -113,12 +113,12 @@
   display:flex; align-items:center; justify-content:center; font-size:16px;
 }
 #view-dashboard .dsi-violet { background:var(--primary-light); }
-#view-dashboard .dsi-orange { background:#FEF3C7; }
-#view-dashboard .dsi-green  { background:rgba(52,211,153,0.12); }
+#view-dashboard .dsi-orange { background:rgba(124,58,237,0.10); }
+#view-dashboard .dsi-green  { background:rgba(124,58,237,0.12); }
 #view-dashboard .dash-stat-badge {
   font-size:10px; font-weight:700; padding:2px 7px; border-radius:20px;
 }
-#view-dashboard .dsb-up  { background:rgba(52,211,153,0.15); color:#059669; }
+#view-dashboard .dsb-up  { background:rgba(124,58,237,0.15); color:#7C3AED; }
 #view-dashboard .dsb-neu { background:var(--surface2); color:var(--text-muted); }
 #view-dashboard .dash-stat-num   { font-size:22px; font-weight:800; color:var(--text); line-height:1; }
 #view-dashboard .dash-stat-label { font-size:11px; color:var(--text-muted); font-weight:600; margin-top:3px; }
@@ -158,24 +158,24 @@
 }
 #view-dashboard .dash-turno:hover { transform:translateX(2px); }
 #view-dashboard .dash-turno.tc-past { opacity:.55; }
-#view-dashboard .dash-turno.tc-now  { border-left-color:var(--accent2); box-shadow:0 0 0 2px rgba(52,211,153,.18); }
+#view-dashboard .dash-turno.tc-now  { border-left-color:var(--primary); box-shadow:0 0 0 2px rgba(124,58,237,.18); }
 #view-dashboard .dash-turno.tc-evento { border-left:4px solid #F97316; background:rgba(249,115,22,0.18); }
 #view-dashboard .dt-tag { font-size:9px; font-weight:800; padding:2px 6px; border-radius:6px; margin-bottom:3px; display:inline-block; }
 #view-dashboard .tag-evento  { background:rgba(249,115,22,0.25); color:#F97316; }
-#view-dashboard .tag-paciente { background:rgba(52,211,153,0.2); color:#059669; }
+#view-dashboard .tag-paciente { background:rgba(124,58,237,0.2); color:#7C3AED; }
 #view-dashboard .dt-hora      { font-size:15px; font-weight:800; color:var(--text); min-width:44px; }
-#view-dashboard .dt-hora.now  { color:var(--accent2); }
+#view-dashboard .dt-hora.now  { color:var(--primary); }
 #view-dashboard .dt-info      { flex:1; }
 #view-dashboard .dt-nombre    { font-size:14px; font-weight:700; color:var(--text); }
 #view-dashboard .dt-meta      { font-size:11px; color:var(--text-muted); margin-top:1px; }
 #view-dashboard .dt-badge     { font-size:10px; font-weight:700; padding:3px 8px; border-radius:20px; }
 #view-dashboard .dtb-done     { background:var(--surface2); color:var(--text-muted); }
-#view-dashboard .dtb-ok       { background:rgba(52,211,153,.15); color:#059669; }
+#view-dashboard .dtb-ok       { background:rgba(124,58,237,.15); color:#7C3AED; }
 #view-dashboard .dtb-wait     { background:var(--primary-light); color:var(--primary); }
 #view-dashboard .dash-now-line { display:flex; align-items:center; gap:8px; margin:4px 0; }
-#view-dashboard .dnl-dot  { width:9px; height:9px; border-radius:50%; background:var(--accent2); flex-shrink:0; }
-#view-dashboard .dnl-lbl  { font-size:10px; font-weight:800; color:var(--accent2); letter-spacing:.5px; white-space:nowrap; }
-#view-dashboard .dnl-line { flex:1; height:1px; background:var(--accent2); opacity:.35; }
+#view-dashboard .dnl-dot  { width:9px; height:9px; border-radius:50%; background:var(--primary); flex-shrink:0; }
+#view-dashboard .dnl-lbl  { font-size:10px; font-weight:800; color:var(--primary); letter-spacing:.5px; white-space:nowrap; }
+#view-dashboard .dnl-line { flex:1; height:1px; background:var(--primary); opacity:.35; }
 #view-dashboard .dash-pad { height:32px; }
 
 /* ── SKELETON LOADER ── */
