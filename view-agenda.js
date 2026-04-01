@@ -650,13 +650,9 @@
   }
 
   /**
-   * Calcula el top absoluto (px) de la línea dentro del contenedor,
-   * usando la geometría REAL de las filas .ag-time-row en lugar de scrollHeight.
-   *
-   * Pasos:
-   *  1. Localiza la fila DOM que corresponde a la hora actual.
-   *  2. Calcula su offsetTop real respecto al contenedor.
-   *  3. Interpola dentro de la fila según los minutos (0-59).
+   * Calcula el top absoluto (px) de la línea dentro del contenido del contenedor.
+   * Usa offsetTop de la fila — coordenada fija relativa al contenedor, sin scroll.
+   * La línea tiene position:absolute, por lo que este valor es correcto directamente.
    *
    * @param {HTMLElement} container
    * @returns {number|null}
@@ -673,10 +669,8 @@
     if (!filas.length || !filas[filaIdx]) return null;
 
     const filaEl     = filas[filaIdx];
-    const containerTop = container.getBoundingClientRect().top;
-    const filaRect     = filaEl.getBoundingClientRect();
-    const filaTop      = filaRect.top - containerTop + container.scrollTop;
-    const filaHeight   = filaRect.height;
+    const filaTop    = filaEl.offsetTop;       // relativo al contenedor, sin scroll
+    const filaHeight = filaEl.offsetHeight;
 
     return filaTop + filaHeight * (mActual / 60);
   }
