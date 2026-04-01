@@ -476,7 +476,9 @@ function _dashRenderTurnos(turnos, hoy) {
     const horaFmt  = dt.toLocaleTimeString('es-AR', { hour:'2-digit', minute:'2-digit' });
     const duracion = t.duracion ? `${t.duracion} min` : '50 min';
     const pac      = t.pacientes;
-    const nombre   = pac ? `${pac.nombre || ''} ${pac.apellido || ''}`.trim() : 'Paciente';
+    const nombre   = t.tipo === 'evento'
+      ? (t.notas || 'Evento')
+      : (pac ? `${pac.nombre || ''} ${pac.apellido || ''}`.trim() || 'Paciente' : 'Paciente');
     const esPasado = dt.getTime() < ahoraMs - 30 * 60 * 1000;
     const esAhora  = !esPasado && dt.getTime() <= ahoraMs + 60 * 60 * 1000;
 
