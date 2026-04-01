@@ -209,7 +209,7 @@
       .ag-wh-day { font-size:9px; font-weight:800; text-transform:uppercase; color:var(--text-muted,#7C6FAE); }
       .ag-wh-num { font-size:17px; font-weight:800; }
       .ag-wh-num.today { color: var(--primary,#5B2FA8); }
-      #ag-week-grid { overflow-y:auto; overflow-x:auto; max-height:calc(100vh - 280px); padding-bottom:80px; }
+      #ag-week-grid { overflow-y:auto; overflow-x:auto; max-height:calc(100vh - 280px); padding-bottom:80px; position:relative; }
       .ag-week-row { display:flex; border-bottom:1px solid var(--border,#E5E2F5); min-height:46px; }
       .ag-week-time { flex:0 0 46px; padding:6px 6px 0 8px; font-size:10px; font-weight:600; color:var(--text-muted,#7C6FAE); border-right:1px solid var(--border,#E5E2F5); }
       .ag-week-cell { flex:1; min-width:44px; border-left:1px solid var(--border,#E5E2F5); padding:2px; min-height:46px; cursor:pointer; transition:background .1s; }
@@ -316,24 +316,16 @@
       }
       .ag-wh-col.dia-hoy-header .ag-wh-day,
       .ag-wh-col.dia-hoy-header .ag-wh-num { color: white; }
-      .ag-week-cell.dia-hoy {
-        position: relative;
-        background: linear-gradient(to bottom, rgba(255,0,128,0.10), rgba(255,0,128,0.06));
-        border-top: 2px solid #ff4fa3;
-      }
-      .ag-week-cell.dia-hoy::before {
-        content: '';
+      .ag-col-hoy {
         position: absolute;
-        inset: 0;
-        background: rgba(255, 0, 128, 0.04);
+        top: 0; bottom: 0;
+        width: calc(100% / 7);
+        background: linear-gradient(to bottom, rgba(255,0,128,0.10), rgba(255,0,128,0.05));
+        border-left: 2px solid #ff4fa3;
+        border-right: 2px solid #ff4fa3;
         pointer-events: none;
-        z-index: 0;
+        z-index: 1;
       }
-      .ag-week-cell.dia-hoy:hover {
-        background: linear-gradient(to bottom, rgba(255,0,128,0.16), rgba(255,0,128,0.10));
-      }
-      .ag-week-cell.has-turno.dia-hoy { background: linear-gradient(to bottom, rgba(255,0,128,0.10), rgba(255,0,128,0.06)); }
-      .ag-week-cell.has-turno.dia-hoy:hover { background: linear-gradient(to bottom, rgba(255,0,128,0.10), rgba(255,0,128,0.06)); }
       .ag-week-ev { position: relative; z-index: 2; }
     </style>
 
@@ -623,17 +615,37 @@
           const bg  = evBg(turno.tipo);
           const brd = evBorder(turno.tipo);
           const nom = nombrePaciente(turno);
-          rows += `<div class="ag-week-cell has-turno${esCeldaHoy ? ' dia-hoy' : ''}">
+          rows += `<div class="ag-week-cell has-turno">
                      <div class="ag-week-ev" style="background:${bg};border-left-color:${brd};color:${brd}"
                           onclick="window._agDetalle('${turno.id}')">${nom}</div>
                    </div>`;
         } else {
-          rows += `<div class="ag-week-cell${esCeldaHoy ? ' dia-hoy' : ''}" onclick="window._agModalFechaHora('${fecha}','${horaStr}')"></div>`;
+          rows += `<div class="ag-week-cell" onclick="window._agModalFechaHora('${fecha}','${horaStr}')"></div>`;
         }
       }
       rows += '</div>';
     });
     gridEl.innerHTML = rows;
+
+    // Overlay de columna continua para el día actual
+    const prevCol = gridEl.querySelector('.ag-col-hoy');
+    if (prevCol) prevCol.remove();
+    const hoyIdx = (() => {
+      for (let i = 0; i < 7; i++) {
+        const d = new Date(lunes); d.setDate(lunes.getDate() + i);
+        if (fmtDate(d) === _todayKey) return i;
+      }
+      return -1;
+    })();
+    if (hoyIdx >= 0) {
+      const col = document.createElement('div');
+      col.className = 'ag-col-hoy';
+      // +1 columna de offset por la columna de horas (46px fija)
+      const cellW = (gridEl.clientWidth - 46) / 7;
+      col.style.left = (46 + hoyIdx * cellW) + 'px';
+      col.style.width = cellW + 'px';
+      gridEl.appendChild(col);
+    }
   }
 
   // ── Month grid ───────────────────────────────────────────
