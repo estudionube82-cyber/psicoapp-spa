@@ -549,14 +549,6 @@
         });
       }
     });
-
-    // Reposicionar línea de hora al hacer scroll en vista día
-    const dayGrid = document.getElementById('ag-time-grid');
-    if (dayGrid) {
-      dayGrid.addEventListener('scroll', () => {
-        if (_currentView === 'dia') actualizarLineaHoraActualDia();
-      });
-    }
   }
 
   // ────────────────────────────────────────────────────────
@@ -658,24 +650,52 @@
   }
 
   /**
+   * Calcula el top absoluto (px) de la línea dentro del contenedor,
+   * usando la geometría REAL de las filas .ag-time-row en lugar de scrollHeight.
+   *
+   * Pasos:
+   *  1. Localiza la fila DOM que corresponde a la hora actual.
+   *  2. Calcula su offsetTop real respecto al contenedor.
+   *  3. Interpola dentro de la fila según los minutos (0-59).
+   *
+   * @param {HTMLElement} container
+   * @returns {number|null}
+   */
+  function _calcTopLineaHoraActual(container) {
+    const ahora   = new Date();
+    const hActual = ahora.getHours();
+    const mActual = ahora.getMinutes();
+
+    if (hActual < HORA_INICIO || hActual >= HORA_FIN) return null;
+
+    const filaIdx = hActual - HORA_INICIO; // 0 = fila 08:00
+    const filas   = container.querySelectorAll('.ag-time-row');
+    if (!filas.length || !filas[filaIdx]) return null;
+
+    const filaEl     = filas[filaIdx];
+    const containerTop = container.getBoundingClientRect().top;
+    const filaRect     = filaEl.getBoundingClientRect();
+    const filaTop      = filaRect.top - containerTop + container.scrollTop;
+    const filaHeight   = filaRect.height;
+
+    return filaTop + filaHeight * (mActual / 60);
+  }
+
+  /**
    * Renderiza la línea en un contenedor scrollable dado.
-   * @param {HTMLElement} container — el grid con scrollHeight real
-   * @param {number} leftPx — posición left en px (para vista semana)
-   * @param {number} widthPx — ancho en px (0 = 100%)
+   * @param {HTMLElement} container
+   * @param {number} leftPx  — posicion left en px (vista semana; 0 = CSS 100%)
+   * @param {number} widthPx — ancho en px (0 = CSS 100%)
    */
   function _renderLineaHoraActual(container, leftPx, widthPx) {
-    // Eliminar línea previa si existe
     container.querySelectorAll('.current-time-line').forEach(el => el.remove());
 
-    const pct = _calcPorcentajeHoraActual();
-    if (pct === null) return; // fuera del horario de agenda
-
-    const topReal    = pct * container.scrollHeight;
-    const topVisible = topReal - container.scrollTop;
+    const topPx = _calcTopLineaHoraActual(container);
+    if (topPx === null) return;
 
     const linea = document.createElement('div');
     linea.className = 'current-time-line';
-    linea.style.top = topVisible + 'px';
+    linea.style.top = topPx + 'px';
     if (widthPx > 0) {
       linea.style.left  = leftPx + 'px';
       linea.style.width = widthPx + 'px';
