@@ -191,7 +191,7 @@ function renderCuenta() {
   const linkPagoMax   = (typeof PSICOAPP_CONFIG !== 'undefined' && PSICOAPP_CONFIG.LINK_PAGO_MAX)
     ? PSICOAPP_CONFIG.LINK_PAGO_MAX   : 'https://mpago.la/TU_LINK_MAX';
   const linkPagoExtra = (typeof PSICOAPP_CONFIG !== 'undefined' && PSICOAPP_CONFIG.LINK_PAGO_EXTRA)
-    ? PSICOAPP_CONFIG.LINK_PAGO_EXTRA : 'https://mpago.la/TU_LINK_EXTRA';
+    ? PSICOAPP_CONFIG.LINK_PAGO_EXTRA : 'https://mpago.la/23Lff3N';
 
   const nombre    = perfil.nombre || 'Profesional';
   const email     = perfil.email  || '';
@@ -258,7 +258,7 @@ function renderCuenta() {
       </div>
     </div>` : ''}
     <div id="vc-usage-bars"></div>
-    ${plan === 'pro' ? `<button class="vc-btn-extra" id="vc-btn-extra-wa">➕ Comprar 100 mensajes WhatsApp extra ($5.000)</button>` : ''}
+    <div id="vc-extra-wa-wrap"></div>
   </div>
 
   <div class="vc-section-title">Elegí tu plan</div>
@@ -330,11 +330,19 @@ function renderCuenta() {
   // ── Siempre actualizar barras de uso (desktop Y mobile, primer render y re-renders) ──
   const usageBarsEl = container.querySelector('#vc-usage-bars');
   if (usageBarsEl) {
-    const usadoWA = usos.whatsapp   ?? 0;   // ?? evita que 0 sea reemplazado por otro valor
+    const usadoWA = usos.whatsapp   ?? 0;
     const usadoIA = usos.informesIA ?? 0;
     usageBarsEl.innerHTML =
       _usageBar(usadoWA, topeWA, '💬 Mensajes WhatsApp', '#7C3AED') +
       _usageBar(usadoIA, topeIA, '🤖 Informes IA',       '#A78BFA');
+  }
+
+  // ── Botón extra WhatsApp: visible solo en plan pro, siempre actualizado ──
+  const extraWaWrap = container.querySelector('#vc-extra-wa-wrap');
+  if (extraWaWrap) {
+    extraWaWrap.innerHTML = plan === 'pro'
+      ? `<button class="vc-btn-extra" id="vc-btn-extra-wa">➕ Comprar 100 mensajes WhatsApp extra ($5.000)</button>`
+      : '';
   }
 
   const q = id => container.querySelector(id);
