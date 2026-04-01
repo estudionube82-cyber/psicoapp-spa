@@ -328,8 +328,8 @@ async function _dashCargarDatos() {
     const turnosMes = resTurnosMes.data || [];
 
     /* Calcular métricas */
-    const totalCobrado   = pagos.reduce((s, p) => s + (Number(p.monto) || 0), 0);
-    const cantPagos      = pagos.length;
+    const totalCobrado   = pagos.filter(p => p.metodo !== 'pendiente').reduce((s, p) => s + (Number(p.monto) || 0), 0);
+    const cantPagos      = pagos.filter(p => p.metodo !== 'pendiente').length;
     const pacUnicos      = new Set(pagos.map(p => p.paciente_id)).size;
     const turnosHoyCant  = turnos.length;
 
@@ -344,9 +344,11 @@ async function _dashCargarDatos() {
       return est === 'realizado' || est === 'completado';
     }).length;
 
+    const pagosPendientes = pagos.filter(p => p.metodo === 'pendiente').length;
+
     /* Render de secciones */
     _dashRenderHero(totalCobrado, cantPagos, pacUnicos);
-    _dashRenderAlertas(sesionSinCobro, pacUnicos, pagos);
+    _dashRenderAlertas(sesionSinCobro, pacUnicos, pagos, pagosPendientes);
     _dashRenderStats(totalCobrado, totalPendiente, pacUnicos, turnosHoyCant);
     _dashRenderTurnos(turnos, hoy);
     _dashRenderNombre();
@@ -373,10 +375,22 @@ function _dashRenderHero(total, cant, pacUnicos) {
 /* ══════════════════════════════════════════
    RENDER: ALERTAS
    ══════════════════════════════════════════ */
-function _dashRenderAlertas(sesionSinCobro, pacUnicos, pagos) {
+function _dashRenderAlertas(sesionSinCobro, pacUnicos, pagos, pagosPendientes) {
   const el = document.getElementById('dash-alerts');
   if (!el) return;
   const items = [];
+
+  if (pagosPendientes > 0) {
+    items.push(`
+      <div class="dash-alert dash-alert-yellow" onclick="navigate('pagos')">
+        <div class="dash-alert-icon">⏳</div>
+        <div class="dash-alert-text">
+          <div class="dash-alert-title">${pagosPendientes} pago${pagosPendientes > 1 ? 's' : ''} pendiente${pagosPendientes > 1 ? 's' : ''} de cobro</div>
+          <div class="dash-alert-sub">Registrá el cobro en Pagos →</div>
+        </div>
+        <div class="dash-alert-arrow">›</div>
+      </div>`);
+  }
 
   if (sesionSinCobro > 0) {
     items.push(`
