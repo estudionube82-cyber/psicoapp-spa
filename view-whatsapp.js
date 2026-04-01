@@ -39,7 +39,7 @@
 #view-whatsapp .plantillas-list{padding:14px 16px;display:flex;flex-direction:column;gap:12px;}
 #view-whatsapp .plantilla-card{background:var(--surface);border-radius:var(--r,16px);padding:16px;box-shadow:var(--sh);}
 #view-whatsapp .plantilla-header{display:flex;align-items:center;gap:10px;margin-bottom:12px;}
-#view-whatsapp .plantilla-icon{width:36px;height:36px;border-radius:11px;background:#E8F8EE;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;}
+#view-whatsapp .plantilla-icon{width:36px;height:36px;border-radius:11px;background:rgba(124,58,237,0.12);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;}
 #view-whatsapp .plantilla-titulo{font-size:14px;font-weight:700;}
 #view-whatsapp .plantilla-sub{font-size:11px;color:var(--muted);margin-top:2px;}
 #view-whatsapp .plantilla-preview{background:var(--wp-light);border-radius:12px;padding:12px 14px;font-size:13px;line-height:1.6;color:#1a1a1a;border-left:4px solid var(--wp);margin-bottom:12px;white-space:pre-wrap;font-family:var(--font);}
@@ -57,16 +57,16 @@
 #view-whatsapp .hist-hora{font-size:11px;color:var(--muted);}
 #view-whatsapp .hist-footer{display:flex;align-items:center;justify-content:space-between;}
 #view-whatsapp .hist-tipo{font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;}
-#view-whatsapp .tipo-confirmacion{background:#EDE9FE;color:#5B2FA8;}
+#view-whatsapp .tipo-confirmacion{background:rgba(124,58,237,0.15);color:var(--primary);}
 #view-whatsapp .tipo-recordatorio{background:#FEF3C7;color:#92400E;}
-#view-whatsapp .tipo-pago{background:#EDE9FE;color:#5B21B6;}
-#view-whatsapp .tipo-libre{background:#E3F2FD;color:#1976D2;}
+#view-whatsapp .tipo-pago{background:rgba(124,58,237,0.15);color:#7C3AED;}
+#view-whatsapp .tipo-libre{background:rgba(124,58,237,0.10);color:var(--primary);}
 #view-whatsapp .tipo-automatico{background:#FEF0E6;color:#EC4899;}
 #view-whatsapp .auto-section{padding:14px 16px;display:flex;flex-direction:column;gap:12px;}
 #view-whatsapp .auto-card{background:var(--surface);border-radius:var(--r,16px);padding:16px;box-shadow:var(--sh);}
 #view-whatsapp .auto-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;}
 #view-whatsapp .auto-titulo{font-size:14px;font-weight:800;color:var(--text,#1E1040);}
-#view-whatsapp .auto-sub{font-size:12px;color:#4B5563;margin-bottom:12px;line-height:1.4;}
+#view-whatsapp .auto-sub{font-size:12px;color:var(--text-muted);margin-bottom:12px;line-height:1.4;}
 #view-whatsapp .wp-toggle{position:relative;width:44px;height:24px;flex-shrink:0;}
 #view-whatsapp .wp-toggle input{opacity:0;width:0;height:0;}
 #view-whatsapp .wp-toggle-slider{position:absolute;inset:0;background:var(--border);border-radius:24px;cursor:pointer;transition:0.3s;}
