@@ -197,14 +197,21 @@
         border: 1.5px dashed var(--border, #E5E2F5); color: var(--text-muted, #7C6FAE);
         cursor: pointer; transition: all .15s; user-select: none;
       }
-      .ag-free-slot:hover { background: var(--primary-light, #EDE9FE); border-color: var(--primary, #5B2FA8); color: var(--primary, #5B2FA8); }
+      .ag-free-slot:hover { background: rgba(168,85,247,0.08); border-color: #a855f7; color: var(--primary, #5B2FA8); }
       .ag-ev-block {
         border-radius: 8px; padding: 8px 10px 8px 14px;
         cursor: pointer; position: relative; overflow: hidden;
-        transition: transform .12s; border-left: 4px solid;
+        transition: transform 0.12s ease, box-shadow 0.12s ease;
+        border-left: 4px solid;
       }
+      .ag-ev-block:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.10); }
       .ag-ev-block:active { transform: scale(.98); }
-      .ag-ev-block.ag-ev-evento { border-left-width: 5px; }
+      .ag-ev-block.ag-ev-evento {
+        border-left-width: 5px;
+        background: #fff7ed !important;
+        box-shadow: 0 4px 10px rgba(249,115,22,0.15);
+      }
+      .ag-ev-block.ag-ev-evento:hover { box-shadow: 0 6px 16px rgba(249,115,22,0.22); }
       .ag-ev-name { font-size: 13px; font-weight: 700; }
       .ag-ev-meta { font-size: 11px; margin-top: 2px; opacity: .75; }
 
@@ -295,7 +302,54 @@
         display:flex; align-items:center; justify-content:center;
         box-shadow:0 8px 24px rgba(91,47,168,.35); cursor:pointer;
         font-size:26px; color:#fff; z-index:40;
+        transition: transform .15s ease, box-shadow .15s ease;
       }
+      #ag-fab.open { transform: rotate(45deg); box-shadow: 0 12px 32px rgba(91,47,168,.5); }
+
+      /* FAB mini-menú */
+      #ag-fab-menu {
+        position: fixed;
+        bottom: 132px;
+        right: 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        z-index: 41;
+        opacity: 0;
+        transform: scale(0.85) translateY(8px);
+        transform-origin: bottom right;
+        pointer-events: none;
+        transition: opacity .18s ease, transform .18s ease;
+      }
+      #ag-fab-menu.open {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+        pointer-events: auto;
+      }
+      .ag-fab-item {
+        display: flex; align-items: center; gap: 10px;
+        padding: 10px 16px;
+        background: var(--surface, #fff);
+        border: 1.5px solid var(--border, #E5E2F5);
+        border-radius: 14px;
+        font-size: 13px; font-weight: 700;
+        font-family: inherit;
+        color: var(--text, #1E1040);
+        cursor: pointer;
+        white-space: nowrap;
+        box-shadow: 0 4px 16px rgba(0,0,0,.10);
+        transition: background .12s, transform .12s;
+      }
+      .ag-fab-item:hover { background: var(--primary-light, #EDE9FE); transform: translateX(-2px); }
+      .ag-fab-item .ag-fab-icon { font-size: 16px; }
+
+      /* Backdrop invisible para cerrar al clickear afuera */
+      #ag-fab-backdrop {
+        position: fixed; inset: 0;
+        z-index: 39;
+        display: none;
+      }
+      #ag-fab-backdrop.open { display: block; }
 
       /* Modal */
       .ag-overlay {
@@ -358,6 +412,7 @@
         color: white;
         padding: 8px 12px;
         border-radius: 10px;
+        box-shadow: 0 6px 18px rgba(124,58,237,0.25);
       }
       #ag-title.ag-dia-hoy-header .ag-t-main,
       #ag-title.ag-dia-hoy-header .ag-t-sub { color: white; }
@@ -379,8 +434,8 @@
       /* Vista día: today-column más prominente cuando es hoy */
       #ag-time-grid .today-column {
         background: linear-gradient(to bottom,
-          rgba(168,85,247,0.10) 0%,
-          rgba(168,85,247,0.05) 60%,
+          rgba(168,85,247,0.12) 0%,
+          rgba(168,85,247,0.06) 60%,
           rgba(168,85,247,0.02) 100%);
         border-left: 3px solid #a855f7;
       }
@@ -390,9 +445,10 @@
       .ag-free-slot,
       .ag-slot-area { position: relative; z-index: 2; }
 
-      /* ── Fila de hora actual (match visual con línea roja) ── */
+      /* ── Fila de hora actual (match violeta) ── */
       .ag-time-row.current-hour {
-        background: rgba(255, 59, 59, 0.05);
+        background: rgba(168,85,247,0.10);
+        border-left: 3px solid #a855f7;
       }
 
       /* Mobile: contenedor scrollable flexible */
@@ -407,10 +463,10 @@
         left: 0;
         width: 100%;
         height: 3px;
-        background: #ff3b3b;
+        background: #a855f7;
         z-index: 999;
         pointer-events: none;
-        box-shadow: 0 0 6px 1px rgba(255,59,59,0.55);
+        box-shadow: 0 0 8px 2px rgba(168,85,247,0.6);
       }
       .current-time-line::before {
         content: '';
@@ -421,8 +477,8 @@
         width: 12px;
         height: 12px;
         border-radius: 50%;
-        background: #ff3b3b;
-        box-shadow: 0 0 8px 3px rgba(255,59,59,0.7);
+        background: #a855f7;
+        box-shadow: 0 0 10px 4px rgba(168,85,247,0.7);
       }
       /* En semana: el círculo va pegado al borde izquierdo de la columna */
       #ag-week-grid .current-time-line::before {
@@ -471,6 +527,19 @@
         <div id="ag-month-grid"></div>
       </div>
 
+    </div>
+
+    <!-- FAB backdrop (cierra menú al click afuera) -->
+    <div id="ag-fab-backdrop"></div>
+
+    <!-- FAB mini-menú -->
+    <div id="ag-fab-menu">
+      <button class="ag-fab-item" id="ag-fab-item-evento">
+        <span class="ag-fab-icon">🗓</span> Nuevo evento
+      </button>
+      <button class="ag-fab-item" id="ag-fab-item-turno">
+        <span class="ag-fab-icon">📅</span> Nuevo turno
+      </button>
     </div>
 
     <!-- FAB -->
@@ -565,7 +634,31 @@
   function _bindEvents() {
     agQ('ag-nav-back').addEventListener('click', navBack);
     agQ('ag-nav-fwd').addEventListener('click', navFwd);
-    agQ('ag-fab').addEventListener('click', () => abrirModal('turno', null, null));
+
+    // FAB → abre mini-menú en lugar de abrir modal directamente
+    function _fabToggle(e) {
+      e.stopPropagation();
+      const fab      = agQ('ag-fab');
+      const menu     = agQ('ag-fab-menu');
+      const backdrop = agQ('ag-fab-backdrop');
+      const isOpen   = menu.classList.contains('open');
+      fab.classList.toggle('open', !isOpen);
+      menu.classList.toggle('open', !isOpen);
+      backdrop.classList.toggle('open', !isOpen);
+    }
+    function _fabClose() {
+      agQ('ag-fab').classList.remove('open');
+      agQ('ag-fab-menu').classList.remove('open');
+      agQ('ag-fab-backdrop').classList.remove('open');
+    }
+    agQ('ag-fab').addEventListener('click', _fabToggle);
+    agQ('ag-fab-backdrop').addEventListener('click', _fabClose);
+    agQ('ag-fab-item-turno').addEventListener('click', () => {
+      _fabClose(); abrirModal('turno', null, null);
+    });
+    agQ('ag-fab-item-evento').addEventListener('click', () => {
+      _fabClose(); abrirModal('evento', null, null);
+    });
 
     ['dia','semana','mes'].forEach(v => {
       agQ(`ag-btn-${v}`).addEventListener('click', () => setView(v));
