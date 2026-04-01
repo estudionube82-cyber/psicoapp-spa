@@ -37,9 +37,9 @@
 #view-pagos .pv-card { background: var(--surface); border-radius: var(--radius-sm); padding: 13px 14px; display: flex; align-items: center; gap: 12px; box-shadow: var(--shadow-sm); margin-bottom: 8px; cursor: pointer; transition: transform .12s; border-left: 3px solid transparent; }
 #view-pagos .pv-card:hover { transform: translateX(2px); }
 #view-pagos .pv-card-icon { width: 38px; height: 38px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; }
-#view-pagos .pv-icon-efectivo { background: #D1FAE5; }
-#view-pagos .pv-icon-transferencia { background: #DBEAFE; }
-#view-pagos .pv-icon-mercado_pago { background: #EDE9FE; }
+#view-pagos .pv-icon-efectivo { background: rgba(124,58,237,0.12); }
+#view-pagos .pv-icon-transferencia { background: rgba(124,58,237,0.15); }
+#view-pagos .pv-icon-mercado_pago { background: rgba(124,58,237,0.18); }
 #view-pagos .pv-card-info { flex: 1; min-width: 0; }
 #view-pagos .pv-card-nombre { font-size: 14px; font-weight: 700; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 #view-pagos .pv-card-meta { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
