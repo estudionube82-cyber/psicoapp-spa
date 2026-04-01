@@ -297,10 +297,6 @@ async function _dashCargarDatos() {
     const primerDiaMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1).toISOString().split('T')[0];
     const ultimoDiaMes = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0).toISOString().split('T')[0];
 
-    /* Sincronizar store antes de queries propias */
-    await PsicoRouter.store.ensurePacientes();
-    await PsicoRouter.store.ensureTurnos({ desde: primerDiaMes, hasta: ultimoDiaMes });
-
     /* 3 queries en paralelo */
     const [resPagos, resTurnosHoy, resTurnosMes] = await Promise.all([
       sb.from('pagos')
@@ -322,11 +318,6 @@ async function _dashCargarDatos() {
         .lte('fecha', ultimoDiaMes)
         .neq('estado', 'cancelado'),
     ]);
-
-    if (!resPagos.data || !resTurnosHoy.data || !resTurnosMes.data) {
-      console.warn('[Dashboard] Datos no cargados aún');
-      return;
-    }
 
     const pagos     = resPagos.data     || [];
     const turnos    = resTurnosHoy.data || [];
