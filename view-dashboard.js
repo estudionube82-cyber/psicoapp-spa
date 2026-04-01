@@ -337,7 +337,9 @@ async function _dashCargarDatos() {
       const est = (t.estado || '').toLowerCase();
       return est === 'pendiente' || est === 'confirmado';
     });
-    const totalPendiente = turnosPendientes.reduce((s, t) => s + (Number(t.precio) || 0), 0);
+    const totalPendienteTurnos = turnosPendientes.reduce((s, t) => s + (Number(t.precio) || 0), 0);
+    const totalPendientePagos  = pagos.filter(p => p.metodo === 'pendiente').reduce((s, p) => s + (Number(p.monto) || 0), 0);
+    const totalPendiente = totalPendienteTurnos + totalPendientePagos;
 
     const sesionSinCobro = turnosMes.filter(t => {
       const est = (t.estado || '').toLowerCase();
