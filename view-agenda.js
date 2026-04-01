@@ -692,37 +692,33 @@
     // ── 2. Limpiar línea previa ───────────────────────────────────────────
     overlay.querySelectorAll('.current-time-line').forEach(el => el.remove());
 
-    // ── 3. Calcular posición usando filas reales del DOM ─────────────────
-    // Se miden TODAS las filas para obtener el rango exacto 08:00→20:00,
-    // independientemente de min-height distinto entre vista día y semana.
+    // ── 3. Calcular posición exacta ───────────────────────────────────────
+    // El overlay tiene top:0 relativo al parent del container.
+    // topVisible = posición dentro del parent = containerOffsetTop + topDentroDelContainer - scrollTop
     const selector = container.id === 'ag-time-grid' ? '.ag-time-row' : '.ag-week-row';
     const filas    = container.querySelectorAll(selector);
-    if (filas.length < 13) return;  // grid aún no renderizado
+    if (filas.length < 13) return;
 
-    // offsetTop de la primera fila relativo al container (no al document)
-    // Se calcula restando el offsetTop del container al de la fila,
-    // recorriendo la cadena de offsetParent hasta llegar al container.
-    function offsetTopRelativo(el, ancestor) {
-      let top = 0;
-      let cur = el;
-      while (cur && cur !== ancestor) {
-        top += cur.offsetTop;
-        cur  = cur.offsetParent;
-      }
-      return top;
-    }
+    // getBoundingClientRect da posición real en viewport — la diferencia entre
+    // dos elementos cancela cualquier scroll/offset externo y da la distancia
+    // relativa entre ellos, que es lo único que necesitamos.
+    const containerRect = container.getBoundingClientRect();
+    const fila0Rect     = filas[0].getBoundingClientRect();
+    const fila12Rect    = filas[12].getBoundingClientRect();
 
-    const startTop    = offsetTopRelativo(filas[0], container);
-    const endTop      = offsetTopRelativo(filas[12], container) + filas[12].offsetHeight;
-    const totalHeight = endTop - startTop;   // rango real 08:00→20:00 en px
+    // Posición de inicio/fin de las filas dentro del contenido scrollable
+    const startTop    = fila0Rect.top    - containerRect.top + container.scrollTop;
+    const endTop      = fila12Rect.bottom - containerRect.top + container.scrollTop;
+    const totalHeight = endTop - startTop;
 
     const now              = new Date();
     const minutesFromStart = (now.getHours() - 8) * 60 + now.getMinutes();
     if (minutesFromStart < 0 || minutesFromStart > 720) return;
 
-    const pct        = minutesFromStart / 720;
-    const topReal    = startTop + pct * totalHeight;
-    const topVisible = topReal - container.scrollTop;
+    // Posición dentro del contenido (absoluta, sin considerar scroll)
+    const topEnContenido = startTop + (minutesFromStart / 720) * totalHeight;
+    // Posición visible en el overlay (descuenta el scroll actual)
+    const topVisible     = topEnContenido - container.scrollTop;
 
     // ── 4. Crear y posicionar la línea ────────────────────────────────────
     const linea = document.createElement('div');
