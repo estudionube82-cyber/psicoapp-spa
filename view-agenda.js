@@ -179,6 +179,7 @@
         transition: background .15s;
       }
       .ag-day-pill.selected { background: var(--primary, #5B2FA8); }
+      .ag-day-pill.disabled { opacity: 0.35; pointer-events: none; cursor: default; }
       .ag-dp-name { font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: .4px; color: var(--text-muted, #7C6FAE); }
       .ag-dp-num  { font-size: 18px; font-weight: 800; color: var(--text, #1E1040); }
       .ag-day-pill.selected .ag-dp-name,
@@ -1064,21 +1065,24 @@
     strip.innerHTML = '';
     const lunes = lunesDe(_fechaActual);
     for (let i = 0; i < 7; i++) {
-      const d     = new Date(lunes); d.setDate(lunes.getDate() + i);
-      const tieneT = _todosTurnos.some(t => t.fecha === fmtDate(d));
-      const sel    = fmtDate(d) === fmtDate(_fechaActual);
-      const pill   = document.createElement('div');
-      pill.className = 'ag-day-pill' + (sel ? ' selected' : '');
+      const d        = new Date(lunes); d.setDate(lunes.getDate() + i);
+      const esMismoMes = d.getMonth() === _fechaActual.getMonth();
+      const tieneT   = _todosTurnos.some(t => t.fecha === fmtDate(d));
+      const sel      = fmtDate(d) === fmtDate(_fechaActual);
+      const pill     = document.createElement('div');
+      pill.className = 'ag-day-pill' + (sel ? ' selected' : '') + (!esMismoMes ? ' disabled' : '');
       pill.innerHTML = `<div class="ag-dp-name">${DIAS[d.getDay()]}</div>
                         <div class="ag-dp-num">${d.getDate()}</div>
-                        ${tieneT ? '<div class="ag-dp-pip"></div>' : ''}`;
-      pill.addEventListener('click', () => {
-        _fechaActual = new Date(d);
-        actualizarHeader();
-        buildDayStrip();
-        renderDia();
-        // La línea se actualiza dentro de renderDia vía rAF
-      });
+                        ${tieneT && esMismoMes ? '<div class="ag-dp-pip"></div>' : ''}`;
+      if (esMismoMes) {
+        pill.addEventListener('click', () => {
+          _fechaActual = new Date(d);
+          actualizarHeader();
+          buildDayStrip();
+          renderDia();
+          // La línea se actualiza dentro de renderDia vía rAF
+        });
+      }
       strip.appendChild(pill);
     }
   }
