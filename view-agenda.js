@@ -53,7 +53,7 @@
   }
   function evBorder(tipo) {
     return {sesion:'#2D6A4F',online:'#1976D2',evaluacion:'#F9A825',
-            judicial:'#7B5EA7',evento:'#F97316',otro:'#9CA3AF'}[tipo] || '#2D6A4F';
+            judicial:'#7C3AED',evento:'#F97316',otro:'#9CA3AF'}[tipo] || '#2D6A4F';
   }
   function turnosDeFecha(fecha) {
     const key = fmtDate(fecha);
