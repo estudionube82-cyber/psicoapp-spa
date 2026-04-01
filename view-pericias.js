@@ -18,11 +18,11 @@
   style.id = 'view-pericias-styles';
   style.textContent = `
 #view-pericias { min-height: 100vh; background: var(--bg); }
-#view-pericias .per-header { background: linear-gradient(145deg, #1E3A5F 0%, #1B4F72 55%, #2E86C1 100%); padding: 20px 20px 28px; position: relative; overflow: hidden; }
+#view-pericias .per-header { background: linear-gradient(145deg, #2D1B69 0%, #5B2FA8 55%, #7C3AED 100%); padding: 20px 20px 28px; position: relative; overflow: hidden; }
 #view-pericias .per-header::after { content: ''; position: absolute; right: -40px; top: -40px; width: 180px; height: 180px; border-radius: 50%; background: rgba(255,255,255,0.05); }
 #view-pericias .per-header-row { display: flex; align-items: center; justify-content: space-between; position: relative; z-index: 1; }
 #view-pericias .per-title { font-family: var(--font-display); font-size: 22px; font-weight: 700; color: white; }
-#view-pericias .per-title span { color: #7EC8E3; }
+#view-pericias .per-title span { color: #c4b5fd; }
 #view-pericias .per-subtitle { font-size: 13px; color: rgba(255,255,255,0.65); margin-top: 4px; position: relative; z-index: 1; }
 #view-pericias .per-fab { width: 40px; height: 40px; border-radius: 12px; background: rgba(255,255,255,0.15); border: 1.5px solid rgba(255,255,255,0.25); color: white; font-size: 22px; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; }
 #view-pericias .per-fab:hover { background: rgba(255,255,255,0.25); }
