@@ -692,16 +692,29 @@
     // ── 2. Limpiar línea previa ───────────────────────────────────────────
     overlay.querySelectorAll('.current-time-line').forEach(el => el.remove());
 
-    // ── 3. Calcular posición usando altura real de una fila × 12 horas ────
-    // El grid tiene 13 filas (08–20) pero el rango horario es 12h (08:00–20:00).
-    // La fila data-hour="8" marca el inicio de las 08:00.
-    // Altura de 12 filas = totalidad del rango horario útil.
-    const firstHour = container.querySelector('[data-hour="8"]');
-    if (!firstHour) return;
+    // ── 3. Calcular posición usando filas reales del DOM ─────────────────
+    // Se miden TODAS las filas para obtener el rango exacto 08:00→20:00,
+    // independientemente de min-height distinto entre vista día y semana.
+    const selector = container.id === 'ag-time-grid' ? '.ag-time-row' : '.ag-week-row';
+    const filas    = container.querySelectorAll(selector);
+    if (filas.length < 13) return;  // grid aún no renderizado
 
-    const rowHeight   = firstHour.getBoundingClientRect().height;
-    const startTop    = firstHour.offsetTop;          // inicio absoluto de las 08:00
-    const totalHeight = rowHeight * 12;               // 12 horas × altura real de fila
+    // offsetTop de la primera fila relativo al container (no al document)
+    // Se calcula restando el offsetTop del container al de la fila,
+    // recorriendo la cadena de offsetParent hasta llegar al container.
+    function offsetTopRelativo(el, ancestor) {
+      let top = 0;
+      let cur = el;
+      while (cur && cur !== ancestor) {
+        top += cur.offsetTop;
+        cur  = cur.offsetParent;
+      }
+      return top;
+    }
+
+    const startTop    = offsetTopRelativo(filas[0], container);
+    const endTop      = offsetTopRelativo(filas[12], container) + filas[12].offsetHeight;
+    const totalHeight = endTop - startTop;   // rango real 08:00→20:00 en px
 
     const now              = new Date();
     const minutesFromStart = (now.getHours() - 8) * 60 + now.getMinutes();
