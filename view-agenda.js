@@ -343,6 +343,33 @@
         flex: 1;
         min-height: 0;
       }
+
+      /* ── Línea hora actual ── */
+      .current-time-line {
+        position: absolute;
+        left: 0;
+        width: 100%;
+        height: 2px;
+        background: #E53935;
+        z-index: 10;
+        pointer-events: none;
+      }
+      .current-time-line::before {
+        content: '';
+        position: absolute;
+        left: 44px;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: #E53935;
+      }
+      /* En semana: el círculo va pegado al borde izquierdo de la columna */
+      #ag-week-grid .current-time-line::before {
+        left: 0;
+        transform: translate(-50%, -50%);
+      }
     </style>
 
     <div id="ag-wrap">
@@ -501,10 +528,12 @@
         if (_currentView === 'semana') {
           const gridEl = document.getElementById('ag-week-grid');
           if (gridEl) posicionarColumnaHoy(gridEl, lunesDe(_fechaActual), fmtDate(new Date()));
+          actualizarLineaHoraActualSemana();
         }
         if (_currentView === 'dia') {
           updateAgendaHeight('ag-time-grid');
           posicionarColumnaHoyDia();
+          actualizarLineaHoraActualDia();
         }
       });
     });
@@ -594,8 +623,140 @@
   }
 
   // ────────────────────────────────────────────────────────
-  //  VISTAS
+  //  LÍNEA DE HORA ACTUAL
+  //  Funciona en vista día (#ag-time-grid) y semana (#ag-week-grid)
   // ────────────────────────────────────────────────────────
+
+  /** Intervalo activo del setInterval; se limpia en onLeave */
+  let _currentTimeInterval = null;
+
+  /** Constantes del rango horario de la agenda */
+  const HORA_INICIO = 8;   // 08:00
+  const HORA_FIN    = 20;  // 20:00 (última fila visible)
+  const TOTAL_MINUTOS = (HORA_FIN - HORA_INICIO) * 60; // 720 min
+
+  /**
+   * Calcula el porcentaje vertical (0–1) de la hora actual
+   * dentro del rango 08:00–20:00.
+   * Devuelve null si está fuera del rango.
+   */
+  function _calcPorcentajeHoraActual() {
+    const ahora = new Date();
+    const minutosDesdeInicio = (ahora.getHours() - HORA_INICIO) * 60 + ahora.getMinutes();
+    if (minutosDesdeInicio < 0 || minutosDesdeInicio > TOTAL_MINUTOS) return null;
+    return minutosDesdeInicio / TOTAL_MINUTOS;
+  }
+
+  /**
+   * Renderiza la línea en un contenedor scrollable dado.
+   * @param {HTMLElement} container — el grid con scrollHeight real
+   * @param {number} leftPx — posición left en px (para vista semana)
+   * @param {number} widthPx — ancho en px (0 = 100%)
+   */
+  function _renderLineaHoraActual(container, leftPx, widthPx) {
+    // Eliminar línea previa si existe
+    container.querySelectorAll('.current-time-line').forEach(el => el.remove());
+
+    const pct = _calcPorcentajeHoraActual();
+    if (pct === null) return; // fuera del horario de agenda
+
+    const topPx = pct * container.scrollHeight;
+
+    const linea = document.createElement('div');
+    linea.className = 'current-time-line';
+    linea.style.top = topPx + 'px';
+    if (widthPx > 0) {
+      linea.style.left  = leftPx + 'px';
+      linea.style.width = widthPx + 'px';
+    }
+    container.appendChild(linea);
+  }
+
+  /**
+   * Actualiza la línea de hora actual en vista DÍA.
+   * Solo se muestra si _fechaActual es hoy.
+   */
+  function actualizarLineaHoraActualDia() {
+    const grid = document.getElementById('ag-time-grid');
+    if (!grid) return;
+    const esHoy = fmtDate(_fechaActual) === fmtDate(_hoy);
+    if (!esHoy) {
+      grid.querySelectorAll('.current-time-line').forEach(el => el.remove());
+      return;
+    }
+    _renderLineaHoraActual(grid, 0, 0); // left/width = 0 → usa CSS 100%
+  }
+
+  /**
+   * Actualiza la línea de hora actual en vista SEMANA.
+   * La línea se posiciona sobre la columna del día actual (si está en la semana visible).
+   */
+  function actualizarLineaHoraActualSemana() {
+    const gridEl = document.getElementById('ag-week-grid');
+    if (!gridEl) return;
+
+    gridEl.querySelectorAll('.current-time-line').forEach(el => el.remove());
+
+    const todayKey = fmtDate(new Date());
+    const lunes = lunesDe(_fechaActual);
+    let hoyIdx = -1;
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(lunes); d.setDate(lunes.getDate() + i);
+      if (fmtDate(d) === todayKey) { hoyIdx = i; break; }
+    }
+    if (hoyIdx < 0) return; // Esta semana no contiene hoy
+
+    const cellW = (gridEl.clientWidth - 46) / 7;
+    const leftPx = 46 + hoyIdx * cellW;
+    _renderLineaHoraActual(gridEl, leftPx, cellW);
+  }
+
+  /**
+   * Dispatcher: actualiza la línea según la vista activa.
+   */
+  function actualizarLineaHoraActual() {
+    if (_currentView === 'dia')    actualizarLineaHoraActualDia();
+    if (_currentView === 'semana') actualizarLineaHoraActualSemana();
+  }
+
+  /**
+   * Hace scroll automático para centrar la hora actual en pantalla.
+   * @param {string} containerId — id del contenedor scrollable
+   */
+  function scrollAHoraActual(containerId) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+
+    // Doble rAF: garantiza scrollHeight real tras pintar
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      const pct = _calcPorcentajeHoraActual();
+      if (pct === null) return;
+      const topPx = pct * container.scrollHeight;
+      container.scrollTop = topPx - (container.clientHeight / 2);
+    }));
+  }
+
+  /**
+   * Inicia el ciclo de actualización automática de la línea (cada 60 s).
+   * Limpia el intervalo anterior si existía.
+   */
+  function iniciarLineaHoraActual() {
+    detenerLineaHoraActual();
+    actualizarLineaHoraActual(); // render inmediato
+    _currentTimeInterval = setInterval(actualizarLineaHoraActual, 60_000);
+  }
+
+  /**
+   * Detiene el setInterval. Llamar en onLeave para no acumular timers.
+   */
+  function detenerLineaHoraActual() {
+    if (_currentTimeInterval) {
+      clearInterval(_currentTimeInterval);
+      _currentTimeInterval = null;
+    }
+  }
+
+
   function setView(v) {
     _currentView = v;
     ['dia','semana','mes'].forEach(x => {
@@ -612,10 +773,20 @@
       requestAnimationFrame(() => requestAnimationFrame(() => {
         updateAgendaHeight('ag-time-grid');
         posicionarColumnaHoyDia();
+        // ── Línea hora actual + auto scroll ──
+        actualizarLineaHoraActualDia();
+        scrollAHoraActual('ag-time-grid');
+        iniciarLineaHoraActual();
       }));
     }
     if (v === 'semana') {
       renderSemana(); // posicionarColumnaHoy() ya se llama al final de renderSemana
+      // ── Línea hora actual + auto scroll ──
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        actualizarLineaHoraActualSemana();
+        scrollAHoraActual('ag-week-grid');
+        iniciarLineaHoraActual();
+      }));
     }
     if (v === 'mes') renderMes();
   }
@@ -672,6 +843,7 @@
         actualizarHeader();
         buildDayStrip();
         renderDia();
+        // La línea se actualiza dentro de renderDia vía rAF
       });
       strip.appendChild(pill);
     }
@@ -710,6 +882,7 @@
     requestAnimationFrame(() => requestAnimationFrame(() => {
       updateAgendaHeight('ag-time-grid');
       posicionarColumnaHoyDia();
+      actualizarLineaHoraActualDia();
     }));
   }
   function renderSemana() {
@@ -1053,6 +1226,7 @@
       agQ('ag-overlay')?.classList.remove('open');
       agQ('ag-overlay-det')?.classList.remove('open');
       _turnoSel = null;
+      detenerLineaHoraActual(); // ← limpiar setInterval de la línea
     },
   });
 
