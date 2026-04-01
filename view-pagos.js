@@ -40,6 +40,8 @@
 #view-pagos .pv-icon-efectivo { background: rgba(124,58,237,0.12); }
 #view-pagos .pv-icon-transferencia { background: rgba(124,58,237,0.15); }
 #view-pagos .pv-icon-mercado_pago { background: rgba(124,58,237,0.18); }
+#view-pagos .pv-icon-pendiente { background: rgba(251,191,36,0.18); }
+#view-pagos .pv-card-pendiente { border-left-color: #FBBF24; opacity: .9; }
 #view-pagos .pv-card-info { flex: 1; min-width: 0; }
 #view-pagos .pv-card-nombre { font-size: 14px; font-weight: 700; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 #view-pagos .pv-card-meta { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
@@ -86,8 +88,8 @@
    CONSTANTES
    ══════════════════════════════════════════ */
 const PV_MESES       = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
-const PV_METODO_ICON = { efectivo:'💵', transferencia:'🏦', mercado_pago:'📲' };
-const PV_METODO_LBL  = { efectivo:'Efectivo', transferencia:'Transferencia', mercado_pago:'Mercado Pago' };
+const PV_METODO_ICON = { efectivo:'💵', transferencia:'🏦', mercado_pago:'📲', pendiente:'⏳' };
+const PV_METODO_LBL  = { efectivo:'Efectivo', transferencia:'Transferencia', mercado_pago:'Mercado Pago', pendiente:'Pendiente de pago' };
 
 
 /* ══════════════════════════════════════════
@@ -154,6 +156,7 @@ function _pvRenderHTML(container) {
   <div class="pv-fchip" data-filtro="efectivo">💵 Efectivo</div>
   <div class="pv-fchip" data-filtro="transferencia">🏦 Transf.</div>
   <div class="pv-fchip" data-filtro="mercado_pago">📲 MP</div>
+  <div class="pv-fchip" data-filtro="pendiente">⏳ Pendiente</div>
 </div>
 
 <div class="pv-list-wrap">
@@ -192,6 +195,7 @@ function _pvRenderHTML(container) {
         <option value="efectivo">💵 Efectivo</option>
         <option value="transferencia">🏦 Transferencia</option>
         <option value="mercado_pago">📲 Mercado Pago</option>
+        <option value="pendiente">⏳ Pendiente de pago</option>
       </select>
     </div>
     <button class="pv-btn-guardar" id="pv-btn-guardar">✓ Guardar pago</button>
@@ -309,19 +313,20 @@ function _pvRenderResumen() {
     const d = new Date(p.fecha + 'T12:00:00');
     return d.getMonth() === _pv.mes && d.getFullYear() === _pv.anio;
   });
-  const total  = del_mes.reduce((s, p) => s + (Number(p.monto) || 0), 0);
+  const total  = del_mes.filter(p => p.metodo !== 'pendiente').reduce((s, p) => s + (Number(p.monto) || 0), 0);
   const ef     = del_mes.filter(p => p.metodo === 'efectivo').reduce((s, p) => s + (Number(p.monto) || 0), 0);
   const tr     = del_mes.filter(p => p.metodo === 'transferencia').reduce((s, p) => s + (Number(p.monto) || 0), 0);
   const mp     = del_mes.filter(p => p.metodo === 'mercado_pago').reduce((s, p) => s + (Number(p.monto) || 0), 0);
+  const pend   = del_mes.filter(p => p.metodo === 'pendiente').length;
   el.innerHTML = `
     <div class="pv-balance-label">Total cobrado</div>
     <div class="pv-balance-amount">${_pvFmt(total)}</div>
-    <div class="pv-balance-sub">${del_mes.length} pago${del_mes.length !== 1 ? 's' : ''} · ${PV_MESES[_pv.mes]} ${_pv.anio}</div>
+    <div class="pv-balance-sub">${del_mes.length} registro${del_mes.length !== 1 ? 's' : ''} · ${PV_MESES[_pv.mes]} ${_pv.anio}</div>
     <div class="pv-chips">
-      <div class="pv-chip"><div class="pv-chip-label">Total</div><div class="pv-chip-val">${del_mes.length}</div></div>
       <div class="pv-chip"><div class="pv-chip-label">Efectivo</div><div class="pv-chip-val pv-green">${_pvFmt(ef)}</div></div>
       <div class="pv-chip"><div class="pv-chip-label">Transf.</div><div class="pv-chip-val pv-green">${_pvFmt(tr)}</div></div>
       <div class="pv-chip"><div class="pv-chip-label">MP</div><div class="pv-chip-val pv-green">${_pvFmt(mp)}</div></div>
+      <div class="pv-chip"><div class="pv-chip-label">Pendiente</div><div class="pv-chip-val" style="color:#FBBF24">${pend}</div></div>
     </div>`;
 }
 
@@ -353,13 +358,13 @@ function _pvRenderLista() {
     return `
       <div class="pv-date-group">${fLabel}</div>
       ${items.map(p => `
-        <div class="pv-card" data-id="${p.id}">
+        <div class="pv-card${p.metodo === 'pendiente' ? ' pv-card-pendiente' : ''}" data-id="${p.id}">
           <div class="pv-card-icon pv-icon-${p.metodo}">${PV_METODO_ICON[p.metodo] || '💰'}</div>
           <div class="pv-card-info">
             <div class="pv-card-nombre">${_pvNombre(p.paciente_id)}</div>
             <div class="pv-card-meta">${PV_METODO_LBL[p.metodo] || p.metodo}</div>
           </div>
-          <div class="pv-card-monto">${_pvFmt(p.monto)}</div>
+          <div class="pv-card-monto" style="${p.metodo === 'pendiente' ? 'color:#FBBF24' : ''}">${p.metodo === 'pendiente' ? '⏳ ' : ''}${_pvFmt(p.monto)}</div>
         </div>`).join('')}`;
   }).join('');
 
