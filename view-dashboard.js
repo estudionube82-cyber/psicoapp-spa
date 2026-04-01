@@ -159,6 +159,7 @@
 #view-dashboard .dash-turno:hover { transform:translateX(2px); }
 #view-dashboard .dash-turno.tc-past { opacity:.55; }
 #view-dashboard .dash-turno.tc-now  { border-left-color:var(--accent2); box-shadow:0 0 0 2px rgba(52,211,153,.18); }
+#view-dashboard .dash-turno.tc-evento { border-left-color:#F97316; background:rgba(249,115,22,0.08); }
 #view-dashboard .dt-hora      { font-size:15px; font-weight:800; color:var(--text); min-width:44px; }
 #view-dashboard .dt-hora.now  { color:var(--accent2); }
 #view-dashboard .dt-info      { flex:1; }
@@ -306,7 +307,7 @@ async function _dashCargarDatos() {
         .lte('fecha', ultimoDiaMes),
 
       sb.from('turnos')
-        .select('id,fecha,hora,duracion,estado,paciente_id,pacientes(nombre,apellido)')
+        .select('id,fecha,hora,duracion,estado,tipo,notas,paciente_id,pacientes(nombre,apellido)')
         .eq('user_id', uid)
         .eq('fecha', fechaHoy)
         .order('hora', { ascending: true }),
@@ -476,9 +477,14 @@ function _dashRenderTurnos(turnos, hoy) {
     const horaFmt  = dt.toLocaleTimeString('es-AR', { hour:'2-digit', minute:'2-digit' });
     const duracion = t.duracion ? `${t.duracion} min` : '50 min';
     const pac      = t.pacientes;
-    const nombre   = t.tipo === 'evento'
+    const tipo     = (t.tipo || '').toLowerCase();
+    const esEvento = tipo === 'evento' || !t.paciente_id;
+    const nombre   = esEvento
       ? (t.notas || 'Evento')
-      : (pac ? `${pac.nombre || ''} ${pac.apellido || ''}`.trim() || 'Paciente' : 'Paciente');
+      : ((pac && (pac.nombre || pac.apellido))
+          ? `${pac.nombre || ''} ${pac.apellido || ''}`.trim()
+          : 'Paciente');
+    const meta     = esEvento ? `Evento · ${duracion}` : `Sesión · ${duracion}`;
     const esPasado = dt.getTime() < ahoraMs - 30 * 60 * 1000;
     const esAhora  = !esPasado && dt.getTime() <= ahoraMs + 60 * 60 * 1000;
 
@@ -499,11 +505,11 @@ function _dashRenderTurnos(turnos, hoy) {
     else                                                  badge = `<div class="dt-badge dtb-wait">⏳ Pendiente</div>`;
 
     html += `
-      <div class="dash-turno${esPasado ? ' tc-past' : ''}${esAhora ? ' tc-now' : ''}" onclick="navigate('agenda')">
+      <div class="dash-turno${esPasado ? ' tc-past' : ''}${esAhora ? ' tc-now' : ''}${esEvento ? ' tc-evento' : ''}" onclick="navigate('agenda')">
         <div class="dt-hora${esAhora ? ' now' : ''}">${horaFmt}</div>
         <div class="dt-info">
           <div class="dt-nombre">${nombre}</div>
-          <div class="dt-meta">Sesión · ${duracion}</div>
+          <div class="dt-meta">${meta}</div>
         </div>
         ${badge}
       </div>`;
