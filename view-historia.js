@@ -21,7 +21,7 @@
 #view-historia .hc-panel { display: none; }
 #view-historia .hc-panel.hc-active { display: block; animation: hcFadeIn .18s ease; }
 @keyframes hcFadeIn { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }
-#view-historia .hc-header { background: linear-gradient(145deg, #0F2A44 0%, #1B4F72 55%, #2471A3 100%); padding: 20px 20px 26px; position: relative; overflow: hidden; }
+#view-historia .hc-header { background: linear-gradient(145deg, #2D1B69 0%, #5B2FA8 55%, #7C3AED 100%); padding: 20px 20px 26px; position: relative; overflow: hidden; }
 #view-historia .hc-header::after { content:''; position:absolute; right:-40px; top:-40px; width:180px; height:180px; border-radius:50%; background:rgba(255,255,255,0.05); }
 #view-historia .hc-header-row { display:flex; align-items:center; gap:12px; position:relative; z-index:1; }
 #view-historia .hc-back-btn { width:34px; height:34px; border-radius:10px; background:rgba(255,255,255,0.15); border:1.5px solid rgba(255,255,255,0.2); color:white; font-size:18px; cursor:pointer; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
@@ -65,7 +65,7 @@
 #view-historia .hc-ses-footer { display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
 #view-historia .hc-diag-chip { font-size:10px; font-weight:700; padding:2px 7px; border-radius:20px; background:var(--primary-light); color:var(--primary); }
 #view-historia .hc-estado-chip { font-size:10px; font-weight:700; padding:2px 7px; border-radius:20px; margin-left:auto; }
-#view-historia .hc-estado-realizada { background:#D1FAE5; color:#065F46; }
+#view-historia .hc-estado-realizada { background: rgba(124,58,237,0.15); color: #7C3AED; }
 #view-historia .hc-estado-cancelada { background:#FEE2E2; color:#B91C1C; }
 #view-historia .hc-estado-pendiente { background:#FEF3C7; color:#92400E; }
 #view-historia .hc-info-card { background:var(--surface); border-radius:14px; margin:12px 16px; padding:14px; box-shadow:var(--shadow-sm); }
@@ -75,7 +75,7 @@
 #view-historia .hc-info-value { font-size:13px; font-weight:600; color:var(--text); line-height:1.5; }
 #view-historia .hc-info-empty { color:var(--text-muted); font-weight:400; }
 #view-historia .hc-btn-edit { width:100%; margin-top:12px; padding:10px; border-radius:10px; border:1.5px solid var(--border); background:var(--bg); color:var(--text); font-family:var(--font); font-size:13px; font-weight:700; cursor:pointer; }
-#view-historia .hc-sd-header { background:linear-gradient(145deg,#0F2A44 0%,#1B4F72 55%,#2471A3 100%); padding:18px 18px 16px; position:relative; overflow:hidden; }
+#view-historia .hc-sd-header { background:linear-gradient(145deg,#2D1B69 0%,#5B2FA8 55%,#7C3AED 100%); padding:18px 18px 16px; position:relative; overflow:hidden; }
 #view-historia .hc-sd-title  { font-size:16px; font-weight:800; color:white; }
 #view-historia .hc-sd-meta   { font-size:12px; color:rgba(255,255,255,0.65); margin-top:3px; }
 #view-historia .hc-sd-actions { display:flex; gap:8px; margin-top:12px; position:relative; z-index:1; }
@@ -86,7 +86,7 @@
 #view-historia .hc-mood-display { display:flex; align-items:center; gap:8px; }
 #view-historia .hc-mood-emoji   { font-size:24px; }
 #view-historia .hc-mood-label   { font-size:14px; font-weight:700; }
-#view-historia .hc-btn-ia { width:calc(100% - 32px); margin:16px; background:linear-gradient(135deg,#1B4F72,#2471A3); color:white; border:none; border-radius:14px; padding:14px; font-size:15px; font-weight:800; font-family:var(--font); cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; }
+#view-historia .hc-btn-ia { width:calc(100% - 32px); margin:16px; background:linear-gradient(135deg,#5B2FA8,#7C3AED); color:white; border:none; border-radius:14px; padding:14px; font-size:15px; font-weight:800; font-family:var(--font); cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; }
 #view-historia .hc-btn-ia:disabled { opacity:.5; cursor:not-allowed; }
 #view-historia .hc-ia-result-wrap { margin:0 16px 16px; display:none; }
 #view-historia .hc-ia-loading { display:none; flex-direction:column; align-items:center; gap:10px; padding:20px; }

@@ -47,8 +47,8 @@
 #view-pericias .per-card-caratula { font-size: 13px; color: var(--text-muted); margin-bottom: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 #view-pericias .per-card-meta { display: flex; gap: 12px; flex-wrap: wrap; }
 #view-pericias .per-card-meta-item { font-size: 11px; color: var(--text-muted); display: flex; align-items: center; gap: 4px; }
-#view-pericias .per-alerta { background: #FFF3E0; color: #E65100; border-radius: 8px; padding: 5px 10px; font-size: 11px; font-weight: 700; margin-top: 8px; display: flex; align-items: center; gap: 6px; }
-[data-theme="dark"] #view-pericias .per-alerta { background: rgba(230,81,0,0.15); color: #FB8C00; }
+#view-pericias .per-alerta { background: rgba(124,58,237,0.12); color: #7C3AED; border-radius: 8px; padding: 5px 10px; font-size: 11px; font-weight: 700; margin-top: 8px; display: flex; align-items: center; gap: 6px; }
+[data-theme="dark"] #view-pericias .per-alerta { background: rgba(124,58,237,0.20); color: #a78bfa; }
 #view-pericias .per-empty { text-align: center; padding: 48px 20px; color: var(--text-muted); background: var(--surface); border-radius: var(--radius); margin: 16px; }
 #view-pericias .per-empty-icon { font-size: 40px; margin-bottom: 10px; }
 #view-pericias .per-empty h3 { color: var(--text); font-size: 17px; margin-bottom: 6px; }
@@ -76,18 +76,18 @@
 .per-estado-select { width: 100%; border: 1.5px solid var(--border); border-radius: 12px; padding: 10px 14px; font-size: 14px; font-family: var(--font); background: var(--bg); color: var(--text); margin-top: 8px; outline: none; }
 .per-det-actions { display: flex; gap: 10px; margin-top: 16px; }
 .per-btn-del { flex: 1; padding: 12px; border-radius: 12px; border: none; background: var(--danger-light); color: var(--danger); font-family: var(--font); font-size: 13px; font-weight: 700; cursor: pointer; }
-#view-pericias .per-s1 .per-stage-dot { background: #1976D2; }
-#view-pericias .per-s1 .per-stage-count { background: #E3F2FD; color: #1976D2; }
-#view-pericias .per-s1 .per-stage-name  { color: #1976D2; }
-#view-pericias .per-s1 .per-card        { border-left-color: #1976D2; }
-#view-pericias .per-s2 .per-stage-dot { background: #E65100; }
-#view-pericias .per-s2 .per-stage-count { background: #FFF3E0; color: #E65100; }
-#view-pericias .per-s2 .per-stage-name  { color: #E65100; }
-#view-pericias .per-s2 .per-card        { border-left-color: #E65100; }
-#view-pericias .per-s3 .per-stage-dot { background: #7B5EA7; }
-#view-pericias .per-s3 .per-stage-count { background: #EDE9FE; color: #7B5EA7; }
-#view-pericias .per-s3 .per-stage-name  { color: #7B5EA7; }
-#view-pericias .per-s3 .per-card        { border-left-color: #7B5EA7; }
+#view-pericias .per-s1 .per-stage-dot { background: #5B2FA8; }
+#view-pericias .per-s1 .per-stage-count { background: rgba(124,58,237,0.15); color: #7C3AED; }
+#view-pericias .per-s1 .per-stage-name  { color: #7C3AED; }
+#view-pericias .per-s1 .per-card        { border-left-color: #5B2FA8; }
+#view-pericias .per-s2 .per-stage-dot { background: #7C3AED; }
+#view-pericias .per-s2 .per-stage-count { background: rgba(124,58,237,0.15); color: #7C3AED; }
+#view-pericias .per-s2 .per-stage-name  { color: #7C3AED; }
+#view-pericias .per-s2 .per-card        { border-left-color: #7C3AED; }
+#view-pericias .per-s3 .per-stage-dot { background: #5B2FA8; }
+#view-pericias .per-s3 .per-stage-count { background: rgba(124,58,237,0.15); color: #7C3AED; }
+#view-pericias .per-s3 .per-stage-name  { color: #7C3AED; }
+#view-pericias .per-s3 .per-card        { border-left-color: #5B2FA8; }
 #view-pericias .per-s4 .per-stage-dot { background: var(--primary); }
 #view-pericias .per-s4 .per-stage-count { background: var(--primary-light); color: var(--primary); }
 #view-pericias .per-s4 .per-stage-name  { color: var(--primary); }
@@ -105,10 +105,10 @@ let _perSeleccionada = null;
 let _perTabActual    = 'pipeline';
 
 const PER_ESTADOS = {
-  en_curso:   { label: 'En curso',   cls: 'per-s1', icon: '⚙️',  color: '#1976D2', light: '#E3F2FD' },
-  entrevista: { label: 'Entrevista', cls: 'per-s2', icon: '🗣',  color: '#E65100', light: '#FFF3E0' },
-  redaccion:  { label: 'Redacción',  cls: 'per-s3', icon: '✍️',  color: '#7B5EA7', light: '#EDE9FE' },
-  presentado: { label: 'Presentado', cls: 'per-s3', icon: '📬',  color: '#7B5EA7', light: '#EDE9FE' },
+  en_curso:   { label: 'En curso',   cls: 'per-s1', icon: '⚙️',  color: '#7C3AED', light: 'rgba(124,58,237,0.15)' },
+  entrevista: { label: 'Entrevista', cls: 'per-s2', icon: '🗣',  color: '#7C3AED', light: 'rgba(124,58,237,0.15)' },
+  redaccion:  { label: 'Redacción',  cls: 'per-s3', icon: '✍️',  color: '#7C3AED', light: 'rgba(124,58,237,0.15)' },
+  presentado: { label: 'Presentado', cls: 'per-s3', icon: '📬',  color: '#7C3AED', light: 'rgba(124,58,237,0.15)' },
   cobrado:    { label: 'Cobrado',    cls: 'per-s4', icon: '✅',  color: null,      light: null       },
 };
 
@@ -129,8 +129,8 @@ function _perRenderHTML(container) {
     </div>
 
     <div class="per-stats">
-      <div class="per-stat"><div class="per-stat-num" id="per-stat-encurso" style="color:#1976D2">—</div><div class="per-stat-label">En curso</div></div>
-      <div class="per-stat"><div class="per-stat-num" id="per-stat-venc" style="color:#E65100">—</div><div class="per-stat-label">Próx. venc.</div></div>
+      <div class="per-stat"><div class="per-stat-num" id="per-stat-encurso" style="color:var(--primary)">—</div><div class="per-stat-label">En curso</div></div>
+      <div class="per-stat"><div class="per-stat-num" id="per-stat-venc" style="color:var(--primary)">—</div><div class="per-stat-label">Próx. venc.</div></div>
       <div class="per-stat"><div class="per-stat-num" id="per-stat-honorarios" style="color:var(--primary);font-size:16px">$0</div><div class="per-stat-label">Honor. pend.</div></div>
     </div>
 
