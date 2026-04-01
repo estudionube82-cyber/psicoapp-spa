@@ -316,17 +316,33 @@
       }
       .ag-wh-col.dia-hoy-header .ag-wh-day,
       .ag-wh-col.dia-hoy-header .ag-wh-num { color: white; }
-      .ag-col-hoy {
+
+      /* today-column: overlay unificado para semana/día — sin bottom:0, usa --agenda-height */
+      .today-column {
         position: absolute;
-        top: 0; bottom: 0;
-        width: calc(100% / 7);
-        background: linear-gradient(to bottom, rgba(255,0,128,0.10), rgba(255,0,128,0.05));
-        border-left: 2px solid #ff4fa3;
-        border-right: 2px solid #ff4fa3;
+        top: 0;
+        height: var(--agenda-height, 100%);
+        /* Sutil: tinte lila muy tenue, no saturado, no tapa eventos */
+        background: linear-gradient(to bottom,
+          rgba(139,92,246,0.06) 0%,
+          rgba(139,92,246,0.03) 60%,
+          rgba(139,92,246,0.01) 100%);
+        border-left: 1.5px solid rgba(139,92,246,0.25);
+        border-right: none;
         pointer-events: none;
         z-index: 1;
       }
-      .ag-week-ev { position: relative; z-index: 2; }
+      /* Eventos y slots siempre encima del overlay */
+      .ag-week-ev,
+      .ag-ev-block,
+      .ag-free-slot,
+      .ag-slot-area { position: relative; z-index: 2; }
+
+      /* Mobile: contenedor scrollable flexible */
+      #ag-week-grid, #ag-time-grid {
+        flex: 1;
+        min-height: 0;
+      }
     </style>
 
     <div id="ag-wrap">
@@ -481,10 +497,16 @@
 
     // Reposicionar columna hoy al redimensionar ventana
     window.addEventListener('resize', () => {
-      if (_currentView === 'semana') {
-        const gridEl = document.getElementById('ag-week-grid');
-        if (gridEl) posicionarColumnaHoy(gridEl, lunesDe(_fechaActual), fmtDate(new Date()));
-      }
+      requestAnimationFrame(() => {
+        if (_currentView === 'semana') {
+          const gridEl = document.getElementById('ag-week-grid');
+          if (gridEl) posicionarColumnaHoy(gridEl, lunesDe(_fechaActual), fmtDate(new Date()));
+        }
+        if (_currentView === 'dia') {
+          updateAgendaHeight('ag-time-grid');
+          posicionarColumnaHoyDia();
+        }
+      });
     });
 
     // Refrescar pacientes si otra vista los modificó
@@ -499,6 +521,79 @@
   }
 
   // ────────────────────────────────────────────────────────
+  //  HOY — altura dinámica y posicionamiento del overlay
+  // ────────────────────────────────────────────────────────
+
+  /**
+   * Lee el scrollHeight real del contenedor y actualiza --agenda-height.
+   * Usa requestAnimationFrame doble para garantizar layout completo.
+   * @param {string} containerId — id del contenedor scrollable
+   * @param {Function} [callback] — opcional, se ejecuta tras actualizar
+   */
+  function updateAgendaHeight(containerId, callback) {
+    const el = document.getElementById(containerId);
+    if (!el) return;
+    // Doble rAF: primer frame completa el paint, segundo lee dimensiones reales
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        const h = el.scrollHeight;
+        if (h > 0) el.style.setProperty('--agenda-height', h + 'px');
+        if (typeof callback === 'function') callback(el, h);
+      });
+    });
+  }
+
+  /**
+   * Crea el overlay .today-column dentro del grid de semana.
+   * Espera a que updateAgendaHeight resuelva para garantizar altura real.
+   */
+  function posicionarColumnaHoy(gridEl, lunes, todayKey) {
+    // Eliminar overlay previo
+    gridEl.querySelectorAll('.today-column').forEach(el => el.remove());
+
+    let hoyIdx = -1;
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(lunes); d.setDate(lunes.getDate() + i);
+      if (fmtDate(d) === todayKey) { hoyIdx = i; break; }
+    }
+    if (hoyIdx < 0) return; // Esta semana no contiene hoy
+
+    // Crear overlay; la altura la setea updateAgendaHeight vía --agenda-height
+    const col = document.createElement('div');
+    col.className = 'today-column';
+    const cellW = (gridEl.clientWidth - 46) / 7;
+    col.style.left  = (46 + hoyIdx * cellW) + 'px';
+    col.style.width = cellW + 'px';
+    gridEl.appendChild(col);
+
+    // Actualizar --agenda-height con doble rAF; el overlay ya está en el DOM
+    updateAgendaHeight('ag-week-grid');
+  }
+
+  /**
+   * Crea el overlay .today-column en vista día, cubriendo todo #ag-time-grid.
+   * Solo se muestra si _fechaActual es hoy.
+   */
+  function posicionarColumnaHoyDia() {
+    const grid = document.getElementById('ag-time-grid');
+    if (!grid) return;
+    // Limpiar overlay previo
+    grid.querySelectorAll('.today-column').forEach(el => el.remove());
+
+    const esHoy = fmtDate(_fechaActual) === fmtDate(_hoy);
+    if (!esHoy) return;
+
+    const col = document.createElement('div');
+    col.className = 'today-column';
+    // En vista día ocupa todo el ancho del área de slots (sin columna de hora)
+    col.style.left  = '46px';
+    col.style.width = 'calc(100% - 46px)';
+    grid.appendChild(col);
+
+    updateAgendaHeight('ag-time-grid');
+  }
+
+  // ────────────────────────────────────────────────────────
   //  VISTAS
   // ────────────────────────────────────────────────────────
   function setView(v) {
@@ -510,9 +605,19 @@
       if (btn) btn.classList.toggle('active', x === v);
     });
     actualizarHeader();
-    if (v === 'dia')    { buildDayStrip(); renderDia(); }
-    if (v === 'semana') renderSemana();
-    if (v === 'mes')    renderMes();
+    if (v === 'dia') {
+      buildDayStrip();
+      renderDia();
+      // rAF doble: garantiza DOM pintado antes de medir scrollHeight
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        updateAgendaHeight('ag-time-grid');
+        posicionarColumnaHoyDia();
+      }));
+    }
+    if (v === 'semana') {
+      renderSemana(); // posicionarColumnaHoy() ya se llama al final de renderSemana
+    }
+    if (v === 'mes') renderMes();
   }
 
   function actualizarHeader() {
@@ -599,9 +704,14 @@
       html += `</div></div>`;
     });
     grid.innerHTML = html;
-  }
 
-  // ── Week grid ────────────────────────────────────────────
+    // Overlay HOY en vista día (misma lógica que semana, clase unificada)
+    // Se llama desde setView con rAF, pero también al hacer click en day-strip
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      updateAgendaHeight('ag-time-grid');
+      posicionarColumnaHoyDia();
+    }));
+  }
   function renderSemana() {
     const hdrEl  = agQ('ag-week-header');
     const gridEl = agQ('ag-week-grid');
@@ -645,25 +755,8 @@
     });
     gridEl.innerHTML = rows;
 
-    // Overlay de columna continua para el día actual
-    const prevCol = gridEl.querySelector('.ag-col-hoy');
-    if (prevCol) prevCol.remove();
-    const hoyIdx = (() => {
-      for (let i = 0; i < 7; i++) {
-        const d = new Date(lunes); d.setDate(lunes.getDate() + i);
-        if (fmtDate(d) === _todayKey) return i;
-      }
-      return -1;
-    })();
-    if (hoyIdx >= 0) {
-      const col = document.createElement('div');
-      col.className = 'ag-col-hoy';
-      // +1 columna de offset por la columna de horas (46px fija)
-      const cellW = (gridEl.clientWidth - 46) / 7;
-      col.style.left = (46 + hoyIdx * cellW) + 'px';
-      col.style.width = cellW + 'px';
-      gridEl.appendChild(col);
-    }
+    // Overlay columna HOY — usa posicionarColumnaHoy() que maneja scrollHeight real
+    posicionarColumnaHoy(gridEl, lunes, _todayKey);
   }
 
   // ── Month grid ───────────────────────────────────────────
@@ -952,6 +1045,7 @@
       // Restaurar vista semana centrada en hoy
       actualizarHeader();
       setView('semana');
+      // setView ya dispara rAF internamente vía posicionarColumnaHoy
     },
 
     /* onLeave — cerrar modales para que no queden colgados al volver */
