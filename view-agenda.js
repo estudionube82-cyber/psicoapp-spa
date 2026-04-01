@@ -549,6 +549,14 @@
         });
       }
     });
+
+    // Reposicionar línea de hora al hacer scroll en vista día
+    const dayGrid = document.getElementById('ag-time-grid');
+    if (dayGrid) {
+      dayGrid.addEventListener('scroll', () => {
+        if (_currentView === 'dia') actualizarLineaHoraActualDia();
+      });
+    }
   }
 
   // ────────────────────────────────────────────────────────
@@ -662,11 +670,12 @@
     const pct = _calcPorcentajeHoraActual();
     if (pct === null) return; // fuera del horario de agenda
 
-    const topPx = pct * container.scrollHeight;
+    const topReal    = pct * container.scrollHeight;
+    const topVisible = topReal - container.scrollTop;
 
     const linea = document.createElement('div');
     linea.className = 'current-time-line';
-    linea.style.top = topPx + 'px';
+    linea.style.top = topVisible + 'px';
     if (widthPx > 0) {
       linea.style.left  = leftPx + 'px';
       linea.style.width = widthPx + 'px';
