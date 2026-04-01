@@ -159,7 +159,10 @@
 #view-dashboard .dash-turno:hover { transform:translateX(2px); }
 #view-dashboard .dash-turno.tc-past { opacity:.55; }
 #view-dashboard .dash-turno.tc-now  { border-left-color:var(--accent2); box-shadow:0 0 0 2px rgba(52,211,153,.18); }
-#view-dashboard .dash-turno.tc-evento { border-left-color:#F97316; background:rgba(249,115,22,0.08); }
+#view-dashboard .dash-turno.tc-evento { border-left:4px solid #F97316; background:rgba(249,115,22,0.18); }
+#view-dashboard .dt-tag { font-size:9px; font-weight:800; padding:2px 6px; border-radius:6px; margin-bottom:3px; display:inline-block; }
+#view-dashboard .tag-evento  { background:rgba(249,115,22,0.25); color:#F97316; }
+#view-dashboard .tag-paciente { background:rgba(52,211,153,0.2); color:#059669; }
 #view-dashboard .dt-hora      { font-size:15px; font-weight:800; color:var(--text); min-width:44px; }
 #view-dashboard .dt-hora.now  { color:var(--accent2); }
 #view-dashboard .dt-info      { flex:1; }
@@ -485,6 +488,10 @@ function _dashRenderTurnos(turnos, hoy) {
           ? `${pac.nombre || ''} ${pac.apellido || ''}`.trim()
           : 'Paciente');
     const meta     = esEvento ? `Evento · ${duracion}` : `Sesión · ${duracion}`;
+    const icono    = esEvento ? '🟠' : '🟢';
+    const tag      = esEvento
+      ? '<span class="dt-tag tag-evento">EVENTO</span>'
+      : '<span class="dt-tag tag-paciente">SESIÓN</span>';
     const esPasado = dt.getTime() < ahoraMs - 30 * 60 * 1000;
     const esAhora  = !esPasado && dt.getTime() <= ahoraMs + 60 * 60 * 1000;
 
@@ -508,7 +515,8 @@ function _dashRenderTurnos(turnos, hoy) {
       <div class="dash-turno${esPasado ? ' tc-past' : ''}${esAhora ? ' tc-now' : ''}${esEvento ? ' tc-evento' : ''}" onclick="navigate('agenda')">
         <div class="dt-hora${esAhora ? ' now' : ''}">${horaFmt}</div>
         <div class="dt-info">
-          <div class="dt-nombre">${nombre}</div>
+          ${tag}
+          <div class="dt-nombre">${icono} ${nombre}</div>
           <div class="dt-meta">${meta}</div>
         </div>
         ${badge}
