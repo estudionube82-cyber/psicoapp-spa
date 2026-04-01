@@ -478,6 +478,24 @@
     agQ('ag-det-eliminar').addEventListener('click', eliminarTurno);
     agQ('ag-det-cerrar').addEventListener('click', cerrarDetalle);
     agQ('ag-overlay-det').addEventListener('click', e => { if (e.target.id === 'ag-overlay-det') cerrarDetalle(); });
+
+    // Reposicionar columna hoy al redimensionar ventana
+    window.addEventListener('resize', () => {
+      if (_currentView === 'semana') {
+        const gridEl = document.getElementById('ag-week-grid');
+        if (gridEl) posicionarColumnaHoy(gridEl, lunesDe(_fechaActual), fmtDate(new Date()));
+      }
+    });
+
+    // Refrescar pacientes si otra vista los modificó
+    window.addEventListener('storeUpdated', (e) => {
+      if (e.detail?.key === 'pacientes') {
+        PsicoRouter.store.ensurePacientes().then(p => {
+          _todosPacientes = p;
+          _rellenarSelectPaciente();
+        });
+      }
+    });
   }
 
   // ────────────────────────────────────────────────────────
