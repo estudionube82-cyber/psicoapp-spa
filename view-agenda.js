@@ -304,6 +304,37 @@
       .ag-badge.conf   { background:#D1FAE5; color:#065F46; }
       .ag-badge.done   { background:var(--bg,#F8F7FF); color:var(--text-muted,#7C6FAE); }
       .ag-badge.cancel { background:#FEE2E2; color:#B91C1C; }
+
+      /* ── Día actual ── */
+      .ag-wh-col.dia-hoy-header {
+        background: linear-gradient(135deg, #ff4fa3, #c94fff);
+        border-radius: 12px;
+        color: white;
+        font-weight: 800;
+        box-shadow: 0 6px 18px rgba(255, 79, 163, 0.35);
+        transform: scale(1.02);
+      }
+      .ag-wh-col.dia-hoy-header .ag-wh-day,
+      .ag-wh-col.dia-hoy-header .ag-wh-num { color: white; }
+      .ag-week-cell.dia-hoy {
+        position: relative;
+        background: linear-gradient(to bottom, rgba(255,0,128,0.10), rgba(255,0,128,0.06));
+        border-top: 2px solid #ff4fa3;
+      }
+      .ag-week-cell.dia-hoy::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background: rgba(255, 0, 128, 0.04);
+        pointer-events: none;
+        z-index: 0;
+      }
+      .ag-week-cell.dia-hoy:hover {
+        background: linear-gradient(to bottom, rgba(255,0,128,0.16), rgba(255,0,128,0.10));
+      }
+      .ag-week-cell.has-turno.dia-hoy { background: linear-gradient(to bottom, rgba(255,0,128,0.10), rgba(255,0,128,0.06)); }
+      .ag-week-cell.has-turno.dia-hoy:hover { background: linear-gradient(to bottom, rgba(255,0,128,0.10), rgba(255,0,128,0.06)); }
+      .ag-week-ev { position: relative; z-index: 2; }
     </style>
 
     <div id="ag-wrap">
@@ -567,11 +598,12 @@
     if (!hdrEl || !gridEl) return;
     const lunes = lunesDe(_fechaActual);
 
+    const _todayKey = fmtDate(new Date());
     let hdr = '<div class="ag-wh-col"></div>';
     for (let i = 0; i < 7; i++) {
       const d    = new Date(lunes); d.setDate(lunes.getDate() + i);
-      const esHoy = fmtDate(d) === fmtDate(_hoy);
-      hdr += `<div class="ag-wh-col">
+      const esHoy = fmtDate(d) === _todayKey;
+      hdr += `<div class="ag-wh-col${esHoy ? ' dia-hoy-header' : ''}">
                 <div class="ag-wh-day">${DIAS[d.getDay()]}</div>
                 <div class="ag-wh-num ${esHoy ? 'today' : ''}">${d.getDate()}</div>
               </div>`;
@@ -586,16 +618,17 @@
         const d     = new Date(lunes); d.setDate(lunes.getDate() + i);
         const fecha = fmtDate(d);
         const turno = _todosTurnos.find(t => t.fecha === fecha && parseInt((t.hora||'0').split(':')[0]) === h);
+        const esCeldaHoy = fecha === _todayKey;
         if (turno) {
           const bg  = evBg(turno.tipo);
           const brd = evBorder(turno.tipo);
           const nom = nombrePaciente(turno);
-          rows += `<div class="ag-week-cell has-turno">
+          rows += `<div class="ag-week-cell has-turno${esCeldaHoy ? ' dia-hoy' : ''}">
                      <div class="ag-week-ev" style="background:${bg};border-left-color:${brd};color:${brd}"
                           onclick="window._agDetalle('${turno.id}')">${nom}</div>
                    </div>`;
         } else {
-          rows += `<div class="ag-week-cell" onclick="window._agModalFechaHora('${fecha}','${horaStr}')"></div>`;
+          rows += `<div class="ag-week-cell${esCeldaHoy ? ' dia-hoy' : ''}" onclick="window._agModalFechaHora('${fecha}','${horaStr}')"></div>`;
         }
       }
       rows += '</div>';
