@@ -681,24 +681,32 @@
         'position:absolute',
         'top:0', 'left:0', 'right:0', 'bottom:0',
         'pointer-events:none',
-        'z-index:1000',
-        'overflow:hidden',   // recorta la línea si está fuera del área visible
+        'z-index:5',           // por debajo de modales (z-index: 60)
+        'overflow:hidden',
       ].join(';');
       const parent = container.parentElement;
-      parent.style.position = 'relative'; // necesario para que absolute funcione
+      parent.style.position = 'relative';
       parent.appendChild(overlay);
     }
 
     // ── 2. Limpiar línea previa ───────────────────────────────────────────
     overlay.querySelectorAll('.current-time-line').forEach(el => el.remove());
 
-    // ── 3. Calcular posición: proporción real del grid ────────────────────
-    const ahora = new Date();
-    const minutosDesdeInicio = (ahora.getHours() - 8) * 60 + ahora.getMinutes();
-    if (minutosDesdeInicio < 0 || minutosDesdeInicio > 720) return;
+    // ── 3. Calcular posición con anchors data-hour reales ─────────────────
+    const firstHour = container.querySelector('[data-hour="8"]');
+    const lastHour  = container.querySelector('[data-hour="20"]');
+    if (!firstHour || !lastHour) return;
 
-    const pct      = minutosDesdeInicio / 720;
-    const topReal  = pct * container.scrollHeight;
+    const startTop    = firstHour.offsetTop;
+    const endTop      = lastHour.offsetTop + lastHour.offsetHeight;
+    const totalHeight = endTop - startTop;
+
+    const now              = new Date();
+    const minutesFromStart = (now.getHours() - 8) * 60 + now.getMinutes();
+    if (minutesFromStart < 0 || minutesFromStart > 720) return;
+
+    const pct        = minutesFromStart / 720;
+    const topReal    = startTop + pct * totalHeight;
     const topVisible = topReal - container.scrollTop;
 
     // ── 4. Crear y posicionar la línea ────────────────────────────────────
@@ -903,7 +911,7 @@
     HORAS.forEach(h => {
       const horaStr = String(h).padStart(2,'0') + ':00';
       const turno   = turnos.find(t => parseInt((t.hora||'0').split(':')[0]) === h);
-      html += `<div class="ag-time-row">
+      html += `<div class="ag-time-row" data-hour="${h}">
                  <div class="ag-time-lbl">${horaStr}</div>
                  <div class="ag-slot-area">`;
       if (turno) {
@@ -951,7 +959,7 @@
     let rows = '';
     HORAS.forEach(h => {
       const horaStr = String(h).padStart(2,'0') + ':00';
-      rows += `<div class="ag-week-row"><div class="ag-week-time">${horaStr}</div>`;
+      rows += `<div class="ag-week-row" data-hour="${h}"><div class="ag-week-time">${horaStr}</div>`;
       for (let i = 0; i < 7; i++) {
         const d     = new Date(lunes); d.setDate(lunes.getDate() + i);
         const fecha = fmtDate(d);
