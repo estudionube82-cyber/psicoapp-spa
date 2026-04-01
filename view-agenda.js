@@ -700,7 +700,9 @@
     if (hActual < HORA_INICIO || hActual >= HORA_FIN) return;
 
     const filaIdx = hActual - HORA_INICIO;
-    const filas   = container.querySelectorAll('.ag-time-row');
+    const filas   = container.id === 'ag-time-grid'
+      ? container.querySelectorAll('.ag-time-row')
+      : container.querySelectorAll('.ag-week-row');
     if (!filas.length || !filas[filaIdx]) return;
 
     const filaEl     = filas[filaIdx];
