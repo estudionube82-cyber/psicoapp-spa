@@ -549,6 +549,15 @@
         });
       }
     });
+
+    // Scroll listeners: recalculan topVisible = offsetTop - scrollTop
+    // para mantener la línea alineada visualmente al hacer scroll
+    agQ('ag-time-grid').addEventListener('scroll', () => {
+      if (_currentView === 'dia') actualizarLineaHoraActualDia();
+    });
+    agQ('ag-week-grid').addEventListener('scroll', () => {
+      if (_currentView === 'semana') actualizarLineaHoraActualSemana();
+    });
   }
 
   // ────────────────────────────────────────────────────────
@@ -650,51 +659,63 @@
   }
 
   /**
-   * Calcula el top absoluto (px) de la línea dentro del contenido del contenedor.
-   * Usa offsetTop de la fila — coordenada fija relativa al contenedor, sin scroll.
-   * La línea tiene position:absolute, por lo que este valor es correcto directamente.
+   * Renderiza la línea en un overlay absoluto que es HERMANO del container scrollable,
+   * no hijo. Así la línea no scrollea con el contenido y siempre queda alineada
+   * visualmente con la hora correcta.
    *
-   * @param {HTMLElement} container
-   * @returns {number|null}
+   * Posición: offsetTop de la fila (fijo en el contenido) - scrollTop del container
+   * = coordenada visible dentro del parent no-scrollable.
+   *
+   * @param {HTMLElement} container — el grid scrollable
+   * @param {number} leftPx  — left en px (vista semana); 0 = ancho completo
+   * @param {number} widthPx — width en px (vista semana); 0 = ancho completo
    */
-  function _calcTopLineaHoraActual(container) {
+  function _renderLineaHoraActual(container, leftPx, widthPx) {
+    // ── 1. Obtener / crear overlay hermano del container ──────────────────
+    const overlayId = container.id + '-time-overlay';
+    let overlay = document.getElementById(overlayId);
+    if (!overlay) {
+      overlay = document.createElement('div');
+      overlay.id = overlayId;
+      overlay.style.cssText = [
+        'position:absolute',
+        'top:0', 'left:0', 'right:0', 'bottom:0',
+        'pointer-events:none',
+        'z-index:1000',
+        'overflow:hidden',   // recorta la línea si está fuera del área visible
+      ].join(';');
+      const parent = container.parentElement;
+      parent.style.position = 'relative'; // necesario para que absolute funcione
+      parent.appendChild(overlay);
+    }
+
+    // ── 2. Limpiar línea previa ───────────────────────────────────────────
+    overlay.querySelectorAll('.current-time-line').forEach(el => el.remove());
+
+    // ── 3. Calcular posición: offsetTop real - scroll actual ──────────────
     const ahora   = new Date();
     const hActual = ahora.getHours();
     const mActual = ahora.getMinutes();
 
-    if (hActual < HORA_INICIO || hActual >= HORA_FIN) return null;
+    if (hActual < HORA_INICIO || hActual >= HORA_FIN) return;
 
-    const filaIdx = hActual - HORA_INICIO; // 0 = fila 08:00
+    const filaIdx = hActual - HORA_INICIO;
     const filas   = container.querySelectorAll('.ag-time-row');
-    if (!filas.length || !filas[filaIdx]) return null;
+    if (!filas.length || !filas[filaIdx]) return;
 
     const filaEl     = filas[filaIdx];
-    const filaTop    = filaEl.offsetTop;       // relativo al contenedor, sin scroll
-    const filaHeight = filaEl.offsetHeight;
+    const topReal    = filaEl.offsetTop + filaEl.offsetHeight * (mActual / 60);
+    const topVisible = topReal - container.scrollTop;
 
-    return filaTop + filaHeight * (mActual / 60);
-  }
-
-  /**
-   * Renderiza la línea en un contenedor scrollable dado.
-   * @param {HTMLElement} container
-   * @param {number} leftPx  — posicion left en px (vista semana; 0 = CSS 100%)
-   * @param {number} widthPx — ancho en px (0 = CSS 100%)
-   */
-  function _renderLineaHoraActual(container, leftPx, widthPx) {
-    container.querySelectorAll('.current-time-line').forEach(el => el.remove());
-
-    const topPx = _calcTopLineaHoraActual(container);
-    if (topPx === null) return;
-
+    // ── 4. Crear y posicionar la línea ────────────────────────────────────
     const linea = document.createElement('div');
     linea.className = 'current-time-line';
-    linea.style.top = topPx + 'px';
+    linea.style.top = topVisible + 'px';
     if (widthPx > 0) {
       linea.style.left  = leftPx + 'px';
       linea.style.width = widthPx + 'px';
     }
-    container.appendChild(linea);
+    overlay.appendChild(linea);
   }
 
   /**
@@ -706,10 +727,12 @@
     if (!grid) return;
     const esHoy = fmtDate(_fechaActual) === fmtDate(_hoy);
     if (!esHoy) {
-      grid.querySelectorAll('.current-time-line').forEach(el => el.remove());
+      // Limpiar overlay si existe
+      const overlay = document.getElementById('ag-time-grid-time-overlay');
+      if (overlay) overlay.querySelectorAll('.current-time-line').forEach(el => el.remove());
       return;
     }
-    _renderLineaHoraActual(grid, 0, 0); // left/width = 0 → usa CSS 100%
+    _renderLineaHoraActual(grid, 0, 0);
   }
 
   /**
@@ -720,7 +743,8 @@
     const gridEl = document.getElementById('ag-week-grid');
     if (!gridEl) return;
 
-    gridEl.querySelectorAll('.current-time-line').forEach(el => el.remove());
+    const overlay = document.getElementById('ag-week-grid-time-overlay');
+    if (overlay) overlay.querySelectorAll('.current-time-line').forEach(el => el.remove());
 
     const todayKey = fmtDate(new Date());
     const lunes = lunesDe(_fechaActual);
@@ -729,9 +753,9 @@
       const d = new Date(lunes); d.setDate(lunes.getDate() + i);
       if (fmtDate(d) === todayKey) { hoyIdx = i; break; }
     }
-    if (hoyIdx < 0) return; // Esta semana no contiene hoy
+    if (hoyIdx < 0) return;
 
-    const cellW = (gridEl.clientWidth - 46) / 7;
+    const cellW  = (gridEl.clientWidth - 46) / 7;
     const leftPx = 46 + hoyIdx * cellW;
     _renderLineaHoraActual(gridEl, leftPx, cellW);
   }
