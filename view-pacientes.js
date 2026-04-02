@@ -701,7 +701,8 @@ function pacCerrarDetalle() {
 
 function pacIrHistoriaClinica() {
   if (!_pacSeleccionado) return;
-  window.location.href = `psicoapp-historia.html?id=${_pacSeleccionado.id}`;
+  PsicoRouter.store.pacienteSeleccionado = _pacSeleccionado;
+  navigate('historia');
 }
 
 async function pacEliminarPaciente() {
