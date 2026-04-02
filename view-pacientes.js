@@ -1,5 +1,3 @@
-import { escHtml, escAttr } from '/src/utils/sanitize.js';
-
 /**
  * view-pacientes.js
  * ─────────────────────────────────────────────────────────────

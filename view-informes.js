@@ -4,7 +4,6 @@
  * Generador de informes clínicos con IA (Claude via Supabase Edge Function)
  */
 
-import { escHtml, escAttr } from '/src/utils/sanitize.js';
 
 /* ══════════════════════════════════════════
    ESTILOS — inyectados una sola vez
