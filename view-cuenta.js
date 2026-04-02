@@ -186,11 +186,7 @@ function renderCuenta() {
   const lim         = getPlanLimits(plan);
   const usos        = sus?.usos  || { whatsapp:0, informesIA:0 };
   const ext         = sus?.extra || { whatsapp:0 };
-  const linkPagoPro   = (typeof PSICOAPP_CONFIG !== 'undefined' && PSICOAPP_CONFIG.LINK_PAGO_PRO)
-    ? PSICOAPP_CONFIG.LINK_PAGO_PRO   : 'https://mpago.la/TU_LINK_PRO';
-  const linkPagoMax   = (typeof PSICOAPP_CONFIG !== 'undefined' && PSICOAPP_CONFIG.LINK_PAGO_MAX)
-    ? PSICOAPP_CONFIG.LINK_PAGO_MAX   : 'https://mpago.la/TU_LINK_MAX';
-  const linkPagoExtra = 'https://mpago.la/23Lff3N';
+  // Pagos manejados 100% por create-preference (Edge Function)
 
   const nombre    = perfil.nombre || 'Profesional';
   const email     = perfil.email  || '';
@@ -345,15 +341,9 @@ function renderCuenta() {
   const q = id => container.querySelector(id);
   const on = (id, fn) => { const el = q(id); if (el) el.addEventListener('click', fn); };
 
-  on('#vc-btn-upgrade-pro', () => {
-    const retorno = encodeURIComponent(window.location.origin + '/?plan=pro');
-    window.location.href = linkPagoPro + '?back_url=' + retorno;
-  });
-  on('#vc-btn-upgrade-max', () => {
-    const retorno = encodeURIComponent(window.location.origin + '/?plan=max');
-    window.location.href = linkPagoMax + '?back_url=' + retorno;
-  });
-  on('#vc-btn-extra-wa',    () => { window.location.href = linkPagoExtra; });
+  on('#vc-btn-upgrade-pro', () => irAPago('pro'));
+  on('#vc-btn-upgrade-max', () => irAPago('max'));
+  on('#vc-btn-extra-wa',    () => irAPago('extra_whatsapp'));
   on('#vc-btn-logout',      async () => {
     window._psicoSigningOut = true;
     try { await sb.auth.signOut(); } catch(e) {}
@@ -377,3 +367,48 @@ function initCuenta() {
 }
 
 window.onViewEnter_cuenta = initCuenta;
+
+/* ══ PAGO VIA MERCADOPAGO ══ */
+async function irAPago(plan) {
+  const btnIds = {
+    pro:             '#vc-btn-upgrade-pro',
+    max:             '#vc-btn-upgrade-max',
+    extra_whatsapp:  '#vc-btn-extra-wa',
+  }
+  const labels = {
+    pro:             '🚀 Activar Pro',
+    max:             '💎 Activar Max',
+    extra_whatsapp:  '➕ Comprar 100 mensajes WhatsApp extra ($5.000)',
+  }
+
+  const btn = document.querySelector(btnIds[plan])
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Redirigiendo…' }
+
+  try {
+    const { data: { session } } = await sb.auth.getSession()
+    if (!session) { vcToast('❌ Sesión no encontrada'); return }
+
+    const email = session.user.email
+
+    const resp = await fetch(PSICOAPP_CONFIG.SUPA_URL + '/functions/v1/create-preference', {
+      method: 'POST',
+      headers: {
+        'Content-Type':  'application/json',
+        'Authorization': 'Bearer ' + session.access_token,
+      },
+      body: JSON.stringify({ email, plan }),
+    })
+
+    if (!resp.ok) throw new Error('Error al crear preferencia: ' + resp.status)
+
+    const data = await resp.json()
+    if (!data.init_point) throw new Error('No se recibió init_point')
+
+    window.location.href = data.init_point
+
+  } catch(e) {
+    console.error('[irAPago]', e)
+    vcToast('❌ Error al iniciar el pago. Intentá de nuevo.')
+    if (btn) { btn.disabled = false; btn.textContent = labels[plan] || 'Reintentar' }
+  }
+}
