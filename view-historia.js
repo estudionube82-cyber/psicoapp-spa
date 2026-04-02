@@ -1010,14 +1010,21 @@ PsicoRouter.register('historia', {
   },
 
   async onEnter() {
-    // Resetear al panel lista siempre que se entra
-    hcShowPanel('lista');
-    _hcPaciente    = null;
-    _hcSesionActual = null;
-    // userId desde store
     _hcUserId = await PsicoRouter.store.ensureUserId();
-    // Pacientes desde store (invalida si viene de agregar nuevo paciente)
     await _hcCargarPacientes();
+
+    // Si viene desde view-pacientes con paciente seleccionado, ir directo al detalle
+    const paciente = PsicoRouter.store.pacienteSeleccionado;
+    if (paciente) {
+      PsicoRouter.store.pacienteSeleccionado = null; // consumir
+      await window.hcAbrirDetalle(paciente.id);
+      return;
+    }
+
+    // Caso normal: mostrar lista
+    hcShowPanel('lista');
+    _hcPaciente     = null;
+    _hcSesionActual = null;
   },
 
   onLeave() {
@@ -1027,7 +1034,7 @@ PsicoRouter.register('historia', {
 });
 
 /* Compatibilidad legacy */
-window.onViewEnter_historia = () => PsicoRouter.navigate('historia');
+// legacy hook no necesario: la vista usa PsicoRouter.register()
 
 /* Funciones de onclick en HTML dinámico — deben ser globales */
 window.hcFiltrar      = hcFiltrar;
