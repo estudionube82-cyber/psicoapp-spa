@@ -341,10 +341,10 @@ function _perCardHtml(p, est) {
         ${est.icon} ${est.label}
       </div>
     </div>
-    <div class="per-card-caratula">${p.caratula || '—'}</div>
+    <div class="per-card-caratula">${escHtml(p.caratula || '—')}</div>
     <div class="per-card-meta">
-      ${p.juzgado         ? `<div class="per-card-meta-item">⚖️ ${p.juzgado}</div>`                  : ''}
-      ${p.peritado        ? `<div class="per-card-meta-item">👤 ${p.peritado}</div>`                  : ''}
+      ${p.juzgado         ? `<div class="per-card-meta-item">⚖️ ${escHtml(p.juzgado)}</div>`                  : ''}
+      ${p.peritado        ? `<div class="per-card-meta-item">👤 ${escHtml(p.peritado)}</div>`                  : ''}
       ${p.honorarios      ? `<div class="per-card-meta-item">💰 ${_perFmtPeso(p.honorarios)}</div>`  : ''}
       ${p.fecha_entrevista ? `<div class="per-card-meta-item">📅 ${_perFmtFecha(p.fecha_entrevista)}</div>` : ''}
     </div>
@@ -424,8 +424,8 @@ window.perAbrirDetalle = function(id) {
   const est = PER_ESTADOS[p.estado] || PER_ESTADOS.en_curso;
 
   document.getElementById('per-det-content').innerHTML = `
-    <div style="font-size:20px;font-weight:800;margin-bottom:2px">📋 ${p.expediente || 'Sin nº'}</div>
-    <div style="font-size:13px;color:var(--text-muted);margin-bottom:14px">${p.caratula || '—'}</div>
+    <div style="font-size:20px;font-weight:800;margin-bottom:2px">📋 ${escHtml(p.expediente || 'Sin nº')}</div>
+    <div style="font-size:13px;color:var(--text-muted);margin-bottom:14px">${escHtml(p.caratula || '—')}</div>
     <div style="display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border-radius:20px;
       background:${est.light || 'var(--primary-light)'};color:${est.color || 'var(--primary)'};
       font-size:12px;font-weight:700;margin-bottom:16px">${est.icon} ${est.label}</div>
@@ -457,7 +457,8 @@ async function perCambiarEstado(nuevoEstado) {
 async function perEliminar() {
   if (!_perSeleccionada) return;
   if (!confirm(`¿Eliminar la pericia "${_perSeleccionada.expediente}"?`)) return;
-  await sb.from('pericias').delete().eq('id', _perSeleccionada.id);
+  const uid = PsicoRouter.store.userId;
+  await sb.from('pericias').delete().eq('id', _perSeleccionada.id).eq('user_id', uid);
   perCerrarDetalle();
   await _perCargar();
 }
@@ -482,7 +483,7 @@ function _perFmtPeso(n) {
 function _perFilaDet(icon, label, val) {
   return `<div class="per-det-fila">
     <div class="per-det-fila-icon">${icon}</div>
-    <div><div class="per-det-fila-label">${label}</div><div class="per-det-fila-val">${val}</div></div>
+    <div><div class="per-det-fila-label">${escHtml(label)}</div><div class="per-det-fila-val">${escHtml(val)}</div></div>
   </div>`;
 }
 

@@ -4,6 +4,8 @@
  * Generador de informes clínicos con IA (Claude via Supabase Edge Function)
  */
 
+import { escHtml, escAttr } from '/src/utils/sanitize.js';
+
 /* ══════════════════════════════════════════
    ESTILOS — inyectados una sola vez
    ══════════════════════════════════════════ */
@@ -144,7 +146,7 @@ function _infRenderHTML(container) {
   <!-- SELECTOR PACIENTE -->
   <div class="inf-card" id="inf-pac-selector">
     <div class="inf-card-title">👤 Seleccioná un paciente</div>
-    <input class="inf-search" id="inf-pac-buscar" placeholder="🔍 Buscar paciente…" oninput="infFiltrarPacientes()">
+    <input class="inf-search" id="inf-pac-buscar" placeholder="🔍 Buscar paciente…">
     <div class="inf-pac-list" id="inf-pac-list">
       <div style="text-align:center;padding:20px;color:var(--text-muted);font-size:13px">⏳ Cargando…</div>
     </div>
@@ -152,7 +154,7 @@ function _infRenderHTML(container) {
 
   <!-- CHIP PACIENTE SELECCIONADO -->
   <div class="inf-card" id="inf-pac-chip" style="display:none">
-    <div class="inf-pac-chip" onclick="infCambiarPaciente()">
+    <div class="inf-pac-chip" id="inf-pac-chip-btn">
       <div class="inf-chip-avatar" id="inf-chip-avatar"></div>
       <div class="inf-chip-nombre" id="inf-chip-nombre"></div>
       <div class="inf-chip-cambiar">Cambiar →</div>
@@ -166,9 +168,9 @@ function _infRenderHTML(container) {
     <div class="inf-card">
       <div class="inf-card-title">📄 Tipo de informe</div>
       <div class="inf-tipos">
-        <button class="inf-tipo-btn inf-tipo-sel" id="inf-tipo-clinico"    onclick="infSelTipo('clinico')">🏥 Clínico</button>
-        <button class="inf-tipo-btn"              id="inf-tipo-juzgado"    onclick="infSelTipo('juzgado')">⚖️ Juzgado</button>
-        <button class="inf-tipo-btn"              id="inf-tipo-obrasocial" onclick="infSelTipo('obrasocial')">📋 Obra Social</button>
+        <button class="inf-tipo-btn inf-tipo-sel" id="inf-tipo-clinico">🏥 Clínico</button>
+        <button class="inf-tipo-btn"              id="inf-tipo-juzgado">⚖️ Juzgado</button>
+        <button class="inf-tipo-btn"              id="inf-tipo-obrasocial">📋 Obra Social</button>
       </div>
     </div>
 
@@ -179,7 +181,7 @@ function _infRenderHTML(container) {
         <div class="inf-limite-text" id="inf-limite-text">Cargando…</div>
         <div class="inf-limite-track"><div class="inf-limite-fill" id="inf-limite-fill" style="width:0%"></div></div>
       </div>
-      <button class="inf-btn-generar" id="inf-btn-generar" onclick="infGenerar()">🤖 Generar informe</button>
+      <button class="inf-btn-generar" id="inf-btn-generar">🤖 Generar informe</button>
 
       <!-- Loading -->
       <div class="inf-loading" id="inf-loading">
@@ -192,8 +194,8 @@ function _infRenderHTML(container) {
         <div class="inf-alerta-riesgo" id="inf-alerta-riesgo">⚠️ Se detectaron indicadores de riesgo clínico. Revisá el informe con atención.</div>
         <div class="inf-output" id="inf-output"></div>
         <div class="inf-output-actions">
-          <button class="inf-action-btn" onclick="infCopiar()">📋 Copiar</button>
-          <button class="inf-action-btn inf-action-primary" onclick="infGuardar()">💾 Guardar</button>
+          <button class="inf-action-btn" id="inf-btn-copiar">📋 Copiar</button>
+          <button class="inf-action-btn inf-action-primary" id="inf-btn-guardar">💾 Guardar</button>
         </div>
       </div>
     </div>
@@ -210,9 +212,9 @@ function _infRenderHTML(container) {
     <div class="inf-card">
       <div class="inf-card-title">🧠 Más funciones IA</div>
       <div class="inf-extra-btns">
-        <button class="inf-extra-btn" id="inf-btn-evolucion"  onclick="infVerEvolucion()">📈 Ver evolución del paciente</button>
-        <button class="inf-extra-btn" id="inf-btn-diag"       onclick="infSugerirDiag()">🔍 Sugerir diagnóstico CIE-11</button>
-        <button class="inf-extra-btn" id="inf-btn-plan"       onclick="infSugerirPlan()">📋 Sugerir plan terapéutico</button>
+        <button class="inf-extra-btn" id="inf-btn-evolucion">📈 Ver evolución del paciente</button>
+        <button class="inf-extra-btn" id="inf-btn-diag">🔍 Sugerir diagnóstico CIE-11</button>
+        <button class="inf-extra-btn" id="inf-btn-plan">📋 Sugerir plan terapéutico</button>
       </div>
       <div class="inf-extra-output" id="inf-extra-output">
         <div class="inf-loading" id="inf-extra-loading">
@@ -221,7 +223,7 @@ function _infRenderHTML(container) {
         </div>
         <div class="inf-extra-result" id="inf-extra-result"></div>
         <div class="inf-output-actions" style="padding:8px 16px 16px">
-          <button class="inf-action-btn" onclick="infCopiarExtra()">📋 Copiar</button>
+          <button class="inf-action-btn" id="inf-btn-copiar-extra">📋 Copiar</button>
         </div>
       </div>
     </div>
@@ -231,6 +233,46 @@ function _infRenderHTML(container) {
 </div><!-- /.inf-body -->
 <div id="inf-toast"></div>
   `;
+
+  /* ── Bind de eventos (reemplaza todos los onclick/oninput inline) ── */
+
+  // Input de búsqueda
+  document.getElementById('inf-pac-buscar')
+    .addEventListener('input', infFiltrarPacientes);
+
+  // Chip "Cambiar paciente"
+  document.getElementById('inf-pac-chip-btn')
+    .addEventListener('click', infCambiarPaciente);
+
+  // Botones de tipo de informe
+  document.getElementById('inf-tipo-clinico')
+    .addEventListener('click', () => infSelTipo('clinico'));
+  document.getElementById('inf-tipo-juzgado')
+    .addEventListener('click', () => infSelTipo('juzgado'));
+  document.getElementById('inf-tipo-obrasocial')
+    .addEventListener('click', () => infSelTipo('obrasocial'));
+
+  // Botón generar
+  document.getElementById('inf-btn-generar')
+    .addEventListener('click', infGenerar);
+
+  // Botones de output
+  document.getElementById('inf-btn-copiar')
+    .addEventListener('click', infCopiar);
+  document.getElementById('inf-btn-guardar')
+    .addEventListener('click', infGuardar);
+
+  // Botones extra IA
+  document.getElementById('inf-btn-evolucion')
+    .addEventListener('click', infVerEvolucion);
+  document.getElementById('inf-btn-diag')
+    .addEventListener('click', infSugerirDiag);
+  document.getElementById('inf-btn-plan')
+    .addEventListener('click', infSugerirPlan);
+
+  // Botón copiar extra
+  document.getElementById('inf-btn-copiar-extra')
+    .addEventListener('click', infCopiarExtra);
 }
 
 
@@ -252,14 +294,20 @@ function _infRenderListaPacientes(lista) {
   cont.innerHTML = lista.map(p => {
     const nombre = `${p.nombre || ''} ${p.apellido || ''}`.trim();
     const activo = _inf.pacActual?.id === p.id ? 'inf-pac-active' : '';
-    return `<div class="inf-pac-item ${activo}" onclick="infSeleccionarPaciente('${p.id}')">
-      <div class="inf-pac-avatar">${nombre.slice(0,2).toUpperCase()}</div>
+    return `<div class="inf-pac-item ${activo}" data-pac-id="${escAttr(String(p.id))}">
+      <div class="inf-pac-avatar">${escHtml(nombre.slice(0,2).toUpperCase())}</div>
       <div>
-        <div class="inf-pac-name">${nombre}</div>
-        ${p.telefono ? `<div class="inf-pac-tel">${p.telefono}</div>` : ''}
+        <div class="inf-pac-name">${escHtml(nombre)}</div>
+        ${p.telefono ? `<div class="inf-pac-tel">${escHtml(p.telefono)}</div>` : ''}
       </div>
     </div>`;
   }).join('');
+
+  // Bind clicks via addEventListener — evita onclick con id dinámico
+  cont.querySelectorAll('.inf-pac-item').forEach(el => {
+    const id = el.dataset.pacId;
+    el.addEventListener('click', () => infSeleccionarPaciente(id));
+  });
 }
 
 window.infFiltrarPacientes = function() {
@@ -285,7 +333,7 @@ window.infSeleccionarPaciente = async function(id) {
     _infCargarSesiones(),
     _infCargarInformesGuardados(),
   ]);
-  _infActualizarBadge();
+  await _infActualizarBadge();
 };
 
 window.infCambiarPaciente = function() {
@@ -301,7 +349,7 @@ window.infCambiarPaciente = function() {
 async function _infCargarInfoClinica() {
   if (!_inf.pacActual) return;
   try {
-    const { data } = await sb.from('historia_clinica').select('*').eq('paciente_id', _inf.pacActual.id).maybeSingle();
+    const { data } = await sb.from('historia_clinica').select('*').eq('paciente_id', _inf.pacActual.id).eq('user_id', PsicoRouter.store.userId).maybeSingle();
     _inf.infoClinica = data || null;
   } catch { _inf.infoClinica = null; }
 }
@@ -312,6 +360,7 @@ async function _infCargarSesiones() {
     const { data } = await sb.from('sesiones')
       .select('id,fecha,tipo,estado,motivo,notas,estado_animo,diagnosticos,numero')
       .eq('paciente_id', _inf.pacActual.id)
+      .eq('user_id', PsicoRouter.store.userId)
       .order('fecha', { ascending: true });
     _inf.sesiones = data || [];
   } catch { _inf.sesiones = []; }
@@ -332,13 +381,19 @@ async function _infCargarInformesGuardados() {
     }
     const tipoLabel = { clinico:'🏥 Clínico', juzgado:'⚖️ Juzgado', obrasocial:'📋 Obra Social' };
     cont.innerHTML = data.map(inf => `
-      <div class="inf-guardado-item" onclick="infVerGuardado(${JSON.stringify(inf).replace(/"/g,'&quot;')})">
+      <div class="inf-guardado-item" data-inf-id="${escAttr(String(inf.id))}">
         <div class="inf-guardado-top">
-          <span class="inf-guardado-tipo">${tipoLabel[inf.tipo] || inf.tipo}</span>
+          <span class="inf-guardado-tipo">${tipoLabel[inf.tipo] || escHtml(inf.tipo)}</span>
           <span class="inf-guardado-fecha">${new Date(inf.created_at).toLocaleDateString('es-AR')}</span>
         </div>
-        <div class="inf-guardado-preview">${inf.texto.slice(0,120)}…</div>
+        <div class="inf-guardado-preview">${escHtml(inf.texto.slice(0,120))}…</div>
       </div>`).join('');
+    // Bind clicks via addEventListener — evita JSON en onclick
+    cont.querySelectorAll('.inf-guardado-item').forEach(el => {
+      const id  = el.dataset.infId;
+      const inf = data.find(x => String(x.id) === id);
+      if (inf) el.addEventListener('click', () => infVerGuardado(inf));
+    });
   } catch {
     cont.innerHTML = '<div style="font-size:12px;color:var(--text-muted);text-align:center;padding:12px">Error al cargar historial</div>';
   }
@@ -367,15 +422,21 @@ window.infSelTipo = function(tipo) {
 /* ══════════════════════════════════════════
    BADGE DE USOS
    ══════════════════════════════════════════ */
-function _infActualizarBadge() {
+async function _infGetPlanData() {
+  const { data, error } = await sb.from('users_plan')
+    .select('plan, ia_used, ia_limit')
+    .eq('user_id', PsicoRouter.store.userId)
+    .maybeSingle();
+  if (error || !data) return { plan: 'free', ia_used: 0, ia_limit: 1 };
+  return data;
+}
+
+async function _infActualizarBadge() {
   const badge = document.getElementById('inf-badge-plan');
   const fill  = document.getElementById('inf-limite-fill');
   const text  = document.getElementById('inf-limite-text');
   try {
-    const sus  = JSON.parse(localStorage.getItem('suscripcion')) || {};
-    const plan = sus.plan || 'free';
-    const usos = sus.usos?.informesIA || 0;
-    const max  = { free:1, pro:3, max:25 }[plan] ?? 1;
+    const { plan, ia_used: usos, ia_limit: max } = await _infGetPlanData();
     const pct  = Math.min(100, Math.round(usos / max * 100));
     if (badge) badge.textContent = `${plan} · ${usos}/${max} informes`;
     if (fill)  fill.style.width  = pct + '%';
@@ -414,7 +475,7 @@ DATOS DEL PROFESIONAL:
 Nombre: ${perfil.nombre_completo || 'Profesional'} | Matrícula: ${perfil.matricula || 'N/A'} | Institución: ${perfil.institucion || 'N/A'}
 
 DATOS DEL PACIENTE:
-Nombre: ${pac.nombre} ${pac.apellido} | Teléfono: ${pac.telefono || 'N/A'}
+Nombre: ${escHtml(pac.nombre)} ${escHtml(pac.apellido)} | Teléfono: ${escHtml(pac.telefono || 'N/A')}
 Motivo de consulta: ${info.motivo_consulta || 'No registrado'}
 Diagnóstico: ${info.diagnostico || 'No registrado'} | Tratamiento: ${info.tratamiento_actual || 'No especificado'}
 
@@ -454,9 +515,25 @@ INSTRUCCIONES:
    ══════════════════════════════════════════ */
 window.infGenerar = async function() {
   if (!_inf.pacActual) { _infToast('⚠ Seleccioná un paciente primero', false); return; }
-  if (!registrarUso('informesIA')) {
-    _infToast('🚫 Límite de informes alcanzado. Actualizá tu plan.');
-    PsicoRouter.navigate('cuenta');
+  if (!_inf.sessionToken) { _infToast('❌ Usuario no autenticado'); return; }
+
+  /* ── Check de uso en backend ── */
+  try {
+    const checkResp = await fetch(PSICOAPP_CONFIG.SUPA_URL + '/functions/v1/check-ia-usage', {
+      method: 'POST',
+      headers: {
+        'Content-Type':  'application/json',
+        'Authorization': 'Bearer ' + _inf.sessionToken,
+      },
+    });
+    const checkData = await checkResp.json();
+    if (checkData.allowed === false) {
+      _infToast('🚫 Límite de informes alcanzado');
+      PsicoRouter.navigate('cuenta');
+      return;
+    }
+  } catch(e) {
+    _infToast('❌ Error al verificar límite: ' + e.message);
     return;
   }
 
@@ -478,17 +555,16 @@ window.infGenerar = async function() {
   }, 2000);
 
   try {
-    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+    const resp = await fetch(PSICOAPP_CONFIG.SUPA_URL + '/functions/v1/generar-informe', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 1000,
-        messages: [{ role: 'user', content: _infArmarPrompt() }],
-      }),
+      headers: {
+        'Content-Type':  'application/json',
+        'Authorization': 'Bearer ' + _inf.sessionToken,
+      },
+      body: JSON.stringify({ prompt: _infArmarPrompt() }),
     });
     const data = await resp.json();
-    const texto = data.content?.map(b => b.text || '').join('') || 'Error al generar el informe.';
+    const texto = data.texto || data.error || 'Error al generar el informe.';
 
     clearInterval(intervalo);
     loading.style.display = 'none';
@@ -496,7 +572,7 @@ window.infGenerar = async function() {
     wrap.style.display = 'block';
     alerta.style.display = texto.includes('⚠️ INDICADOR DE RIESGO') ? 'block' : 'none';
     wrap.scrollIntoView({ behavior: 'smooth' });
-    _infActualizarBadge();
+    await _infActualizarBadge();
 
   } catch(e) {
     clearInterval(intervalo);
@@ -547,18 +623,19 @@ async function _infLlamarExtra(prompt, loadingText) {
   if (lt) lt.textContent = loadingText;
 
   try {
-    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+    if (!_inf.sessionToken) throw new Error('Usuario no autenticado');
+
+    const resp = await fetch(PSICOAPP_CONFIG.SUPA_URL + '/functions/v1/generar-informe', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 1000,
-        messages: [{ role: 'user', content: prompt + '\n\n' + _infArmarContexto() }],
-      }),
+      headers: {
+        'Content-Type':  'application/json',
+        'Authorization': 'Bearer ' + _inf.sessionToken,
+      },
+      body: JSON.stringify({ prompt: prompt + '\n\n' + _infArmarContexto() }),
     });
     const data = await resp.json();
     loading.style.display = 'none';
-    result.textContent = data.content?.map(b => b.text || '').join('') || 'Sin resultado.';
+    result.textContent = data.texto || data.error || 'Sin resultado.';
     wrap.scrollIntoView({ behavior: 'smooth' });
   } catch(e) {
     loading.style.display = 'none';
@@ -607,7 +684,7 @@ PsicoRouter.register('informes', {
 
     /* Cargar pacientes desde store (evita re-fetch si ya están cacheados) */
     await _infCargarPacientes();
-    _infActualizarBadge();
+    await _infActualizarBadge();
   },
 
   onLeave() {

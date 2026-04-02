@@ -132,6 +132,29 @@
 
 
 /* ══════════════════════════════════════════
+   HELPERS XSS — escapado seguro
+   ══════════════════════════════════════════ */
+function escHtml(str) {
+  if (str == null) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+function escAttr(str) {
+  if (str == null) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+
+
+/* ══════════════════════════════════════════
    ESTADO INTERNO
    ══════════════════════════════════════════ */
 let _hcTodosPacientes = [];
@@ -454,19 +477,26 @@ function _hcRenderPacientes(lista) {
     const nombre   = `${p.apellido || ''}, ${p.nombre || ''}`.trim().replace(/^,\s*/, '');
     const initials = `${(p.nombre || '?')[0]}${(p.apellido || '?')[0]}`.toUpperCase();
     const color    = HC_COLORES[i % HC_COLORES.length];
-    return `<div class="hc-pac-card" onclick="hcAbrirDetalle('${p.id}')">
-      <div class="hc-pac-avatar" style="background:${color}">${initials}</div>
+    return `<div class="hc-pac-card" data-pac-id="${escAttr(p.id)}">
+      <div class="hc-pac-avatar" style="background:${escAttr(color)}">${escHtml(initials)}</div>
       <div style="flex:1">
-        <div class="hc-pac-name">${nombre}</div>
-        <div class="hc-pac-sub" id="hc-sub-${p.id}">Cargando…</div>
+        <div class="hc-pac-name">${escHtml(nombre)}</div>
+        <div class="hc-pac-sub" id="hc-sub-${escAttr(p.id)}">Cargando…</div>
       </div>
       <div class="hc-pac-arrow">›</div>
     </div>`;
   }).join('');
 
+  // Bind click via addEventListener — sin onclick inline
+  cont.querySelectorAll('.hc-pac-card').forEach(card => {
+    card.addEventListener('click', () => hcAbrirDetalle(card.dataset.pacId));
+  });
+
   lista.forEach(async p => {
     const { count } = await sb.from('sesiones_clinicas')
-      .select('id', { count: 'exact', head: true }).eq('paciente_id', p.id);
+      .select('id', { count: 'exact', head: true })
+      .eq('paciente_id', p.id)
+      .eq('user_id', _hcUserId);
     const el = document.getElementById('hc-sub-' + p.id);
     if (el) el.textContent = count ? `${count} sesión${count > 1 ? 'es' : ''}` : 'Sin sesiones';
   });
@@ -537,27 +567,32 @@ function _hcRenderSesiones(lista) {
   }
   cont.innerHTML = lista.map((s, i) => {
     const diags    = _hcParseDiags(s.diagnosticos);
-    const diagHtml = diags.slice(0, 2).map(d => `<span class="hc-diag-chip">${d.split('–')[0].trim()}</span>`).join('');
+    const diagHtml = diags.slice(0, 2).map(d => `<span class="hc-diag-chip">${escHtml(d.split('–')[0].trim())}</span>`).join('');
     const estadoCls = { realizada:'hc-estado-realizada', cancelada:'hc-estado-cancelada', pendiente:'hc-estado-pendiente' }[s.estado] || 'hc-estado-realizada';
     const pendCls   = s.estado === 'pendiente' ? ' hc-ses-pendiente' : s.estado === 'cancelada' ? ' hc-ses-cancelada' : '';
-    return `<div class="hc-ses-card${pendCls}" onclick="hcVerSesion(${s.id})">
+    return `<div class="hc-ses-card${pendCls}" data-ses-id="${escAttr(s.id)}">
       <div class="hc-ses-top">
-        <span class="hc-ses-num">N° ${s.numero_sesion || (lista.length - i)}</span>
-        <span class="hc-ses-fecha">${_hcFmtFecha(s.fecha)}</span>
-        ${s.estado_animo ? `<span class="hc-ses-mood">${HC_MOOD_MAP[s.estado_animo]}</span>` : ''}
-        <span class="hc-ses-tipo">${s.tipo || 'individual'}</span>
+        <span class="hc-ses-num">N° ${escHtml(s.numero_sesion != null ? String(s.numero_sesion) : String(lista.length - i))}</span>
+        <span class="hc-ses-fecha">${escHtml(_hcFmtFecha(s.fecha))}</span>
+        ${s.estado_animo ? `<span class="hc-ses-mood">${HC_MOOD_MAP[s.estado_animo] || ''}</span>` : ''}
+        <span class="hc-ses-tipo">${escHtml(s.tipo || 'individual')}</span>
       </div>
-      ${s.motivo ? `<div class="hc-ses-motivo">${s.motivo}</div>` : ''}
+      ${s.motivo ? `<div class="hc-ses-motivo">${escHtml(s.motivo)}</div>` : ''}
       <div class="hc-ses-footer">
         ${diagHtml}
-        <span class="hc-estado-chip ${estadoCls}">${s.estado || 'realizada'}</span>
+        <span class="hc-estado-chip ${estadoCls}">${escHtml(s.estado || 'realizada')}</span>
       </div>
     </div>`;
   }).join('');
+
+  // Bind click via addEventListener — sin onclick inline
+  cont.querySelectorAll('.hc-ses-card').forEach(card => {
+    card.addEventListener('click', () => hcVerSesion(card.dataset.sesId));
+  });
 }
 
 window.hcVerSesion = function(id) {
-  _hcSesionActual = _hcSesiones.find(s => s.id === id);
+  _hcSesionActual = _hcSesiones.find(s => String(s.id) === String(id));
   if (!_hcSesionActual) return;
   const s     = _hcSesionActual;
   const diags = _hcParseDiags(s.diagnosticos);
@@ -566,11 +601,11 @@ window.hcVerSesion = function(id) {
   document.getElementById('hc-sd-meta').textContent  = _hcFmtFecha(s.fecha);
 
   document.getElementById('hc-sd-body').innerHTML = `
-    ${s.estado_animo ? `<div class="hc-section"><div class="hc-section-title">Estado de ánimo</div><div class="hc-section-body"><div class="hc-mood-display"><span class="hc-mood-emoji">${HC_MOOD_MAP[s.estado_animo]}</span><span class="hc-mood-label">${HC_MOOD_LABELS[s.estado_animo]}</span></div></div></div>` : ''}
-    ${s.motivo ? `<div class="hc-section"><div class="hc-section-title">Motivo / tema</div><div class="hc-section-body">${s.motivo}</div></div>` : ''}
-    ${s.notas  ? `<div class="hc-section"><div class="hc-section-title">Notas clínicas</div><div class="hc-section-body">${s.notas.replace(/\n/g,'<br>')}</div></div>` : ''}
-    ${s.tareas ? `<div class="hc-section"><div class="hc-section-title">Tareas para próxima sesión</div><div class="hc-section-body">${s.tareas}</div></div>` : ''}
-    ${diags.length ? `<div class="hc-section"><div class="hc-section-title">Diagnóstico</div><div class="hc-section-body" style="display:flex;flex-wrap:wrap;gap:6px">${diags.map(d=>`<span class="hc-diag-chip">${d}</span>`).join('')}</div></div>` : ''}
+    ${s.estado_animo ? `<div class="hc-section"><div class="hc-section-title">Estado de ánimo</div><div class="hc-section-body"><div class="hc-mood-display"><span class="hc-mood-emoji">${HC_MOOD_MAP[s.estado_animo] || ''}</span><span class="hc-mood-label">${escHtml(HC_MOOD_LABELS[s.estado_animo] || '')}</span></div></div></div>` : ''}
+    ${s.motivo ? `<div class="hc-section"><div class="hc-section-title">Motivo / tema</div><div class="hc-section-body">${escHtml(s.motivo)}</div></div>` : ''}
+    ${s.notas  ? `<div class="hc-section"><div class="hc-section-title">Notas clínicas</div><div class="hc-section-body">${escHtml(s.notas).replace(/\n/g,'<br>')}</div></div>` : ''}
+    ${s.tareas ? `<div class="hc-section"><div class="hc-section-title">Tareas para próxima sesión</div><div class="hc-section-body">${escHtml(s.tareas)}</div></div>` : ''}
+    ${diags.length ? `<div class="hc-section"><div class="hc-section-title">Diagnóstico</div><div class="hc-section-body" style="display:flex;flex-wrap:wrap;gap:6px">${diags.map(d=>`<span class="hc-diag-chip">${escHtml(d)}</span>`).join('')}</div></div>` : ''}
   `;
 
   document.getElementById('hc-ia-result-wrap').style.display = 'none';
@@ -593,28 +628,35 @@ async function _hcCargarInfo() {
 function _hcRenderInfo(info) {
   const cont = document.getElementById('hc-info-content');
   if (!cont) return;
-  const campo = (label, val) => `<div class="hc-info-row"><div class="hc-info-label">${label}</div><div class="hc-info-value ${val ? '' : 'hc-info-empty'}">${val || 'Sin datos'}</div></div>`;
+  const campo = (label, val) => {
+    const safe = val ? escHtml(val) : null;
+    return `<div class="hc-info-row"><div class="hc-info-label">${escHtml(label)}</div><div class="hc-info-value ${safe ? '' : 'hc-info-empty'}">${safe || 'Sin datos'}</div></div>`;
+  };
   cont.innerHTML = `
     <div class="hc-info-card">
       <div class="hc-info-card-title">📋 Motivo y antecedentes</div>
       ${campo('Motivo de consulta', info?.motivo_consulta)}
       ${campo('Antecedentes', info?.antecedentes)}
-      <button class="hc-btn-edit" onclick="hcAbrirModalInfo()">✏️ Editar información clínica</button>
+      <button class="hc-btn-edit" id="hc-btn-edit-info-1">✏️ Editar información clínica</button>
     </div>
     <div class="hc-info-card">
       <div class="hc-info-card-title">🩺 Diagnóstico y tratamiento</div>
       ${campo('Diagnóstico principal', info?.diagnostico_principal)}
       ${campo('Medicación', info?.medicacion)}
       ${campo('Enfoque terapéutico', info?.enfoque_terapeutico)}
-      <button class="hc-btn-edit" onclick="hcAbrirModalInfo()">✏️ Editar</button>
+      <button class="hc-btn-edit" id="hc-btn-edit-info-2">✏️ Editar</button>
     </div>
     <div class="hc-info-card">
       <div class="hc-info-card-title">🎯 Objetivos</div>
       ${campo('Objetivos terapéuticos', info?.objetivos)}
       ${campo('Notas generales', info?.notas_generales)}
-      <button class="hc-btn-edit" onclick="hcAbrirModalInfo()">✏️ Editar</button>
+      <button class="hc-btn-edit" id="hc-btn-edit-info-3">✏️ Editar</button>
     </div>
   `;
+  // Bind click via addEventListener — sin onclick inline
+  ['hc-btn-edit-info-1','hc-btn-edit-info-2','hc-btn-edit-info-3'].forEach(id => {
+    document.getElementById(id)?.addEventListener('click', hcAbrirModalInfo);
+  });
 }
 
 
@@ -689,9 +731,13 @@ function hcAddDiagCustom() {
 }
 
 function _hcRenderDiagCustom() {
-  document.getElementById('hc-diag-custom-list').innerHTML = _hcDiagsCustom.map(d =>
-    `<div class="hc-diag-chip-sel hc-diag-on">${d} <span onclick="hcRemoveDiagCustom('${d}')" style="cursor:pointer;margin-left:4px;font-size:11px">✕</span></div>`
+  const list = document.getElementById('hc-diag-custom-list');
+  list.innerHTML = _hcDiagsCustom.map(d =>
+    `<div class="hc-diag-chip-sel hc-diag-on" data-diag-val="${escAttr(d)}">${escHtml(d)} <span style="cursor:pointer;margin-left:4px;font-size:11px" data-remove="${escAttr(d)}">✕</span></div>`
   ).join('');
+  list.querySelectorAll('[data-remove]').forEach(btn => {
+    btn.addEventListener('click', () => hcRemoveDiagCustom(btn.dataset.remove));
+  });
 }
 
 window.hcRemoveDiagCustom = function(v) {
@@ -722,15 +768,15 @@ async function hcGuardarSesion() {
       tipo:          document.getElementById('hc-ses-tipo').value,
       estado:        document.getElementById('hc-ses-estado').value,
       estado_animo:  _hcMood || null,
-      motivo:        document.getElementById('hc-ses-motivo').value.trim()  || null,
-      notas:         document.getElementById('hc-ses-notas').value.trim()   || null,
-      tareas:        document.getElementById('hc-ses-tareas').value.trim()  || null,
-      numero_sesion: parseInt(document.getElementById('hc-ses-num').value)  || null,
+      motivo:        escHtml(document.getElementById('hc-ses-motivo').value.trim())  || null,
+      notas:         escHtml(document.getElementById('hc-ses-notas').value.trim())   || null,
+      tareas:        escHtml(document.getElementById('hc-ses-tareas').value.trim())  || null,
+      numero_sesion: parseInt(document.getElementById('hc-ses-num').value)           || null,
       diagnosticos:  allDiags.length ? JSON.stringify(allDiags) : null,
     };
     let error;
     if (_hcEditandoId) {
-      ({ error } = await sb.from('sesiones_clinicas').update(payload).eq('id', _hcEditandoId));
+      ({ error } = await sb.from('sesiones_clinicas').update(payload).eq('id', _hcEditandoId).eq('user_id', _hcUserId));
     } else {
       ({ error } = await sb.from('sesiones_clinicas').insert(payload));
     }
@@ -748,7 +794,7 @@ async function hcGuardarSesion() {
 
 async function hcEliminarSesion() {
   if (!_hcEditandoId || !confirm('¿Eliminar esta sesión?')) return;
-  const { error } = await sb.from('sesiones_clinicas').delete().eq('id', _hcEditandoId);
+  const { error } = await sb.from('sesiones_clinicas').delete().eq('id', _hcEditandoId).eq('user_id', _hcUserId);
   if (error) { hcToast('❌ Error al eliminar'); return; }
   hcCerrarModalSesion();
   hcToast('🗑️ Sesión eliminada');
@@ -783,17 +829,17 @@ async function hcGuardarInfo() {
     const payload = {
       user_id:               _hcUserId,
       paciente_id:           _hcPaciente.id,
-      motivo_consulta:       document.getElementById('hc-info-motivo').value.trim()       || null,
-      antecedentes:          document.getElementById('hc-info-antecedentes').value.trim() || null,
-      diagnostico_principal: document.getElementById('hc-info-diagnostico').value.trim()  || null,
-      medicacion:            document.getElementById('hc-info-medicacion').value.trim()   || null,
-      enfoque_terapeutico:   document.getElementById('hc-info-enfoque').value             || null,
-      objetivos:             document.getElementById('hc-info-objetivos').value.trim()    || null,
-      notas_generales:       document.getElementById('hc-info-notas-gen').value.trim()   || null,
+      motivo_consulta:       escHtml(document.getElementById('hc-info-motivo').value.trim())       || null,
+      antecedentes:          escHtml(document.getElementById('hc-info-antecedentes').value.trim()) || null,
+      diagnostico_principal: escHtml(document.getElementById('hc-info-diagnostico').value.trim())  || null,
+      medicacion:            escHtml(document.getElementById('hc-info-medicacion').value.trim())   || null,
+      enfoque_terapeutico:   document.getElementById('hc-info-enfoque').value                      || null,
+      objetivos:             escHtml(document.getElementById('hc-info-objetivos').value.trim())    || null,
+      notas_generales:       escHtml(document.getElementById('hc-info-notas-gen').value.trim())    || null,
     };
     let error;
     if (_hcInfoClinica?.id) {
-      ({ error } = await sb.from('historias_clinicas').update(payload).eq('id', _hcInfoClinica.id));
+      ({ error } = await sb.from('historias_clinicas').update(payload).eq('id', _hcInfoClinica.id).eq('user_id', _hcUserId));
     } else {
       ({ error } = await sb.from('historias_clinicas').insert(payload));
     }
@@ -865,12 +911,18 @@ ALERTA:
 
 Lenguaje técnico-clínico argentino.`;
 
+    const { data: { session } } = await sb.auth.getSession();
+    if (!session) throw new Error('Usuario no autenticado');
+    const token = session.access_token;
+
     const resp = await fetch(PSICOAPP_CONFIG.SUPA_URL + '/functions/v1/generar-informe', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + PSICOAPP_CONFIG.SUPA_KEY },
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
       body: JSON.stringify({ prompt }),
     });
-    const data  = await resp.json();
+    if (!resp.ok) throw new Error('Error en el servidor');
+    const data = await resp.json();
+    if (!data || typeof data !== 'object') throw new Error('Respuesta inválida');
     load.style.display = 'none';
     const texto = data.error ? '❌ Error: ' + data.error : (data.texto || 'Sin respuesta');
     out.textContent = texto;

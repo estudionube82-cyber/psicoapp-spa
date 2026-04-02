@@ -339,10 +339,10 @@ function _wpRenderPacientes() {
     const tieneWapp = !!p.telefono;
     return `
       <div class="pac-card" onclick="wpAbrirEnvio('${p.id}')" style="cursor:pointer;">
-        <div class="pac-avatar" style="background:${color}">${iniciales}</div>
+        <div class="pac-avatar" style="background:${color}">${escHtml(iniciales)}</div>
         <div class="pac-info">
-          <div class="pac-nombre">${p.nombre} ${p.apellido}</div>
-          <div class="pac-tel">${p.telefono || ''}</div>
+          <div class="pac-nombre">${escHtml(p.nombre)} ${escHtml(p.apellido)}</div>
+          <div class="pac-tel">${escHtml(p.telefono || '')}</div>
           ${!tieneWapp ? '<div class="pac-sin-tel">⚠ Sin teléfono</div>' : ''}
         </div>
         ${tieneWapp ? '<div style="font-size:20px">💬</div>' : ''}
@@ -527,13 +527,13 @@ function _wpRenderHistorial() {
     const iniciales = pac ? [(pac.nombre||'?')[0],(pac.apellido||'?')[0]].join('').toUpperCase() : '??';
     const color    = WP_COLORES[nombre.charCodeAt(0) % WP_COLORES.length];
     const fecha    = new Date(h.created_at).toLocaleDateString('es-AR', { day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' });
-    const preview  = h.mensaje ? h.mensaje.replace(/\n/g,' ').slice(0, 80) + (h.mensaje.length > 80 ? '…' : '') : '';
+    const preview  = h.mensaje ? escHtml(h.mensaje.replace(/\n/g,' ').slice(0, 80)) + (h.mensaje.length > 80 ? '…' : '') : '';
     return `
       <div class="hist-card">
         <div class="hist-top">
-          <div class="hist-avatar" style="background:${color}">${iniciales}</div>
+          <div class="hist-avatar" style="background:${color}">${escHtml(iniciales)}</div>
           <div style="flex:1;min-width:0">
-            <div class="hist-nombre">${nombre}</div>
+            <div class="hist-nombre">${escHtml(nombre)}</div>
             ${preview ? `<div style="font-size:11px;color:var(--muted);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${preview}</div>` : ''}
           </div>
           <div class="hist-hora" style="white-space:nowrap;margin-left:8px">${fecha}</div>
@@ -577,7 +577,7 @@ async function _wpCargarTurnosMañana() {
         <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)">
           <div style="font-size:20px">${tieneWapp ? '✅' : '⚠️'}</div>
           <div style="flex:1">
-            <div style="font-weight:700;font-size:14px">${pac.nombre} ${pac.apellido}</div>
+            <div style="font-weight:700;font-size:14px">${escHtml(pac.nombre)} ${escHtml(pac.apellido)}</div>
             <div style="font-size:12px;color:var(--muted)">${t.hora} hs${tieneWapp ? '' : ' — sin teléfono'}</div>
           </div>
         </div>`;

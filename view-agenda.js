@@ -1129,7 +1129,7 @@
         const esEvento = turno.tipo === 'evento';
         html += `<div class="ag-ev-block${esEvento ? ' ag-ev-evento' : ''}" style="background:${bg};border-left-color:${brd}"
                       onclick="window._agDetalle('${turno.id}')">
-                   <div class="ag-ev-name">${tipoEmoji(turno.tipo)} ${nom}</div>
+                   <div class="ag-ev-name">${tipoEmoji(turno.tipo)} ${escHtml(nom)}</div>
                    <div class="ag-ev-meta">${horaStr} · ${turno.duracion || 50} min · ${tipoLabel(turno.tipo)}</div>
                  </div>`;
       } else {
@@ -1180,7 +1180,7 @@
           const nom = nombreDisplay(turno);
           rows += `<div class="ag-week-cell has-turno">
                      <div class="ag-week-ev" style="background:${bg};border-left-color:${brd};color:${brd}"
-                          onclick="window._agDetalle('${turno.id}')">${nom}</div>
+                          onclick="window._agDetalle('${turno.id}')">${escHtml(nom)}</div>
                    </div>`;
         } else {
           rows += `<div class="ag-week-cell" onclick="window._agModalFechaHora('${fecha}','${horaStr}')"></div>`;
@@ -1242,7 +1242,6 @@
 
   /** Aplica el estado visual del modal según el modo activo (_modoModal) */
   function _syncModalModo() {
-    console.log('MODAL NUEVO ACTIVO');
     const esTurno = _modoModal !== 'evento';
 
     // Tabs: resaltar el activo
@@ -1400,7 +1399,7 @@
     const nom = nombrePaciente(t);
 
     agQ('ag-det-header').innerHTML = `
-      <div style="font-size:19px;font-weight:800">${tipoEmoji(t.tipo)} ${nom}</div>
+      <div style="font-size:19px;font-weight:800">${tipoEmoji(t.tipo)} ${escHtml(nom)}</div>
       <div style="font-size:12px;color:var(--text-muted,#7C6FAE);margin-top:4px">
         ${tipoLabel(t.tipo)} · ${fmtFechaLinda(t.fecha)} · ${(t.hora||'').slice(0,5)}
       </div>`;
@@ -1426,7 +1425,7 @@
   function detRow(icon, label, val) {
     return `<div class="ag-det-row">
               <div class="ag-det-icon">${icon}</div>
-              <div><div class="ag-det-lbl">${label}</div><div class="ag-det-val">${val}</div></div>
+              <div><div class="ag-det-lbl">${escHtml(label)}</div><div class="ag-det-val">${escHtml(val)}</div></div>
             </div>`;
   }
 
@@ -1453,7 +1452,7 @@
     if (!_turnoSel) return;
     if (!confirm('¿Eliminar este turno?')) return;
     try {
-      const { error } = await sb.from('turnos').delete().eq('id', _turnoSel.id);
+      const { error } = await sb.from('turnos').delete().eq('id', _turnoSel.id).eq('user_id', _userId);
       if (error) throw error;
       cerrarDetalle();
       await cargarTurnos();

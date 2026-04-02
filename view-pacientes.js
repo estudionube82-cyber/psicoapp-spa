@@ -1,3 +1,5 @@
+import { escHtml, escAttr } from '/src/utils/sanitize.js';
+
 /**
  * view-pacientes.js
  * ─────────────────────────────────────────────────────────────
@@ -209,15 +211,15 @@
     <div class="pac-search-wrap">
       <div class="pac-search-icon">🔍</div>
       <input class="pac-search-input" id="pac-searchInput"
-        placeholder="Buscar paciente..." oninput="pacFiltrar()">
+        placeholder="Buscar paciente...">
     </div>
   </div>
   <div class="pac-filter-row">
-    <button class="fchip-p active" onclick="pacSetFiltro('todos', this)">
+    <button class="fchip-p active" id="pac-chip-todos">
       Todos (<span id="pac-cnt-todos">0</span>)
     </button>
-    <button class="fchip-p" onclick="pacSetFiltro('os', this)">🏥 Obra social</button>
-    <button class="fchip-p" onclick="pacSetFiltro('particular', this)">💳 Particular</button>
+    <button class="fchip-p" id="pac-chip-os">🏥 Obra social</button>
+    <button class="fchip-p" id="pac-chip-particular">💳 Particular</button>
   </div>
 </div>
 
@@ -243,7 +245,7 @@
 </div>
 
 <!-- FAB -->
-<button class="pac-fab" onclick="pacAbrirModal()">＋</button>
+<button class="pac-fab" id="pac-fabBtn">＋</button>
 
 <!-- MODAL NUEVO PACIENTE -->
 <div class="pac-overlay" id="pac-overlay">
@@ -302,10 +304,10 @@
         placeholder="Derivación, motivo de consulta..."
         style="resize:none;min-height:72px;font-size:15px;line-height:1.5"></textarea>
     </div>
-    <button class="pac-btn-crear" id="pac-btnCrear" onclick="pacCrearPaciente()">
+    <button class="pac-btn-crear" id="pac-btnCrear">
       ✓ Crear paciente
     </button>
-    <button onclick="pacCerrarModal()"
+    <button id="pac-btnCancelarModal"
       style="width:100%;background:none;border:none;padding:14px;font-size:14px;color:var(--text-muted);font-family:var(--font);cursor:pointer;margin-top:4px">
       Cancelar
     </button>
@@ -328,12 +330,12 @@
 
     <div class="pac-detail-actions">
       <button class="pac-btn-action pac-btn-wp" id="pac-det-wp-btn">💬 WhatsApp</button>
-      <button class="pac-btn-action pac-btn-del" onclick="pacEliminarPaciente()">🗑 Eliminar</button>
+      <button class="pac-btn-action pac-btn-del" id="pac-btnEliminar">🗑 Eliminar</button>
     </div>
 
     <!-- PANEL IA -->
     <div style="margin-top:12px">
-      <button onclick="pacTogglePanelIA()" id="pac-btnToggleIA"
+      <button id="pac-btnToggleIA"
         style="width:100%;background:linear-gradient(135deg,#059669,#10B981);color:white;border:none;border-radius:14px;padding:13px;font-size:14px;font-weight:700;font-family:var(--font);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px">
         🤖 Mensaje con IA
       </button>
@@ -347,10 +349,10 @@
         <div id="pac-iaOpcionesWrap">
           <div style="font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">Tipo de mensaje</div>
           <div style="display:flex;flex-direction:column;gap:8px">
-            <button onclick="pacGenerarMensajeIA('recordatorio')" style="background:var(--primary-light);color:var(--primary);border:none;border-radius:11px;padding:11px;font-size:13px;font-weight:700;cursor:pointer;text-align:left">⏰ Recordatorio de turno</button>
-            <button onclick="pacGenerarMensajeIA('ausente')" style="background:#FEE2E2;color:#991B1B;border:none;border-radius:11px;padding:11px;font-size:13px;font-weight:700;cursor:pointer;text-align:left">❌ Paciente ausente</button>
-            <button onclick="pacGenerarMensajeIA('seguimiento')" style="background:#ECFDF5;color:#065F46;border:none;border-radius:11px;padding:11px;font-size:13px;font-weight:700;cursor:pointer;text-align:left">💚 Seguimiento / Cómo estás</button>
-            <button onclick="pacMostrarReprogramar()" style="background:#FEF3C7;color:#92400E;border:none;border-radius:11px;padding:11px;font-size:13px;font-weight:700;cursor:pointer;text-align:left">🔄 Reprogramar turno</button>
+            <button id="pac-ia-recordatorio" style="background:var(--primary-light);color:var(--primary);border:none;border-radius:11px;padding:11px;font-size:13px;font-weight:700;cursor:pointer;text-align:left">⏰ Recordatorio de turno</button>
+            <button id="pac-ia-ausente" style="background:#FEE2E2;color:#991B1B;border:none;border-radius:11px;padding:11px;font-size:13px;font-weight:700;cursor:pointer;text-align:left">❌ Paciente ausente</button>
+            <button id="pac-ia-seguimiento" style="background:#ECFDF5;color:#065F46;border:none;border-radius:11px;padding:11px;font-size:13px;font-weight:700;cursor:pointer;text-align:left">💚 Seguimiento / Cómo estás</button>
+            <button id="pac-ia-reprogramar" style="background:#FEF3C7;color:#92400E;border:none;border-radius:11px;padding:11px;font-size:13px;font-weight:700;cursor:pointer;text-align:left">🔄 Reprogramar turno</button>
           </div>
         </div>
 
@@ -363,8 +365,8 @@
             style="width:100%;background:var(--surface);border:1.5px solid var(--border);border-radius:11px;padding:10px 12px;font-size:13px;font-family:var(--font);min-height:60px;outline:none;resize:vertical;color:var(--text)"
             placeholder='Ej: "mañana a las 18hs" o "el 3/4 a las 10:00"'></textarea>
           <div style="display:flex;gap:8px;margin-top:8px">
-            <button onclick="pacProcesarReprogramar()" style="flex:1;background:var(--sb-bg,#1E1040);color:white;border:none;border-radius:11px;padding:10px;font-size:13px;font-weight:700;cursor:pointer">✨ Generar mensaje</button>
-            <button onclick="document.getElementById('pac-reprogramarWrap').style.display='none';document.getElementById('pac-iaOpcionesWrap').style.display='block'"
+            <button id="pac-ia-generar-reprog" style="flex:1;background:var(--sb-bg,#1E1040);color:white;border:none;border-radius:11px;padding:10px;font-size:13px;font-weight:700;cursor:pointer">✨ Generar mensaje</button>
+            <button id="pac-ia-cancelar-reprog"
               style="background:var(--border);color:var(--text-muted);border:none;border-radius:11px;padding:10px 14px;font-size:13px;font-weight:700;cursor:pointer">✕</button>
           </div>
         </div>
@@ -379,20 +381,20 @@
         <div id="pac-iaResultado" style="display:none;margin-top:10px">
           <div id="pac-iaMensaje" style="background:var(--surface);border-radius:11px;padding:12px 14px;font-size:13px;line-height:1.7;color:var(--text);white-space:pre-wrap"></div>
           <div style="display:flex;gap:8px;margin-top:10px">
-            <button onclick="pacCopiarMensaje()" style="flex:1;background:var(--primary-light);color:var(--primary);border:none;border-radius:11px;padding:10px;font-size:13px;font-weight:700;cursor:pointer">📋 Copiar</button>
-            <button onclick="pacEnviarWA()" style="flex:1;background:#25D366;color:white;border:none;border-radius:11px;padding:10px;font-size:13px;font-weight:700;cursor:pointer">📱 WhatsApp</button>
+            <button id="pac-ia-copiar" style="flex:1;background:var(--primary-light);color:var(--primary);border:none;border-radius:11px;padding:10px;font-size:13px;font-weight:700;cursor:pointer">📋 Copiar</button>
+            <button id="pac-ia-enviar-wa" style="flex:1;background:#25D366;color:white;border:none;border-radius:11px;padding:10px;font-size:13px;font-weight:700;cursor:pointer">📱 WhatsApp</button>
           </div>
-          <button onclick="document.getElementById('pac-iaResultado').style.display='none';document.getElementById('pac-iaOpcionesWrap').style.display='block'"
+          <button id="pac-ia-otro-mensaje"
             style="width:100%;background:none;border:none;padding:8px;font-size:12px;color:var(--text-muted);cursor:pointer;margin-top:4px">← Otro mensaje</button>
         </div>
       </div>
     </div>
 
-    <button onclick="pacIrHistoriaClinica()"
+    <button id="pac-btnHistoria"
       style="width:100%;background:var(--primary);color:white;border:none;border-radius:14px;padding:14px;font-size:15px;font-weight:700;font-family:var(--font);cursor:pointer;margin-top:10px;display:flex;align-items:center;justify-content:center;gap:8px">
       🧠 Ver Historia Clínica
     </button>
-    <button onclick="pacCerrarDetalle()"
+    <button id="pac-btnCerrarDetalle"
       style="width:100%;background:none;border:none;padding:14px;font-size:14px;color:var(--text-muted);font-family:var(--font);cursor:pointer;margin-top:4px">
       Cerrar
     </button>
@@ -407,6 +409,59 @@
   document.getElementById('pac-overlayDetalle').addEventListener('click', e => {
     if (e.target === document.getElementById('pac-overlayDetalle')) pacCerrarDetalle();
   });
+
+  /* ── Binds de eventos (reemplazan todos los onclick/oninput inline) ── */
+  document.getElementById('pac-searchInput')
+    .addEventListener('input', pacFiltrar);
+
+  document.getElementById('pac-chip-todos')
+    .addEventListener('click', function() { pacSetFiltro('todos', this); });
+  document.getElementById('pac-chip-os')
+    .addEventListener('click', function() { pacSetFiltro('os', this); });
+  document.getElementById('pac-chip-particular')
+    .addEventListener('click', function() { pacSetFiltro('particular', this); });
+
+  document.getElementById('pac-fabBtn')
+    .addEventListener('click', pacAbrirModal);
+
+  document.getElementById('pac-btnCrear')
+    .addEventListener('click', pacCrearPaciente);
+  document.getElementById('pac-btnCancelarModal')
+    .addEventListener('click', pacCerrarModal);
+
+  document.getElementById('pac-btnEliminar')
+    .addEventListener('click', pacEliminarPaciente);
+  document.getElementById('pac-btnToggleIA')
+    .addEventListener('click', pacTogglePanelIA);
+  document.getElementById('pac-btnHistoria')
+    .addEventListener('click', pacIrHistoriaClinica);
+  document.getElementById('pac-btnCerrarDetalle')
+    .addEventListener('click', pacCerrarDetalle);
+
+  document.getElementById('pac-ia-recordatorio')
+    .addEventListener('click', () => pacGenerarMensajeIA('recordatorio'));
+  document.getElementById('pac-ia-ausente')
+    .addEventListener('click', () => pacGenerarMensajeIA('ausente'));
+  document.getElementById('pac-ia-seguimiento')
+    .addEventListener('click', () => pacGenerarMensajeIA('seguimiento'));
+  document.getElementById('pac-ia-reprogramar')
+    .addEventListener('click', pacMostrarReprogramar);
+  document.getElementById('pac-ia-generar-reprog')
+    .addEventListener('click', pacProcesarReprogramar);
+  document.getElementById('pac-ia-cancelar-reprog')
+    .addEventListener('click', () => {
+      document.getElementById('pac-reprogramarWrap').style.display = 'none';
+      document.getElementById('pac-iaOpcionesWrap').style.display = 'block';
+    });
+  document.getElementById('pac-ia-copiar')
+    .addEventListener('click', pacCopiarMensaje);
+  document.getElementById('pac-ia-enviar-wa')
+    .addEventListener('click', pacEnviarWA);
+  document.getElementById('pac-ia-otro-mensaje')
+    .addEventListener('click', () => {
+      document.getElementById('pac-iaResultado').style.display = 'none';
+      document.getElementById('pac-iaOpcionesWrap').style.display = 'block';
+    });
 })();
 
 
@@ -469,23 +524,26 @@ function pacRenderLista(lista) {
     const letra = i2;
     if (letra !== letraActual) {
       letraActual = letra;
-      html += `<div class="pac-alpha-divider">${letra}</div>`;
+      html += `<div class="pac-alpha-divider">${escHtml(letra)}</div>`;
     }
     const badge = p.obra_social
-      ? `<div class="pac-patient-badge pb-os">${p.obra_social}</div>`
+      ? `<div class="pac-patient-badge pb-os">${escHtml(p.obra_social)}</div>`
       : `<div class="pac-patient-badge pb-particular">Particular</div>`;
-    const tel = p.telefono ? `💬 ${p.telefono}` : 'Sin teléfono';
+    const tel = p.telefono ? `💬 ${escHtml(p.telefono)}` : 'Sin teléfono';
     html += `
-      <div class="pac-patient-card" onclick="pacAbrirDetalle('${p.id}')">
-        <div class="pac-patient-avatar ${color}">${i1}${i2}</div>
+      <div class="pac-patient-card" data-pac-id="${escAttr(String(p.id))}">
+        <div class="pac-patient-avatar ${color}">${escHtml(i1)}${escHtml(i2)}</div>
         <div class="pac-patient-info">
-          <div class="pac-patient-name">${p.apellido}, ${p.nombre}</div>
+          <div class="pac-patient-name">${escHtml(p.apellido)}, ${escHtml(p.nombre)}</div>
           <div class="pac-patient-meta">${tel}</div>
         </div>
         <div class="pac-patient-right">${badge}</div>
       </div>`;
   });
   container.innerHTML = html;
+  container.querySelectorAll('.pac-patient-card').forEach(el => {
+    el.addEventListener('click', () => pacAbrirDetalle(el.dataset.pacId));
+  });
 }
 
 function pacFiltrar() {
@@ -530,9 +588,8 @@ async function pacCrearPaciente() {
   const btn = document.getElementById('pac-btnCrear');
   btn.disabled = true; btn.textContent = 'Guardando...';
 
-  const { data: { session } } = await sb.auth.getSession();
   const { error } = await sb.from('pacientes').insert({
-    user_id:          session.user.id,
+    user_id:          PsicoRouter.store.userId,
     nombre,
     apellido,
     activo:           true,
@@ -566,29 +623,39 @@ function pacAbrirDetalle(id) {
 
   document.getElementById('pac-det-avatar').textContent =
     (p.nombre||'?')[0].toUpperCase() + (p.apellido||'?')[0].toUpperCase();
-  document.getElementById('pac-det-nombre').textContent = `${p.nombre} ${p.apellido}`;
+  document.getElementById('pac-det-nombre').textContent = `${p.nombre || ''} ${p.apellido || ''}`.trim();
   document.getElementById('pac-det-meta').textContent = p.obra_social || 'Particular';
 
-  let body = '';
-  if (p.telefono)         body += pacFila('💬','Teléfono', p.telefono);
-  if (p.email)            body += pacFila('✉️','Email', p.email);
-  if (p.dni)              body += pacFila('🪪','DNI', p.dni);
-  if (p.fecha_nacimiento) body += pacFila('🎂','Nacimiento', pacFormatFecha(p.fecha_nacimiento));
-  if (p.obra_social)      body += pacFila('🏥','Obra social', p.obra_social + (p.nro_afiliado ? ` · Afil. ${p.nro_afiliado}` : ''));
-  if (p.notas)            body += pacFila('📝','Notas', p.notas);
-  if (!body)              body = '<div style="color:var(--text-muted);font-size:13px">Sin datos adicionales.</div>';
-  document.getElementById('pac-det-body').innerHTML = body;
+  const detBody = document.getElementById('pac-det-body');
+  detBody.textContent = '';
+  const filas = [];
+  if (p.telefono)         filas.push(pacFila('💬','Teléfono', p.telefono));
+  if (p.email)            filas.push(pacFila('✉️','Email', p.email));
+  if (p.dni)              filas.push(pacFila('🪪','DNI', p.dni));
+  if (p.fecha_nacimiento) filas.push(pacFila('🎂','Nacimiento', pacFormatFecha(p.fecha_nacimiento)));
+  if (p.obra_social)      filas.push(pacFila('🏥','Obra social', p.obra_social + (p.nro_afiliado ? ` · Afil. ${p.nro_afiliado}` : '')));
+  if (p.notas)            filas.push(pacFila('📝','Notas', p.notas));
+  if (filas.length) {
+    filas.forEach(fila => detBody.appendChild(fila));
+  } else {
+    const empty = document.createElement('div');
+    empty.style.cssText = 'color:var(--text-muted);font-size:13px';
+    empty.textContent = 'Sin datos adicionales.';
+    detBody.appendChild(empty);
+  }
 
   const wpBtn = document.getElementById('pac-det-wp-btn');
+  wpBtn._waClickHandler && wpBtn.removeEventListener('click', wpBtn._waClickHandler);
   if (p.telefono) {
     let num = p.telefono.replace(/\D/g,'');
     if (!num.startsWith('549')) num = '549' + num.replace(/^0?/,'');
     wpBtn._waNum = num;
-    wpBtn.onclick = () => window.open(`https://wa.me/${num}`, '_blank');
+    wpBtn._waClickHandler = () => window.open(`https://wa.me/${num}`, '_blank');
+    wpBtn.addEventListener('click', wpBtn._waClickHandler);
     wpBtn.style.opacity = '1';
   } else {
     wpBtn._waNum = '';
-    wpBtn.onclick = null;
+    wpBtn._waClickHandler = null;
     wpBtn.style.opacity = '0.4';
   }
 
@@ -605,11 +672,28 @@ function pacAbrirDetalle(id) {
 }
 
 function pacFila(icon, label, val) {
-  return `<div style="display:flex;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)">
-    <span style="font-size:16px">${icon}</span>
-    <div><div style="font-size:11px;color:var(--text-muted);font-weight:700;text-transform:uppercase;letter-spacing:.5px">${label}</div>
-    <div style="font-size:14px;font-weight:600;margin-top:2px;color:var(--text)">${val}</div></div>
-  </div>`;
+  const row = document.createElement('div');
+  row.style.cssText = 'display:flex;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)';
+
+  const iconSpan = document.createElement('span');
+  iconSpan.style.fontSize = '16px';
+  iconSpan.textContent = icon;
+
+  const inner = document.createElement('div');
+
+  const labelDiv = document.createElement('div');
+  labelDiv.style.cssText = 'font-size:11px;color:var(--text-muted);font-weight:700;text-transform:uppercase;letter-spacing:.5px';
+  labelDiv.textContent = label;
+
+  const valDiv = document.createElement('div');
+  valDiv.style.cssText = 'font-size:14px;font-weight:600;margin-top:2px;color:var(--text)';
+  valDiv.textContent = val;
+
+  inner.appendChild(labelDiv);
+  inner.appendChild(valDiv);
+  row.appendChild(iconSpan);
+  row.appendChild(inner);
+  return row;
 }
 
 function pacCerrarDetalle() {
@@ -625,7 +709,8 @@ function pacIrHistoriaClinica() {
 async function pacEliminarPaciente() {
   if (!_pacSeleccionado) return;
   if (!confirm(`¿Eliminar a ${_pacSeleccionado.nombre} ${_pacSeleccionado.apellido}?`)) return;
-  await sb.from('pacientes').update({ activo: false }).eq('id', _pacSeleccionado.id);
+  const _uid = PsicoRouter.store.userId;
+  await sb.from('pacientes').update({ activo: false }).eq('id', _pacSeleccionado.id).eq('user_id', _uid);
   PsicoRouter.store.invalidatePacientes();
   pacCerrarDetalle();
   await pacCargar();
@@ -647,6 +732,7 @@ async function pacCargarProximoTurno(pacienteId) {
       .from('turnos')
       .select('id, fecha, hora')
       .eq('paciente_id', pacienteId)
+      .eq('user_id', PsicoRouter.store.userId)
       .gte('fecha', hoy)
       .order('fecha', { ascending: true })
       .order('hora',  { ascending: true })
@@ -730,7 +816,7 @@ async function pacProcesarReprogramar() {
       if (nf) updates.fecha = nf;
       if (nh) updates.hora  = nh;
       try {
-        const { error } = await sb.from('turnos').update(updates).eq('id', _pacProximoTurno.id);
+        const { error } = await sb.from('turnos').update(updates).eq('id', _pacProximoTurno.id).eq('user_id', PsicoRouter.store.userId);
         if (!error) {
           agendaActualizada = true;
           if (nf) { const [y,m,d] = nf.split('-'); _pacProximoTurno.fecha = nf; _pacProximoTurno.fechaFormateada = `${d}/${m}/${y}`; }
@@ -791,11 +877,21 @@ async function pacLlamarIA(prompt, agendaActualizada = false) {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': 'Bearer ' + PSICOAPP_CONFIG.SUPA_KEY
+        'Authorization': 'Bearer ' + await (async () => {
+          const { data: { session } } = await sb.auth.getSession();
+          if (!session) throw new Error('Usuario no autenticado');
+          return session.access_token;
+        })()
       },
       body: JSON.stringify({ prompt })
     });
+    if (!resp.ok) {
+      throw new Error('Error en el servidor');
+    }
     const data = await resp.json();
+    if (!data || typeof data !== 'object') {
+      throw new Error('Respuesta inválida del servidor');
+    }
     document.getElementById('pac-iaLoading').style.display = 'none';
     document.getElementById('pac-iaMensaje').textContent = data.texto || data.error || 'Sin respuesta';
 
