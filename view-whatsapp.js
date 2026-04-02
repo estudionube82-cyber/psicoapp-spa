@@ -420,6 +420,12 @@ window.wpUsarPlantilla = function(tipo) {
    ══════════════════════════════════════════ */
 async function _wpEnviarMensaje(pac, msg, tipo = 'libre') {
   try {
+    /* ── Check de límite WhatsApp ── */
+    if (!(await puedeUsar('whatsapp'))) {
+      wpMostrarToast('🚫 Límite de WhatsApp alcanzado. Actualizá tu plan.', false);
+      return;
+    }
+
     let telNorm = (pac.telefono || '').replace(/\D/g, '');
     if (telNorm.startsWith('0')) telNorm = telNorm.slice(1);
     if (!telNorm.startsWith('54')) telNorm = '54' + telNorm;
@@ -604,6 +610,13 @@ async function _wpEnviarRecordatoriosManual() {
   const btn = document.getElementById('wp-btn-probar');
   if (btn) { btn.disabled = true; btn.textContent = 'Enviando...'; }
   try {
+    /* ── Check de límite WhatsApp ── */
+    if (!(await puedeUsar('whatsapp'))) {
+      wpMostrarToast('🚫 Límite de WhatsApp alcanzado. Actualizá tu plan.', false);
+      if (btn) { btn.disabled = false; btn.textContent = '▶ Probar ahora — enviar recordatorios de mañana'; }
+      return;
+    }
+
     let enviados = 0;
     for (const t of _wp.turnosProximos) {
       const pac = t.pacientes;

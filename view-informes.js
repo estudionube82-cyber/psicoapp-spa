@@ -516,6 +516,13 @@ window.infGenerar = async function() {
   if (!_inf.pacActual) { _infToast('⚠ Seleccioná un paciente primero', false); return; }
   if (!_inf.sessionToken) { _infToast('❌ Usuario no autenticado'); return; }
 
+  /* ── Check de uso en FRONTEND (optimista, evita llamada innecesaria al backend) ── */
+  if (!(await puedeUsar('informesIA'))) {
+    _infToast('🚫 Límite de informes alcanzado. Actualizá tu plan.');
+    PsicoRouter.navigate('cuenta');
+    return;
+  }
+
   /* ── Check de uso en backend ── */
   try {
     const checkResp = await fetch(PSICOAPP_CONFIG.SUPA_URL + '/functions/v1/check-ia-usage', {
