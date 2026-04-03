@@ -432,13 +432,12 @@ window._psicoAuthReady = new Promise((resolve) => {
     // Exponer userId para el store del router
     window._psicoUserId = session.user.id;
 
-    // ── FALLBACK: verificar/crear perfil con activo: true ────────
-    // Cubre usuarios registrados antes del trigger SQL,
-    // o cualquier caso donde el perfil no se creó automáticamente.
+    // ── FALLBACK: verificar/crear perfil si no existe ────────
+    // Cubre usuarios registrados antes del trigger SQL.
     try {
       const { data: perfilExistente } = await sb
         .from('profiles')
-        .select('id, activo')
+        .select('id')
         .eq('id', session.user.id)
         .maybeSingle();
 
@@ -448,14 +447,9 @@ window._psicoAuthReady = new Promise((resolve) => {
           id:         session.user.id,
           email:      session.user.email,
           plan:       'free',
-          activo:     true,
           created_at: new Date().toISOString(),
         });
         console.log('[Auth] ✅ Perfil creado automáticamente');
-      } else if (!perfilExistente.activo) {
-        // Perfil existe pero inactivo → activarlo
-        await sb.from('profiles').update({ activo: true }).eq('id', session.user.id);
-        console.log('[Auth] ✅ Perfil activado');
       }
     } catch(e) {
       console.warn('[Auth] No se pudo verificar/crear perfil:', e.message);
