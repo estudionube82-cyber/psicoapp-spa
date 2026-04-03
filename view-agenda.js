@@ -1370,11 +1370,15 @@
     const fechaLinda = `${d}/${m}/${y}`;
     const horaLinda  = insertData.hora.slice(0, 5);
 
-    await fetch('https://terlbqrcampdqtxjbihg.supabase.co/functions/v1/enviar-whatsapp', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
-      body: JSON.stringify({ to: telNorm, nombre, fecha: fechaLinda, hora: horaLinda }),
-    });
+    try {
+      await fetch('https://terlbqrcampdqtxjbihg.supabase.co/functions/v1/enviar-whatsapp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
+        body: JSON.stringify({ to: telNorm, nombre, fecha: fechaLinda, hora: horaLinda }),
+      });
+    } catch(e) {
+      console.warn('[Agenda] No se pudo enviar WA de confirmación:', e.message);
+    }
 
     const msgHistorial = `Hola ${nombre}, te recuerdo tu turno para el día ${fechaLinda} a las ${horaLinda}. En caso de no poder asistir, por favor avisá con anticipación.`;
 

@@ -236,11 +236,17 @@ function _perBindEvents() {
 async function _perCargar() {
   const uid = await PsicoRouter.store.ensureUserId();
   if (!uid) return;
-  const { data } = await sb.from('pericias')
-    .select('*').eq('user_id', uid).order('created_at', { ascending: false });
-  _perPericias = data || [];
-  _perActualizarStats();
-  _perRenderTab();
+  try {
+    const { data, error } = await sb.from('pericias')
+      .select('*').eq('user_id', uid).order('created_at', { ascending: false });
+    if (error) throw error;
+    _perPericias = data || [];
+    _perActualizarStats();
+    _perRenderTab();
+  } catch(e) {
+    console.error('[Pericias] Error al cargar:', e.message);
+    _perPericias = [];
+  }
 }
 
 
@@ -449,18 +455,30 @@ function perCerrarDetalle() {
 
 async function perCambiarEstado(nuevoEstado) {
   if (!_perSeleccionada) return;
-  await sb.from('pericias').update({ estado: nuevoEstado }).eq('id', _perSeleccionada.id);
-  perCerrarDetalle();
-  await _perCargar();
+  try {
+    const { error } = await sb.from('pericias').update({ estado: nuevoEstado }).eq('id', _perSeleccionada.id);
+    if (error) throw error;
+    perCerrarDetalle();
+    await _perCargar();
+  } catch(e) {
+    console.error('[Pericias] Error al cambiar estado:', e.message);
+    alert('⚠️ Error al actualizar el estado. Intentá de nuevo.');
+  }
 }
 
 async function perEliminar() {
   if (!_perSeleccionada) return;
   if (!confirm(`¿Eliminar la pericia "${_perSeleccionada.expediente}"?`)) return;
   const uid = PsicoRouter.store.userId;
-  await sb.from('pericias').delete().eq('id', _perSeleccionada.id).eq('user_id', uid);
-  perCerrarDetalle();
-  await _perCargar();
+  try {
+    const { error } = await sb.from('pericias').delete().eq('id', _perSeleccionada.id).eq('user_id', uid);
+    if (error) throw error;
+    perCerrarDetalle();
+    await _perCargar();
+  } catch(e) {
+    console.error('[Pericias] Error al eliminar:', e.message);
+    alert('⚠️ Error al eliminar la pericia. Intentá de nuevo.');
+  }
 }
 
 
