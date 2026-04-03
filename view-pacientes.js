@@ -603,6 +603,8 @@ async function pacCrearPaciente() {
   btn.disabled = false; btn.textContent = '✓ Crear paciente';
   if (error) { pacMostrarError('Error al guardar. Intentá de nuevo.'); return; }
   PsicoRouter.store.invalidatePacientes();
+  // Notificar al Dashboard y otras vistas que hay un paciente nuevo
+  window.dispatchEvent(new Event('pacientesActualizados'));
   pacCerrarModal();
   await pacCargar();
 }

@@ -617,5 +617,12 @@ window.addEventListener('storeUpdated', (e) => {
   }
 });
 
+/* Refrescar cuando se crea un paciente nuevo desde view-pacientes */
+window.addEventListener('pacientesActualizados', () => {
+  console.log('[Dashboard] 🔄 Paciente nuevo detectado — refrescando...');
+  const container = document.getElementById('view-dashboard');
+  if (container?.classList.contains('view-active')) _dashCargarDatos();
+});
+
 /* Compatibilidad legacy */
 window.onViewEnter_dashboard = () => PsicoRouter.navigate('dashboard');
