@@ -603,8 +603,8 @@ async function pacCrearPaciente() {
   btn.disabled = false; btn.textContent = '✓ Crear paciente';
   if (error) { pacMostrarError('Error al guardar. Intentá de nuevo.'); return; }
   PsicoRouter.store.invalidatePacientes();
-  // Notificar al Dashboard y otras vistas que hay un paciente nuevo
   window.dispatchEvent(new Event('pacientesActualizados'));
+  window.dispatchEvent(new CustomEvent('storeUpdated', { detail: { key: 'pacientes' } }));
   pacCerrarModal();
   await pacCargar();
 }
@@ -713,6 +713,8 @@ async function pacEliminarPaciente() {
   const _uid = PsicoRouter.store.userId;
   await sb.from('pacientes').update({ activo: false }).eq('id', _pacSeleccionado.id).eq('user_id', _uid);
   PsicoRouter.store.invalidatePacientes();
+  window.dispatchEvent(new Event('pacientesActualizados'));
+  window.dispatchEvent(new CustomEvent('storeUpdated', { detail: { key: 'pacientes' } }));
   pacCerrarDetalle();
   await pacCargar();
 }

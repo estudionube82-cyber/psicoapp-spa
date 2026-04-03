@@ -317,6 +317,9 @@ const _PerfilView = (() => {
       _updateHeader(container, nombre_completo, null);
       _syncSidebar(nombre_completo, null);
 
+      // Notificar a otras vistas (dashboard, sidebar) que el perfil cambió
+      window.dispatchEvent(new Event('perfilActualizado'));
+
       console.log(`[Perfil] ✅ Perfil guardado correctamente`);
       _showToast(container, `✅ Datos guardados correctamente`, `ok`);
 
