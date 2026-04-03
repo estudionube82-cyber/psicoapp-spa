@@ -256,12 +256,12 @@ const _PerfilView = (() => {
 
       const { data, error } = await sb
         .from('profiles')
-        .select('nombre_completo, telefono_profesional, matricula_provincial, foto_url')
+        .select('nombre_completo, telefono_profesional, especialidad, foto_url')
         .eq('id', userId)
         .maybeSingle();
 
       if (error) {
-        console.error('[Perfil] Error al cargar:', error.message);
+        console.error('[Perfil] ❌ Error al cargar perfil:', error.message, error);
         return;
       }
 
@@ -269,7 +269,7 @@ const _PerfilView = (() => {
       const p = data || {};
       container.querySelector('#vp-nombre').value    = p.nombre_completo        || '';
       container.querySelector('#vp-telefono').value  = p.telefono_profesional   || '';
-      container.querySelector('#vp-matricula').value = p.matricula_provincial   || '';
+      container.querySelector('#vp-especialidad').value = p.especialidad   || '';
 
       // Actualizar cabecera y sidebar con los datos cargados
       _updateHeader(container, p.nombre_completo, p.foto_url);
@@ -293,17 +293,19 @@ const _PerfilView = (() => {
 
     const nombre_completo      = container.querySelector('#vp-nombre').value.trim();
     const telefono_profesional = container.querySelector('#vp-telefono').value.trim();
-    const matricula_provincial = container.querySelector('#vp-matricula').value.trim();
+    const especialidad = container.querySelector('#vp-especialidad').value.trim();
 
+    console.log(`[Perfil] Guardando perfil para userId: ${userId}`, { nombre_completo, telefono_profesional, especialidad });
     _setLoading(container, true);
 
     try {
       const { error } = await sb.from('profiles').upsert(
-        { id: userId, nombre_completo, telefono_profesional, matricula_provincial },
+        { id: userId, nombre_completo, telefono_profesional, especialidad },
         { onConflict: 'id' }
       );
 
       if (error) {
+        console.error('[Perfil] ❌ Supabase error al guardar:', error.message, error);
         _showToast(container, '❌ Error al guardar: ' + error.message, 'error');
         return;
       }
@@ -315,7 +317,8 @@ const _PerfilView = (() => {
       _updateHeader(container, nombre_completo, null);
       _syncSidebar(nombre_completo, null);
 
-      _showToast(container, '✅ Datos guardados correctamente', 'ok');
+      console.log(`[Perfil] ✅ Perfil guardado correctamente`);
+      _showToast(container, `✅ Datos guardados correctamente`, `ok`);
 
     } catch (e) {
       _showToast(container, '❌ Error inesperado: ' + e.message, 'error');
@@ -372,9 +375,9 @@ const _PerfilView = (() => {
     </div>
 
     <div class="vp-field">
-      <label class="vp-label" for="vp-matricula">Matrícula profesional</label>
-      <input class="vp-input" id="vp-matricula" type="text"
-        placeholder="Ej: 12345">
+      <label class="vp-label" for="vp-especialidad">Especialidad</label>
+      <input class="vp-input" id="vp-especialidad" type="text"
+        placeholder="Ej: Psicología Clínica">
     </div>
 
     <div id="vp-toast" class="vp-toast"></div>
