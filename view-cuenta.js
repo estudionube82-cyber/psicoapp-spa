@@ -1,7 +1,7 @@
 let cuentaInitialized = false;
 /**
  * view-cuenta.js — PsicoApp
- * Planes: Free / Pro / Max con control de uso real.
+ * Planes: Free / Pro / Max — lee plan desde PlanService (Edge Function)
  */
 
 (function injectCuentaStyles() {
@@ -81,13 +81,6 @@ let cuentaInitialized = false;
 #view-cuenta .btn-upgrade     { background:linear-gradient(135deg,#5B2FA8,#7C3AED); color:white; box-shadow:0 4px 16px rgba(92,47,168,.4); }
 #view-cuenta .btn-upgrade-max { background:linear-gradient(135deg,#BE185D,#F472B6); color:white; box-shadow:0 4px 16px rgba(244,114,182,.4); }
 
-#view-cuenta .vc-yapague-card  { background:var(--surface); border-radius:var(--radius); padding:18px; box-shadow:var(--shadow-sm); display:flex; flex-direction:column; gap:10px; }
-#view-cuenta .vc-yapague-title { font-size:14px; font-weight:700; color:var(--text); }
-#view-cuenta .vc-yapague-sub   { font-size:12px; color:var(--text-muted); line-height:1.5; }
-#view-cuenta .vc-btns-yapague  { display:flex; gap:10px; }
-#view-cuenta .vc-btn-yapague { flex:1; padding:12px; border-radius:var(--radius-sm); background:rgba(124,58,237,.1); color:#7C3AED; border:1.5px solid rgba(124,58,237,.25); font-family:var(--font); font-size:13px; font-weight:800; cursor:pointer; transition:transform .12s; }
-#view-cuenta .vc-btn-yapague:hover { transform:translateY(-1px); }
-#view-cuenta .vc-btn-yapague-max { background:rgba(124,58,237,.12); color:#5B2FA8; border-color:rgba(124,58,237,.25); }
 #view-cuenta .vc-btn-extra { width:100%; padding:12px; border-radius:var(--radius-sm); background:linear-gradient(135deg,rgba(92,47,168,.1),rgba(124,58,237,.08)); border:1.5px dashed rgba(124,58,237,.35); color:var(--primary); font-family:var(--font); font-size:12px; font-weight:800; cursor:pointer; transition:transform .12s; }
 #view-cuenta .vc-btn-extra:hover { transform:translateY(-1px); }
 #view-cuenta .vc-logout-wrap { display:flex; flex-direction:column; gap:8px; }
@@ -101,52 +94,8 @@ let cuentaInitialized = false;
   document.head.appendChild(style);
 })();
 
-/* ══ FUNCIONES SAAS ══
-   getPlanLimits, diasDesdeInicio, puedeUsar, registrarUso, avisoLimite
-   se cargan desde suscripcion-control.js (cargado antes en index.html)
-*/
-
 function vc_getPerfil() {
   try { return JSON.parse(localStorage.getItem('perfil')) || {}; } catch { return {}; }
-}
-
-function getSuscripcion() {
-  try { return JSON.parse(localStorage.getItem('suscripcion')) || null; } catch { return null; }
-}
-
-async function activarSuscripcion(planElegido) {
-  const planFinal = planElegido || 'pro';
-  const s = getSuscripcion();
-  const nuevoEstado = {
-    plan: planFinal, estado: 'activa',
-    fechaInicio: s?.fechaInicio || new Date().toISOString(),
-    usos:  s?.usos  || { whatsapp:0, informesIA:0 },
-    extra: s?.extra || { whatsapp:0 },
-  };
-  saveSuscripcion(nuevoEstado);
-
-  // Sincronizar con Supabase
-  try {
-    const { data: { session } } = await sb.auth.getSession();
-    if (session) {
-      await sb.from('profiles').update({ plan: planFinal }).eq('id', session.user.id);
-    }
-  } catch(e) {
-    console.warn('[Cuenta] No se pudo sincronizar plan a Supabase:', e.message);
-  }
-
-  renderCuenta();
-  vcToast('✅ ¡Plan ' + planFinal.toUpperCase() + ' activado!');
-}
-
-function comprarExtraWhatsapp() {
-  const s = getSuscripcion();
-  if (!s) return;
-  if (!s.extra) s.extra = { whatsapp:0 };
-  s.extra.whatsapp = (s.extra.whatsapp || 0) + 100;
-  saveSuscripcion(s);
-  renderCuenta();
-  vcToast('✅ 100 mensajes WhatsApp extra agregados');
 }
 
 function vcToast(msg) {
@@ -172,46 +121,47 @@ function _usageBar(usado, tope, label, color) {
   </div>`;
 }
 
-/* ══ RENDER ══ */
-
-function renderCuenta() {
+/* ══ RENDER — usa PlanService como fuente de verdad ══ */
+async function renderCuenta() {
   const container = document.getElementById('view-cuenta');
   if (!container) return;
 
-  const perfil      = vc_getPerfil();
-  const sus         = getSuscripcion();
-  const plan        = sus?.plan   || 'free';
-  const estado      = sus?.estado || 'inactiva';
-  const estaActiva  = estado === 'activa';
-  const lim         = getPlanLimits(plan);
-  const usos        = sus?.usos  || { whatsapp:0, informesIA:0 };
-  const ext         = sus?.extra || { whatsapp:0 };
-  // Pagos manejados 100% por create-preference (Edge Function)
+  // Obtener plan real desde Edge Function
+  let planData = { plan: 'free', status: 'active', ia_used: 0, ia_limit: 5 }
+  try {
+    if (typeof PlanService !== 'undefined') {
+      PlanService.invalidar() // forzar recarga fresca
+      planData = await PlanService.getPlan()
+    }
+  } catch(e) {
+    console.warn('[Cuenta] No se pudo obtener plan:', e.message)
+  }
 
-  const nombre    = perfil.nombre || 'Profesional';
-  const email     = perfil.email  || '';
-  const iniciales = nombre.split(' ').filter(Boolean).slice(0,2).map(w=>w[0]).join('').toUpperCase();
-  const avatarHTML = perfil.foto ? `<img src="${perfil.foto}">` : (iniciales || '👤');
+  const plan       = planData.plan   || 'free'
+  const estaActiva = planData.status === 'active'
+  const iaUsado    = planData.ia_used  || 0
+  const iaLimit    = planData.ia_limit || 5
 
-  const diasUsados    = diasDesdeInicio(sus?.fechaInicio);
-  const diasRestantes = lim.dias !== null ? Math.max(0, lim.dias - diasUsados) : null;
-  const fechaLabel    = estaActiva && sus?.fechaInicio
-    ? new Date(sus.fechaInicio).toLocaleDateString('es-AR',{day:'2-digit',month:'long',year:'numeric'})
-    : null;
+  const lim    = typeof getPlanLimits === 'function' ? getPlanLimits(plan) : { whatsapp: 20, informesIA: iaLimit, dias: 15 }
+  const perfil = vc_getPerfil()
 
-  const topeWA = lim.whatsapp + (ext.whatsapp || 0);
-  const topeIA = lim.informesIA;
+  const nombre    = perfil.nombre || 'Profesional'
+  const email     = perfil.email  || ''
+  const iniciales = nombre.split(' ').filter(Boolean).slice(0,2).map(w=>w[0]).join('').toUpperCase()
+  const avatarHTML = perfil.foto ? `<img src="${perfil.foto}">` : (iniciales || '👤')
+
+  const planLabel = plan.charAt(0).toUpperCase() + plan.slice(1)
 
   const heroBadge = plan === 'max'
     ? `<div class="vc-hero-badge hb-max">💎 Plan Max activo</div>`
     : plan === 'pro'
       ? `<div class="vc-hero-badge hb-pro">⭐ Plan Pro activo</div>`
-      : `<div class="vc-hero-badge hb-free">🔒 Plan Free</div>`;
+      : `<div class="vc-hero-badge hb-free">🔒 Plan Free</div>`
 
-  const planLabel = plan.charAt(0).toUpperCase() + plan.slice(1);
+  // Siempre re-renderizar para mostrar datos frescos
+  cuentaInitialized = false
 
-  if (!cuentaInitialized) {
-    container.innerHTML = `
+  container.innerHTML = `
 <div id="vc-toast-global" class="vc-toast"></div>
 
 <div class="vc-hero">
@@ -238,22 +188,16 @@ function renderCuenta() {
     <div style="text-align:right">
       <div class="vc-strip-label">Plan</div>
       <div class="vc-strip-val">${planLabel}</div>
-      ${fechaLabel ? `<div class="vc-strip-fecha">Desde ${fechaLabel}</div>` : ''}
     </div>
   </div>
 
   <div class="vc-usage-card">
     <div class="vc-section-title">Uso del plan</div>
-    ${plan === 'free' && diasRestantes !== null ? `
-    <div class="vc-dias-badge ${diasRestantes <= 3 ? 'alerta' : ''}">
-      <span style="font-size:20px;">${diasRestantes <= 3 ? '🔴' : '📅'}</span>
-      <div>
-        <div style="font-size:13px;font-weight:800;color:${diasRestantes <= 3 ? '#EF4444' : 'var(--text)'};">${diasRestantes} días restantes del período Free</div>
-        <div style="font-size:11px;color:var(--text-muted);">Período de prueba de 15 días</div>
-      </div>
-    </div>` : ''}
-    <div id="vc-usage-bars"></div>
-    <div id="vc-extra-wa-wrap"></div>
+    ${_usageBar(iaUsado, iaLimit, '🤖 Informes IA', '#A78BFA')}
+    ${_usageBar(0, lim.whatsapp, '💬 Mensajes WhatsApp', '#7C3AED')}
+    <div id="vc-extra-wa-wrap">
+      <button class="vc-btn-extra" id="vc-btn-extra-wa">➕ Comprar 100 mensajes WhatsApp extra ($5.000)</button>
+    </div>
   </div>
 
   <div class="vc-section-title">Elegí tu plan</div>
@@ -310,75 +254,56 @@ function renderCuenta() {
 
   </div>
 
-
-
   <div class="vc-logout-wrap">
     <button class="vc-btn-logout" id="vc-btn-logout">🚪 Cerrar sesión</button>
   </div>
 
   <div class="vc-pad"></div>
 </div>
-  `;
-    cuentaInitialized = true;
-  }
+  `
+  cuentaInitialized = true
 
-  // ── Siempre actualizar barras de uso (desktop Y mobile, primer render y re-renders) ──
-  const usageBarsEl = container.querySelector('#vc-usage-bars');
-  if (usageBarsEl) {
-    const usadoWA = usos.whatsapp   ?? 0;
-    const usadoIA = usos.informesIA ?? 0;
-    usageBarsEl.innerHTML =
-      _usageBar(usadoWA, topeWA, '💬 Mensajes WhatsApp', '#7C3AED') +
-      _usageBar(usadoIA, topeIA, '🤖 Informes IA',       '#A78BFA');
-  }
+  const q = id => container.querySelector(id)
+  const on = (id, fn) => { const el = q(id); if (el) el.addEventListener('click', fn); }
 
-  // ── Botón extra WhatsApp: visible solo en plan pro, siempre actualizado ──
-  const extraWaWrap = container.querySelector('#vc-extra-wa-wrap');
-  if (extraWaWrap) {
-    extraWaWrap.innerHTML = `<button class="vc-btn-extra" id="vc-btn-extra-wa">➕ Comprar 100 mensajes WhatsApp extra ($5.000)</button>`;
-  }
-
-  const q = id => container.querySelector(id);
-  const on = (id, fn) => { const el = q(id); if (el) el.addEventListener('click', fn); };
-
-  on('#vc-btn-upgrade-pro', () => irAPago('pro'));
-  on('#vc-btn-upgrade-max', () => irAPago('max'));
-  on('#vc-btn-extra-wa',    () => irAPago('extra_whatsapp'));
-  on('#vc-btn-logout',      async () => {
-    window._psicoSigningOut = true;
-    try { await sb.auth.signOut(); } catch(e) {}
-    window.location.replace('/login.html');
-  });
+  on('#vc-btn-upgrade-pro', () => irAPago('pro'))
+  on('#vc-btn-upgrade-max', () => irAPago('max'))
+  on('#vc-btn-extra-wa',    () => irAPago('extra_whatsapp'))
+  on('#vc-btn-logout', async () => {
+    window._psicoSigningOut = true
+    try { await sb.auth.signOut() } catch(e) {}
+    window.location.replace('/login.html')
+  })
 }
 
 window.addEventListener('perfilActualizado', () => {
-  const c = document.getElementById('view-cuenta');
-  if (c && c.classList.contains('view-active')) renderCuenta();
-});
+  const c = document.getElementById('view-cuenta')
+  if (c && c.classList.contains('view-active')) renderCuenta()
+})
 
 function initCuenta() {
   try {
-    const c = document.getElementById('view-cuenta');
-    if (!c) return;
-    renderCuenta();
+    const c = document.getElementById('view-cuenta')
+    if (!c) return
+    renderCuenta()
   } catch(e) {
-    console.error('initCuenta error:', e);
+    console.error('initCuenta error:', e)
   }
 }
 
-window.onViewEnter_cuenta = initCuenta;
+window.onViewEnter_cuenta = initCuenta
 
 /* ══ PAGO VIA MERCADOPAGO ══ */
 async function irAPago(plan) {
   const btnIds = {
-    pro:             '#vc-btn-upgrade-pro',
-    max:             '#vc-btn-upgrade-max',
-    extra_whatsapp:  '#vc-btn-extra-wa',
+    pro:            '#vc-btn-upgrade-pro',
+    max:            '#vc-btn-upgrade-max',
+    extra_whatsapp: '#vc-btn-extra-wa',
   }
   const labels = {
-    pro:             '🚀 Activar Pro',
-    max:             '💎 Activar Max',
-    extra_whatsapp:  '➕ Comprar 100 mensajes WhatsApp extra ($5.000)',
+    pro:            '🚀 Activar Pro',
+    max:            '💎 Activar Max',
+    extra_whatsapp: '➕ Comprar 100 mensajes WhatsApp extra ($5.000)',
   }
 
   const btn = document.querySelector(btnIds[plan])
@@ -388,15 +313,13 @@ async function irAPago(plan) {
     const { data: { session } } = await sb.auth.getSession()
     if (!session) { vcToast('❌ Sesión no encontrada'); return }
 
-    const email = session.user.email
-
     const resp = await fetch(PSICOAPP_CONFIG.SUPA_URL + '/functions/v1/create-preference', {
       method: 'POST',
       headers: {
         'Content-Type':  'application/json',
         'Authorization': 'Bearer ' + session.access_token,
       },
-      body: JSON.stringify({ email, plan }),
+      body: JSON.stringify({ email: session.user.email, plan }),
     })
 
     if (!resp.ok) throw new Error('Error al crear preferencia: ' + resp.status)
