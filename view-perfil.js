@@ -256,7 +256,7 @@ const _PerfilView = (() => {
 
       const { data, error } = await sb
         .from('profiles')
-        .select('nombre, telefono, matricula, foto_url')
+        .select('nombre_completo, telefono_profesional, matricula_provincial, foto_url')
         .eq('id', userId)
         .maybeSingle();
 
@@ -267,13 +267,13 @@ const _PerfilView = (() => {
 
       // Rellenar inputs con datos existentes (o vacíos si es perfil nuevo)
       const p = data || {};
-      container.querySelector('#vp-nombre').value    = p.nombre    || '';
-      container.querySelector('#vp-telefono').value  = p.telefono  || '';
-      container.querySelector('#vp-matricula').value = p.matricula || '';
+      container.querySelector('#vp-nombre').value    = p.nombre_completo        || '';
+      container.querySelector('#vp-telefono').value  = p.telefono_profesional   || '';
+      container.querySelector('#vp-matricula').value = p.matricula_provincial   || '';
 
       // Actualizar cabecera y sidebar con los datos cargados
-      _updateHeader(container, p.nombre, p.foto_url);
-      _syncSidebar(p.nombre, p.foto_url);
+      _updateHeader(container, p.nombre_completo, p.foto_url);
+      _syncSidebar(p.nombre_completo, p.foto_url);
 
     } catch (e) {
       console.error('[Perfil] Error inesperado al cargar:', e.message);
@@ -291,15 +291,15 @@ const _PerfilView = (() => {
       return;
     }
 
-    const nombre    = container.querySelector('#vp-nombre').value.trim();
-    const telefono  = container.querySelector('#vp-telefono').value.trim();
-    const matricula = container.querySelector('#vp-matricula').value.trim();
+    const nombre_completo      = container.querySelector('#vp-nombre').value.trim();
+    const telefono_profesional = container.querySelector('#vp-telefono').value.trim();
+    const matricula_provincial = container.querySelector('#vp-matricula').value.trim();
 
     _setLoading(container, true);
 
     try {
       const { error } = await sb.from('profiles').upsert(
-        { id: userId, nombre, telefono, matricula },
+        { id: userId, nombre_completo, telefono_profesional, matricula_provincial },
         { onConflict: 'id' }
       );
 
@@ -312,8 +312,8 @@ const _PerfilView = (() => {
       PsicoRouter.store.invalidatePerfil();
 
       // Actualizar UI sin recargar la vista
-      _updateHeader(container, nombre, null);
-      _syncSidebar(nombre, null);
+      _updateHeader(container, nombre_completo, null);
+      _syncSidebar(nombre_completo, null);
 
       _showToast(container, '✅ Datos guardados correctamente', 'ok');
 
