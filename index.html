@@ -348,52 +348,10 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); min-
   }
 })();
 
-/* ── ACTIVACIÓN AUTOMÁTICA DE PLAN POR RETORNO DE MERCADO PAGO ──
- * Cuando el usuario paga, MP redirige a /?plan=pro o /?plan=max.
- * Guardamos el plan en sessionStorage ANTES de limpiar la URL,
- * así el router no lo pierde al navegar a dashboard.
+/* ── ACTIVACIÓN DE PLAN ──────────────────────────────────────
+ * La activación del plan se realiza ÚNICAMENTE desde el backend
+ * mediante webhook de MercadoPago → Edge Function → users_plan.
  * ─────────────────────────────────────────────────────────── */
-(function() {
-  const params    = new URLSearchParams(window.location.search);
-  const planParam = params.get('plan');
-  if (!planParam || !['pro','max'].includes(planParam)) return;
-  // Guardar antes de limpiar URL
-  sessionStorage.setItem('_psicoActivarPlan', planParam);
-  history.replaceState({}, '', '/');
-})();
-
-async function _activarPlanPendiente() {
-  const planParam = sessionStorage.getItem('_psicoActivarPlan');
-  if (!planParam) return;
-  sessionStorage.removeItem('_psicoActivarPlan');
-
-  try {
-    const { data: { session } } = await sb.auth.getSession();
-    if (!session) return;
-
-    await sb.from('profiles').update({ plan: planParam }).eq('id', session.user.id);
-
-    let sus = {};
-    try { sus = JSON.parse(localStorage.getItem('suscripcion')) || {}; } catch {}
-    sus.plan        = planParam;
-    sus.estado      = 'activa';
-    sus.fechaInicio = sus.fechaInicio || new Date().toISOString();
-    localStorage.setItem('suscripcion', JSON.stringify(sus));
-
-    navigate('cuenta');
-    setTimeout(() => {
-      const t = document.getElementById('vc-toast-global');
-      if (t) {
-        t.textContent = '🎉 ¡Plan ' + planParam.toUpperCase() + ' activado correctamente!';
-        t.classList.add('show');
-        setTimeout(() => t.classList.remove('show'), 4000);
-      }
-    }, 500);
-
-  } catch(e) {
-    console.warn('[PsicoApp] No se pudo activar plan:', e.message);
-  }
-}
 
 /* ── SUPABASE ── */
 const { createClient } = supabase;
@@ -511,8 +469,7 @@ function bnMoreNav(view) {
 document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('bn-mas-btn').addEventListener('click', bnMoreOpen);
   document.getElementById('bn-more-overlay').addEventListener('click', bnMoreClose);
-  // Activar plan pendiente si el usuario viene de Mercado Pago
-  if (sessionStorage.getItem('_psicoActivarPlan')) _activarPlanPendiente();
+
 });
 
 /* ── navigate() y router — gestionados por app-router.js ──
@@ -529,6 +486,7 @@ document.addEventListener('DOMContentLoaded', () => {
 <script src="psicoapp-sanitize.js" onerror="console.error('psicoapp-sanitize.js no encontrado')"></script>
 
 <!-- Scripts de vistas -->
+<script src="planService.js"          onerror="console.warn('planService.js no encontrado')"></script>
 <script src="suscripcion-control.js"  onerror="console.warn('suscripcion-control.js no encontrado')"></script>
 <script src="view-dashboard.js"       onerror="console.warn('view-dashboard.js no encontrado')"></script>
 <script src="view-pacientes.js"       onerror="console.warn('view-pacientes.js no encontrado')"></script>
