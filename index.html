@@ -432,30 +432,37 @@ window._psicoAuthReady = new Promise((resolve) => {
     // Exponer userId para el store del router
     window._psicoUserId = session.user.id;
 
-    // Cargar plan y usos desde Supabase y sincronizar localStorage
+    // ── FALLBACK: verificar/crear perfil con activo: true ────────
+    // Cubre usuarios registrados antes del trigger SQL,
+    // o cualquier caso donde el perfil no se creó automáticamente.
     try {
-      const { data: perfil } = await sb
+      const { data: perfilExistente } = await sb
         .from('profiles')
-        .select('plan, wa_usos, wa_extra')
+        .select('id, activo')
         .eq('id', session.user.id)
         .maybeSingle();
 
-      if (perfil) {
-        let sus = {};
-        try { sus = JSON.parse(localStorage.getItem('suscripcion')) || {}; } catch {}
-
-        const planActual = perfil.plan || 'free';
-        localStorage.setItem('suscripcion', JSON.stringify({
-          plan:        planActual,
-          estado:      'activa',
-          fechaInicio: sus.fechaInicio || new Date().toISOString(),
-          usos:        { whatsapp: perfil.wa_usos || 0, informesIA: sus.usos?.informesIA || 0 },
-          extra:       { whatsapp: perfil.wa_extra || 0 },
-        }));
+      if (!perfilExistente) {
+        // Perfil no existe → crearlo con valores seguros
+        await sb.from('profiles').insert({
+          id:         session.user.id,
+          email:      session.user.email,
+          plan:       'free',
+          activo:     true,
+          created_at: new Date().toISOString(),
+        });
+        console.log('[Auth] ✅ Perfil creado automáticamente');
+      } else if (!perfilExistente.activo) {
+        // Perfil existe pero inactivo → activarlo
+        await sb.from('profiles').update({ activo: true }).eq('id', session.user.id);
+        console.log('[Auth] ✅ Perfil activado');
       }
     } catch(e) {
-      console.warn('[Auth] No se pudo sincronizar suscripción:', e.message);
+      console.warn('[Auth] No se pudo verificar/crear perfil:', e.message);
     }
+
+    // Plan cargado bajo demanda desde PlanService (Edge Function getUserPlan)
+    // No se guarda en localStorage — el backend es la única fuente de verdad
 
     resolve(); // auth confirmado → el router puede navegar
   });
