@@ -301,8 +301,8 @@ async function _dashCargarDatos() {
     const primerDiaMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1).toISOString().split('T')[0];
     const ultimoDiaMes = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0).toISOString().split('T')[0];
 
-    /* 3 queries en paralelo */
-    const [resPagos, resTurnosHoy, resTurnosMes] = await Promise.all([
+    /* 4 queries en paralelo — incluye pacientes reales */
+    const [resPagos, resTurnosHoy, resTurnosMes, resPacientes] = await Promise.all([
       sb.from('pagos')
         .select('id,paciente_id,monto,fecha,metodo')
         .eq('user_id', uid)
@@ -321,6 +321,11 @@ async function _dashCargarDatos() {
         .gte('fecha', primerDiaMes)
         .lte('fecha', ultimoDiaMes)
         .neq('estado', 'cancelado'),
+
+      sb.from('pacientes')
+        .select('id')
+        .eq('user_id', uid)
+        .eq('activo', true),
     ]);
 
     const pagos     = resPagos.data     || [];
@@ -330,8 +335,10 @@ async function _dashCargarDatos() {
     /* Calcular métricas */
     const totalCobrado   = pagos.filter(p => p.metodo !== 'pendiente').reduce((s, p) => s + (Number(p.monto) || 0), 0);
     const cantPagos      = pagos.filter(p => p.metodo !== 'pendiente').length;
-    const pacUnicos      = new Set(pagos.map(p => p.paciente_id)).size;
+    const pacUnicos      = resPacientes.data?.length || 0;
     const turnosHoyCant  = turnos.length;
+
+    console.log('[Dashboard] pacientes reales:', pacUnicos);
 
     const turnosPendientes = turnosMes.filter(t => {
       const est = (t.estado || '').toLowerCase();
@@ -612,16 +619,20 @@ PsicoRouter.register('dashboard', {
 /* Refrescar si se actualizan turnos o pagos desde otra vista */
 window.addEventListener('storeUpdated', (e) => {
   if (['turnos','pagos','pacientes'].includes(e.detail?.key)) {
-    const container = document.getElementById('view-dashboard');
-    if (container?.classList.contains('view-active')) _dashCargarDatos();
+    _dashCargarDatos();
   }
 });
 
-/* Refrescar cuando se crea un paciente nuevo desde view-pacientes */
+/* Refrescar cuando se crea/edita/elimina un paciente */
 window.addEventListener('pacientesActualizados', () => {
-  console.log('[Dashboard] 🔄 Paciente nuevo detectado — refrescando...');
-  const container = document.getElementById('view-dashboard');
-  if (container?.classList.contains('view-active')) _dashCargarDatos();
+  console.log('[Dashboard] 🔄 Pacientes actualizados — refrescando...');
+  _dashCargarDatos();
+});
+
+/* Refrescar cuando se actualiza el perfil */
+window.addEventListener('perfilActualizado', () => {
+  console.log('[Dashboard] 🔄 Perfil actualizado — refrescando...');
+  _dashCargarDatos();
 });
 
 /* Compatibilidad legacy */
