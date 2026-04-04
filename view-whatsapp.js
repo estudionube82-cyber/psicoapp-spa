@@ -78,6 +78,14 @@
 #view-whatsapp .btn-probar{width:100%;background:var(--wp-dark);color:white;border:none;border-radius:11px;padding:12px;font-size:14px;font-weight:700;font-family:var(--font);cursor:pointer;margin-top:10px;display:flex;align-items:center;justify-content:center;gap:8px;}
 #view-whatsapp .btn-probar:active{opacity:0.85;}
 #view-whatsapp .empty-sec{text-align:center;padding:40px 20px;color:var(--muted);}
+#view-whatsapp .hist-resumen{display:flex;gap:8px;padding:0 16px 12px;flex-wrap:wrap;}
+#view-whatsapp .hist-resumen-card{flex:1;min-width:80px;background:var(--surface);border-radius:12px;padding:10px 12px;box-shadow:var(--sh);text-align:center;}
+#view-whatsapp .hist-resumen-num{font-size:20px;font-weight:800;line-height:1;}
+#view-whatsapp .hist-resumen-label{font-size:10px;color:var(--muted);margin-top:3px;font-weight:600;}
+#view-whatsapp .estado-enviado{font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;background:#D1FAE5;color:#065F46;}
+#view-whatsapp .estado-pendiente{font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;background:#FEF3C7;color:#92400E;}
+#view-whatsapp .btn-reenviar{font-size:11px;font-weight:700;padding:4px 10px;border-radius:20px;background:var(--wp);color:white;border:none;cursor:pointer;font-family:var(--font);}
+#view-whatsapp .btn-reenviar:disabled{opacity:0.5;cursor:not-allowed;}
 #view-whatsapp .empty-icon{font-size:40px;margin-bottom:8px;}
 #view-whatsapp .wp-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:60;display:none;align-items:flex-end;justify-content:center;}
 #view-whatsapp .wp-overlay.open{display:flex;}
@@ -181,11 +189,27 @@ function _wpRenderHTML(container) {
     <div class="hist-title">Mensajes enviados</div>
     <span id="wp-hist-count" style="font-size:12px;color:var(--muted);font-weight:600"></span>
   </div>
+  <div class="hist-resumen" id="wp-hist-resumen" style="display:none">
+    <div class="hist-resumen-card">
+      <div class="hist-resumen-num" id="wp-res-enviados" style="color:#065F46">0</div>
+      <div class="hist-resumen-label">Enviados</div>
+    </div>
+    <div class="hist-resumen-card">
+      <div class="hist-resumen-num" id="wp-res-pendientes" style="color:#92400E">0</div>
+      <div class="hist-resumen-label">Pendientes</div>
+    </div>
+    <div class="hist-resumen-card">
+      <div class="hist-resumen-num" id="wp-res-errores" style="color:#991B1B">0</div>
+      <div class="hist-resumen-label">Errores</div>
+    </div>
+  </div>
   <div class="hist-filtros">
     <div class="hist-filtro active" data-filtro="todos">Todos</div>
     <div class="hist-filtro" data-filtro="recordatorio">Recordatorios</div>
     <div class="hist-filtro" data-filtro="confirmacion">Confirmaciones</div>
     <div class="hist-filtro" data-filtro="automatico">Automáticos</div>
+    <div class="hist-filtro" data-filtro="enviados">✓ Enviados</div>
+    <div class="hist-filtro" data-filtro="pendientes">⏳ Pendientes</div>
   </div>
   <div class="hist-list" id="wpHistList">
     <div class="empty-sec"><div class="empty-icon">⏳</div>Cargando historial...</div>
@@ -498,7 +522,7 @@ window.wpCargarHistorial = async function() {
   if (el) el.innerHTML = '<div class="empty-sec"><div class="empty-icon">⏳</div>Cargando...</div>';
 
   const { data, error } = await sb.from('wa_historial')
-    .select('id, created_at, tipo, mensaje, paciente_id, pacientes(nombre, apellido)')
+    .select('id, created_at, tipo, mensaje, paciente_id, turno_id, pacientes(nombre, apellido)')
     .eq('user_id', _wp.userId)
     .order('created_at', { ascending: false })
     .limit(100);
@@ -508,7 +532,22 @@ window.wpCargarHistorial = async function() {
     return;
   }
 
-  _wp.historialTodos = data || [];
+  // Si hay turno_id, traer estado recordatorio_enviado de turnos
+  const turnoIds = [...new Set((data || []).map(h => h.turno_id).filter(Boolean))];
+  let turnosMap = {};
+  if (turnoIds.length) {
+    const { data: turnos } = await sb.from('turnos')
+      .select('id, recordatorio_enviado')
+      .in('id', turnoIds);
+    (turnos || []).forEach(t => { turnosMap[t.id] = t.recordatorio_enviado; });
+  }
+
+  // Enriquecer historial con estado
+  _wp.historialTodos = (data || []).map(h => ({
+    ...h,
+    _recordatorio_enviado: h.turno_id != null ? !!turnosMap[h.turno_id] : null,
+  }));
+
   _wpRenderHistorial();
 };
 
@@ -518,8 +557,26 @@ function _wpRenderHistorial() {
   if (!el) return;
   const lista = _wp.filtroHistorial === 'todos'
     ? _wp.historialTodos
-    : _wp.historialTodos.filter(h => h.tipo === _wp.filtroHistorial);
+    : _wp.filtroHistorial === 'enviados'
+      ? _wp.historialTodos.filter(h => h._recordatorio_enviado === true)
+      : _wp.filtroHistorial === 'pendientes'
+        ? _wp.historialTodos.filter(h => h.turno_id != null && (h._recordatorio_enviado === false || h._recordatorio_enviado === null))
+        : _wp.historialTodos.filter(h => h.tipo === _wp.filtroHistorial);
   if (cnt) cnt.textContent = lista.length + ' mensajes';
+
+  // Resumen
+  const resEl = document.getElementById('wp-hist-resumen');
+  if (resEl && lista.length) {
+    const enviados  = lista.filter(h => h._recordatorio_enviado === true).length;
+    const pendientes = lista.filter(h => h._recordatorio_enviado === false || (h.turno_id && h._recordatorio_enviado === null)).length;
+    document.getElementById('wp-res-enviados').textContent  = enviados;
+    document.getElementById('wp-res-pendientes').textContent = pendientes;
+    document.getElementById('wp-res-errores').textContent   = 0;
+    resEl.style.display = 'flex';
+  } else if (resEl) {
+    resEl.style.display = 'none';
+  }
+
   if (!lista.length) {
     el.innerHTML = '<div class="empty-sec"><div class="empty-icon">📭</div>Sin mensajes aún</div>';
     return;
@@ -534,6 +591,20 @@ function _wpRenderHistorial() {
     const color    = WP_COLORES[nombre.charCodeAt(0) % WP_COLORES.length];
     const fecha    = new Date(h.created_at).toLocaleDateString('es-AR', { day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' });
     const preview  = h.mensaje ? escHtml(h.mensaje.replace(/\n/g,' ').slice(0, 80)) + (h.mensaje.length > 80 ? '…' : '') : '';
+
+    // Estado del recordatorio
+    let estadoHTML = '';
+    if (h.turno_id != null) {
+      if (h._recordatorio_enviado === true) {
+        estadoHTML = '<span class="estado-enviado">✓ Enviado</span>';
+      } else {
+        estadoHTML = `<span class="estado-pendiente">⏳ Pendiente</span>
+          <button class="btn-reenviar" data-turno-id="${escHtml(h.turno_id)}" onclick="wpReenviarRecordatorio(this, '${escHtml(h.turno_id)}')">↩ Reenviar</button>`;
+      }
+    } else {
+      estadoHTML = '<span style="font-size:10px;color:#25D366;font-weight:700">✓ Enviado</span>';
+    }
+
     return `
       <div class="hist-card">
         <div class="hist-top">
@@ -546,7 +617,7 @@ function _wpRenderHistorial() {
         </div>
         <div class="hist-footer">
           <span class="hist-tipo ${tipoClass[h.tipo]||''}">${iconos[h.tipo]||'💬'} ${tipoLabel[h.tipo]||h.tipo||'mensaje'}</span>
-          <span style="font-size:10px;color:#25D366;font-weight:700">✓ Enviado</span>
+          <div style="display:flex;align-items:center;gap:6px">${estadoHTML}</div>
         </div>
       </div>`;
   }).join('');
@@ -642,6 +713,39 @@ async function _wpEnviarRecordatoriosManual() {
     if (btn) { btn.disabled = false; btn.textContent = '▶ Probar ahora — enviar recordatorios de mañana'; }
   }
 }
+
+
+/* ══════════════════════════════════════════
+   REENVIAR RECORDATORIO
+   ══════════════════════════════════════════ */
+window.wpReenviarRecordatorio = async function(btn, turnoId) {
+  if (!turnoId) return;
+  btn.disabled = true;
+  btn.textContent = 'Enviando...';
+  try {
+    const resp = await fetch('https://terlbqrcampdqtxjbihg.supabase.co/functions/v1/recordatorios-whatsapp', {
+      method: 'POST',
+      headers: {
+        'Content-Type':  'application/json',
+        'Authorization': `Bearer ${_wp.sessionToken}`,
+      },
+      body: JSON.stringify({ turno_id: turnoId }),
+    });
+    const data = await resp.json();
+    if (resp.ok && data.ok !== false) {
+      wpMostrarToast('✅ Recordatorio reenviado');
+      await wpCargarHistorial(); // refrescar lista
+    } else {
+      wpMostrarToast('❌ Error: ' + (data.error || 'No se pudo reenviar'), false);
+      btn.disabled = false;
+      btn.textContent = '↩ Reenviar';
+    }
+  } catch(e) {
+    wpMostrarToast('❌ Error: ' + e.message, false);
+    btn.disabled = false;
+    btn.textContent = '↩ Reenviar';
+  }
+};
 
 
 /* ══════════════════════════════════════════
