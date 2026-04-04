@@ -1,7 +1,8 @@
-let cuentaInitialized = false;
 /**
  * view-cuenta.js — PsicoApp
- * Planes: Free / Pro / Max — lee plan desde PlanService (Edge Function)
+ * Planes: Free / Pro / Max
+ * Fuente de verdad: PsicoRouter.store (perfil) + PlanService (plan/uso)
+ * Sin localStorage. Sin variables cacheadas fuera del store.
  */
 
 (function injectCuentaStyles() {
@@ -33,7 +34,6 @@ let cuentaInitialized = false;
 #view-cuenta .dot-inactiva { background:#9CA3AF; }
 #view-cuenta .vc-strip-label { font-size:13px; font-weight:600; color:var(--text-muted); }
 #view-cuenta .vc-strip-val   { font-size:14px; font-weight:800; color:var(--text); }
-#view-cuenta .vc-strip-fecha { font-size:11px; color:var(--text-muted); font-weight:500; }
 
 #view-cuenta .vc-section-title { font-size:13px; font-weight:800; color:var(--text-muted); text-transform:uppercase; letter-spacing:.8px; }
 
@@ -45,8 +45,6 @@ let cuentaInitialized = false;
 #view-cuenta .vc-usage-count.alerta { color:#EF4444; }
 #view-cuenta .vc-bar-track { height:7px; border-radius:99px; background:var(--border); overflow:hidden; }
 #view-cuenta .vc-bar-fill  { height:100%; border-radius:99px; transition:width .4s; }
-#view-cuenta .vc-dias-badge { display:flex; align-items:center; gap:10px; border-radius:10px; padding:11px 14px; background:var(--surface2); }
-#view-cuenta .vc-dias-badge.alerta { background:rgba(239,68,68,.08); }
 
 #view-cuenta .vc-planes-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(145px,1fr)); gap:12px; }
 #view-cuenta .vc-plan-card { background:var(--surface); border-radius:var(--radius); padding:18px 14px 14px; border:2px solid var(--border); position:relative; display:flex; flex-direction:column; gap:10px; box-shadow:var(--shadow-sm); }
@@ -94,10 +92,7 @@ let cuentaInitialized = false;
   document.head.appendChild(style);
 })();
 
-function vc_getPerfil() {
-  try { return JSON.parse(localStorage.getItem('perfil')) || {}; } catch { return {}; }
-}
-
+/* ══ TOAST ══ */
 function vcToast(msg) {
   const t = document.getElementById('vc-toast-global');
   if (!t) return;
@@ -106,6 +101,7 @@ function vcToast(msg) {
   setTimeout(() => t.classList.remove('show'), 3500);
 }
 
+/* ══ BARRA DE USO ══ */
 function _usageBar(usado, tope, label, color) {
   const pct    = tope > 0 ? Math.min(100, Math.round(usado / tope * 100)) : 0;
   const alerta = pct >= 80;
@@ -121,46 +117,59 @@ function _usageBar(usado, tope, label, color) {
   </div>`;
 }
 
-/* ══ RENDER — usa PlanService como fuente de verdad ══ */
+/* ══ RENDER PRINCIPAL ══
+   Fuentes de verdad:
+   - perfil  → PsicoRouter.store.ensurePerfil()   (nombre, foto, email)
+   - plan    → PlanService.getPlan()               (plan, status, uso IA)
+   Sin localStorage. Sin variables globales de cache.
+═══════════════════════════════════════════════════ */
 async function renderCuenta() {
   const container = document.getElementById('view-cuenta');
   if (!container) return;
 
-  // Obtener plan real desde Edge Function
-  let planData = { plan: 'free', status: 'active', ia_used: 0, ia_limit: 5 }
+  /* ── 1. Perfil desde el store (cache en memoria o fetch a Supabase) ── */
+  let perfil = {};
   try {
-    if (typeof PlanService !== 'undefined') {
-      PlanService.invalidar() // forzar recarga fresca
-      planData = await PlanService.getPlan()
-    }
+    perfil = await PsicoRouter.store.ensurePerfil();
   } catch(e) {
-    console.warn('[Cuenta] No se pudo obtener plan:', e.message)
+    console.warn('[Cuenta] No se pudo obtener perfil:', e.message);
   }
 
-  const plan       = planData.plan   || 'free'
-  const estaActiva = planData.status === 'active'
-  const iaUsado    = planData.ia_used  || 0
-  const iaLimit    = planData.ia_limit || 5
+  const nombre   = perfil.nombre_completo || perfil.nombre || 'Profesional';
+  const email    = perfil.email           || '';
+  const fotoUrl  = perfil.foto_url        || perfil.foto  || null;
+  const iniciales = nombre.split(' ').filter(Boolean).slice(0, 2).map(w => w[0]).join('').toUpperCase();
+  const avatarHTML = fotoUrl
+    ? `<img src="${fotoUrl}">`
+    : (iniciales || '👤');
 
-  const lim    = typeof getPlanLimits === 'function' ? getPlanLimits(plan) : { whatsapp: 20, informesIA: iaLimit, dias: 15 }
-  const perfil = vc_getPerfil()
+  /* ── 2. Plan desde PlanService (invalida cache para datos frescos) ── */
+  let planData = { plan: 'free', status: 'active', ia_used: 0, ia_limit: 5 };
+  try {
+    if (typeof PlanService !== 'undefined') {
+      PlanService.invalidar();
+      planData = await PlanService.getPlan();
+    }
+  } catch(e) {
+    console.warn('[Cuenta] No se pudo obtener plan:', e.message);
+  }
 
-  const nombre    = perfil.nombre || 'Profesional'
-  const email     = perfil.email  || ''
-  const iniciales = nombre.split(' ').filter(Boolean).slice(0,2).map(w=>w[0]).join('').toUpperCase()
-  const avatarHTML = perfil.foto ? `<img src="${perfil.foto}">` : (iniciales || '👤')
-
-  const planLabel = plan.charAt(0).toUpperCase() + plan.slice(1)
+  const plan       = planData.plan   || 'free';
+  const estaActiva = planData.status === 'active';
+  const iaUsado    = planData.ia_used  || 0;
+  const iaLimit    = planData.ia_limit || 5;
+  const lim        = typeof getPlanLimits === 'function'
+    ? getPlanLimits(plan)
+    : { whatsapp: 20, informesIA: iaLimit, dias: 15 };
+  const planLabel  = plan.charAt(0).toUpperCase() + plan.slice(1);
 
   const heroBadge = plan === 'max'
     ? `<div class="vc-hero-badge hb-max">💎 Plan Max activo</div>`
     : plan === 'pro'
       ? `<div class="vc-hero-badge hb-pro">⭐ Plan Pro activo</div>`
-      : `<div class="vc-hero-badge hb-free">🔒 Plan Free</div>`
+      : `<div class="vc-hero-badge hb-free">🔒 Plan Free</div>`;
 
-  // Siempre re-renderizar para mostrar datos frescos
-  cuentaInitialized = false
-
+  /* ── 3. Renderizar ── */
   container.innerHTML = `
 <div id="vc-toast-global" class="vc-toast"></div>
 
@@ -260,39 +269,44 @@ async function renderCuenta() {
 
   <div class="vc-pad"></div>
 </div>
-  `
-  cuentaInitialized = true
+  `;
 
-  const q = id => container.querySelector(id)
-  const on = (id, fn) => { const el = q(id); if (el) el.addEventListener('click', fn); }
+  /* ── 4. Binds de botones (post-render) ── */
+  const q  = id => container.querySelector(id);
+  const on = (id, fn) => { const el = q(id); if (el) el.addEventListener('click', fn); };
 
-  on('#vc-btn-upgrade-pro', () => irAPago('pro'))
-  on('#vc-btn-upgrade-max', () => irAPago('max'))
-  on('#vc-btn-extra-wa',    () => irAPago('extra_whatsapp'))
+  on('#vc-btn-upgrade-pro', () => irAPago('pro'));
+  on('#vc-btn-upgrade-max', () => irAPago('max'));
+  on('#vc-btn-extra-wa',    () => irAPago('extra_whatsapp'));
   on('#vc-btn-logout', async () => {
-    window._psicoSigningOut = true
-    try { await sb.auth.signOut() } catch(e) {}
-    window.location.replace('/login.html')
-  })
+    window._psicoSigningOut = true;
+    try { await sb.auth.signOut(); } catch(e) {}
+    window.location.replace('/login.html');
+  });
 }
 
+/* ══ LISTENER: reacciona a cambios de perfil o plan ══
+   - storeUpdated { type: 'perfil' } → perfil cambió
+   - storeUpdated { type: 'plan'   } → plan cambió (webhook MP)
+   - storeUpdated sin detail         → compatibilidad genérica
+   Solo re-renderiza si la vista está visible.
+══════════════════════════════════════════════════════ */
 window.addEventListener('storeUpdated', (e) => {
-  if (e.detail?.type !== 'perfil') return
-  const c = document.getElementById('view-cuenta')
-  if (c && c.classList.contains('view-active')) renderCuenta()
-})
+  const type = e.detail?.type;
+  /* Filtrar: solo tipos relevantes o eventos sin type (genéricos) */
+  if (type && type !== 'perfil' && type !== 'plan') return;
+  const c = document.getElementById('view-cuenta');
+  if (c && c.classList.contains('view-active')) renderCuenta();
+});
 
+/* ══ ENTRY POINT ══ */
 function initCuenta() {
-  try {
-    const c = document.getElementById('view-cuenta')
-    if (!c) return
-    renderCuenta()
-  } catch(e) {
-    console.error('initCuenta error:', e)
-  }
+  const c = document.getElementById('view-cuenta');
+  if (!c) return;
+  renderCuenta();
 }
 
-window.onViewEnter_cuenta = initCuenta
+window.onViewEnter_cuenta = initCuenta;
 
 /* ══ PAGO VIA MERCADOPAGO ══ */
 function irAPago(plan) {
@@ -300,26 +314,26 @@ function irAPago(plan) {
     pro:            '#vc-btn-upgrade-pro',
     max:            '#vc-btn-upgrade-max',
     extra_whatsapp: '#vc-btn-extra-wa',
-  }
+  };
   const labels = {
     pro:            '🚀 Activar Pro',
     max:            '💎 Activar Max',
     extra_whatsapp: '➕ Comprar 100 mensajes WhatsApp extra ($5.000)',
-  }
+  };
   const links = {
     pro:            PSICOAPP_CONFIG.LINK_PAGO_PRO,
     max:            PSICOAPP_CONFIG.LINK_PAGO_MAX,
     extra_whatsapp: PSICOAPP_CONFIG.LINK_PAGO_EXTRA,
+  };
+
+  const btn  = document.querySelector(btnIds[plan]);
+  const link = links[plan];
+
+  if (!link || link.includes('TU_LINK') || link === '') {
+    vcToast('❌ Link de pago no configurado. Contactá al administrador.');
+    return;
   }
 
-  const btn  = document.querySelector(btnIds[plan])
-  const link = links[plan]
-
-  if (!link || link.includes('TU_LINK')) {
-    vcToast('❌ Link de pago no configurado. Contactá al administrador.')
-    return
-  }
-
-  if (btn) { btn.disabled = true; btn.textContent = '⏳ Redirigiendo…' }
-  window.location.href = link
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Redirigiendo…'; }
+  window.location.href = link;
 }
