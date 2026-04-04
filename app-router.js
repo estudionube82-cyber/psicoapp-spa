@@ -63,6 +63,12 @@ const PsicoRouter = (() => {
       this.perfil = data || {};
       return this.perfil;
     },
+    /* Actualiza el cache con datos ya conocidos (sin round-trip a Supabase).
+       Usar después de un save exitoso para que los listeners reciban datos frescos. */
+    setPerfil(data) {
+      this.perfil = { ...(this.perfil || {}), ...data };
+    },
+    /* Borra el cache y fuerza re-fetch en el próximo ensurePerfil(). */
     invalidatePerfil() {
       this.perfil = null;
       window.dispatchEvent(new CustomEvent('storeUpdated', { detail: { type: 'perfil' } }));

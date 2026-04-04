@@ -420,24 +420,42 @@ window._psicoAuthReady = new Promise((resolve) => {
   });
 });
 
-/* ── SIDEBAR: cargar perfil ── */
-function syncSidebarPerfil() {
+/* ── SIDEBAR: cargar perfil ──
+   Lee desde PsicoRouter.store.perfil (fuente de verdad en memoria).
+   Si el store aún no tiene datos, los pide a Supabase via ensurePerfil().
+   Nunca lee de localStorage (datos siempre stale).
+──────────────────────────────────────────────────────── */
+async function syncSidebarPerfil() {
   try {
-    const p = JSON.parse(localStorage.getItem('perfil')) || {};
+    /* Intentar desde el store en memoria primero (O(1), sin red) */
+    let p = PsicoRouter?.store?.perfil;
+
+    /* Si el store no tiene datos todavía, pedirlos a Supabase */
+    if (!p || Object.keys(p).length === 0) {
+      p = await PsicoRouter.store.ensurePerfil();
+    }
+
+    const nombre = p?.nombre_completo || p?.nombre || '';
+    const foto   = p?.foto_url || p?.foto || null;
+
     const nameEl   = document.getElementById('sb-user-name');
     const avatarEl = document.getElementById('sb-avatar-initials');
-    if (nameEl) nameEl.textContent = p.nombre || 'Mi perfil';
+    if (nameEl)   nameEl.textContent = nombre || 'Mi perfil';
     if (avatarEl) {
-      if (p.foto) {
-        avatarEl.innerHTML = `<img src="${p.foto}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`;
-      } else {
-        avatarEl.innerHTML = `<span>${p.nombre ? p.nombre.slice(0, 2).toUpperCase() : '👤'}</span>`;
-      }
+      avatarEl.innerHTML = foto
+        ? `<img src="${foto}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`
+        : `<span>${nombre ? nombre.slice(0, 2).toUpperCase() : '👤'}</span>`;
     }
-  } catch(e) {}
+  } catch(e) {
+    console.warn('[Sidebar] No se pudo sincronizar perfil:', e.message);
+  }
 }
-syncSidebarPerfil();
-window.addEventListener('perfilActualizado', syncSidebarPerfil);
+
+/* Ejecutar al inicio (espera auth) y ante cada cambio de perfil */
+window._psicoAuthReady?.then(() => syncSidebarPerfil());
+window.addEventListener('storeUpdated', (e) => {
+  if (e.detail?.type === 'perfil') syncSidebarPerfil();
+});
 
 /* ── SINCRONIZAR wa_usos A SUPABASE ── */
 // Se llama desde view-agenda.js y view-whatsapp.js después de enviar WA

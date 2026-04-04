@@ -212,7 +212,7 @@ const _PerfilView = (() => {
         ? `<img src="${fotoUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`
         : `<span>${nombre ? nombre.slice(0, 2).toUpperCase() : '👤'}</span>`;
     }
-    window.dispatchEvent(new Event('perfilActualizado'));
+    window.dispatchEvent(new CustomEvent('storeUpdated', { detail: { type: 'perfil' } }));
   }
 
   /* ── Actualizar cabecera de la vista ────────────────────── */
@@ -310,15 +310,15 @@ const _PerfilView = (() => {
         return;
       }
 
-      // Invalidar caché del store para que otras vistas reciban datos frescos
-      PsicoRouter.store.invalidatePerfil();
+      // Actualizar cache del store con datos frescos (sin invalidar — ya los tenemos)
+      // Así los listeners del evento reciben store.perfil ya poblado
+      PsicoRouter.store.setPerfil({ nombre_completo, telefono_profesional, especialidad });
 
-      // Actualizar UI sin recargar la vista
+      // Actualizar UI de la propia vista
       _updateHeader(container, nombre_completo, null);
       _syncSidebar(nombre_completo, null);
 
-      // Notificar a otras vistas (dashboard, sidebar) que el perfil cambió
-      window.dispatchEvent(new Event('perfilActualizado'));
+      // Notificar a todas las vistas — el store ya tiene los datos nuevos
       window.dispatchEvent(new CustomEvent('storeUpdated', { detail: { type: 'perfil' } }));
 
       console.log(`[Perfil] ✅ Perfil guardado correctamente`);

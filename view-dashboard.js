@@ -4,7 +4,7 @@
  *
  * onEnter() siempre refresca datos (pagos + turnos cambian constantemente).
  * userId viene del store — sin getUser() duplicado.
- * Nombre/avatar se sincronizan también en sidebar via evento perfilActualizado.
+ * Nombre/avatar se sincronizan también en sidebar via storeUpdated { type: 'perfil' }.
  */
 
 /* ══════════════════════════════════════════
@@ -360,7 +360,7 @@ async function _dashCargarDatos() {
     _dashRenderAlertas(sesionSinCobro, pacUnicos, pagos, pagosPendientes);
     _dashRenderStats(totalCobrado, totalPendiente, pacUnicos, turnosHoyCant);
     _dashRenderTurnos(turnos, hoy);
-    _dashRenderNombre();
+    await _dashRenderNombre();
 
   } catch(e) {
     console.error('[Dashboard]', e.message);
@@ -560,26 +560,17 @@ function _dashRenderTurnos(turnos, hoy) {
 
 
 /* ══════════════════════════════════════════
-   RENDER: NOMBRE EN HEADER + SIDEBAR
+   RENDER: NOMBRE EN HEADER
+   Lee siempre desde el store (fuente de verdad).
+   Si el cache está vacío, lo pide a Supabase.
    ══════════════════════════════════════════ */
-function _dashRenderNombre() {
-  /* Preferir perfil del store, fallback a localStorage */
-  const perfil  = PsicoRouter.store.perfil || {};
-  let   nombre  = perfil.nombre_completo || perfil.nombre;
+async function _dashRenderNombre() {
+  /* ensurePerfil() devuelve el cache si existe, o hace fetch a Supabase */
+  const perfil = await PsicoRouter.store.ensurePerfil().catch(() => ({}));
+  const nombre = perfil.nombre_completo || perfil.nombre || 'Psicólogo/a';
 
-  if (!nombre) {
-    try { nombre = (JSON.parse(localStorage.getItem('perfil')) || {}).nombre; } catch {}
-  }
-  if (!nombre) nombre = 'Psicólogo/a';
-
-  const nameEl   = document.getElementById('dash-user-name');
-  const sbName   = document.getElementById('sb-user-name');
-  const sbAvatar = document.getElementById('sb-avatar-initials');
-  const initials = nombre.slice(0, 2).toUpperCase();
-
-  if (nameEl)   nameEl.textContent  = nombre;
-  if (sbName)   sbName.textContent  = nombre;
-  if (sbAvatar) sbAvatar.innerHTML  = `<span>${initials}</span>`;
+  const nameEl = document.getElementById('dash-user-name');
+  if (nameEl) nameEl.textContent = nombre;
 }
 
 
@@ -634,9 +625,8 @@ function _dashRefreshDebounced(e) {
 }
 
 /* Escuchar storeUpdated con detail.type (nuevo) y sin detail (compatibilidad) */
-window.addEventListener('storeUpdated',       _dashRefreshDebounced);
+window.addEventListener('storeUpdated',          _dashRefreshDebounced);
 window.addEventListener('pacientesActualizados', _dashRefreshDebounced);
-window.addEventListener('perfilActualizado',     _dashRefreshDebounced);
 
 /* Compatibilidad legacy */
 window.onViewEnter_dashboard = () => PsicoRouter.navigate('dashboard');

@@ -276,7 +276,8 @@ async function renderCuenta() {
   })
 }
 
-window.addEventListener('perfilActualizado', () => {
+window.addEventListener('storeUpdated', (e) => {
+  if (e.detail?.type !== 'perfil') return
   const c = document.getElementById('view-cuenta')
   if (c && c.classList.contains('view-active')) renderCuenta()
 })
