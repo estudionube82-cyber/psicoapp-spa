@@ -52,7 +52,7 @@ const PsicoRouter = (() => {
     },
     invalidatePacientes() {
       this.pacientes = null;
-      window.dispatchEvent(new CustomEvent('storeUpdated', { detail: { key: 'pacientes' } }));
+      window.dispatchEvent(new CustomEvent('storeUpdated', { detail: { type: 'pacientes' } }));
     },
 
     async ensurePerfil() {
@@ -65,7 +65,7 @@ const PsicoRouter = (() => {
     },
     invalidatePerfil() {
       this.perfil = null;
-      window.dispatchEvent(new CustomEvent('storeUpdated', { detail: { key: 'perfil' } }));
+      window.dispatchEvent(new CustomEvent('storeUpdated', { detail: { type: 'perfil' } }));
     },
 
     /* ── Turnos: cache por rango de fechas ───────────────────
@@ -91,7 +91,7 @@ const PsicoRouter = (() => {
     },
     invalidateTurnos() {
       this._turnosCache = {};
-      window.dispatchEvent(new CustomEvent('storeUpdated', { detail: { key: 'turnos' } }));
+      window.dispatchEvent(new CustomEvent('storeUpdated', { detail: { type: 'turnos' } }));
     },
   };
 

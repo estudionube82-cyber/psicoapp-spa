@@ -328,6 +328,8 @@
 
     <div class="pac-detail-actions">
       <button class="pac-btn-action pac-btn-wp" id="pac-det-wp-btn">💬 WhatsApp</button>
+      <button class="pac-btn-action" id="pac-btnEditar"
+        style="background:var(--primary-light);color:var(--primary)">✏️ Editar</button>
       <button class="pac-btn-action pac-btn-del" id="pac-btnEliminar">🗑 Eliminar</button>
     </div>
 
@@ -427,6 +429,8 @@
   document.getElementById('pac-btnCancelarModal')
     .addEventListener('click', pacCerrarModal);
 
+  document.getElementById('pac-btnEditar')
+    .addEventListener('click', pacAbrirEditar);
   document.getElementById('pac-btnEliminar')
     .addEventListener('click', pacEliminarPaciente);
   document.getElementById('pac-btnToggleIA')
@@ -470,6 +474,8 @@ let _pacFiltro = 'todos';
 let _pacSeleccionado = null;
 let _pacActualIA = null;
 let _pacProximoTurno = null;
+let _pacModoEdicion = false;   // true = modal crear está en modo edición
+let _pacEditandoId  = null;    // id del paciente que se está editando
 
 const PAC_COLORES = ['av-green','av-blue','av-purple','av-orange','av-teal'];
 
@@ -489,7 +495,8 @@ async function pacCargar() {
 
 // Refrescar automáticamente si otra vista modifica pacientes
 window.addEventListener('storeUpdated', (e) => {
-  if (e.detail?.key === 'pacientes') pacCargar();
+  const type = e.detail?.type;
+  if (type === 'pacientes' || !type) pacCargar();
 });
 
 function pacActualizarStats() {
@@ -565,11 +572,42 @@ function pacSetFiltro(f, el) {
 
 /* ── Modal nuevo ── */
 function pacAbrirModal() {
+  _pacModoEdicion = false;
+  _pacEditandoId  = null;
   ['pac-f-nombre','pac-f-apellido','pac-f-telefono','pac-f-email','pac-f-dni','pac-f-os','pac-f-nroafil','pac-f-notas','pac-f-fnac'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.value = '';
   });
+  document.querySelector('#pac-overlay .pac-modal-title').textContent = '➕ Nuevo paciente';
+  document.getElementById('pac-btnCrear').textContent = '✓ Crear paciente';
   document.getElementById('pac-msgError').style.display = 'none';
+  document.getElementById('pac-overlay').classList.add('open');
+  setTimeout(() => document.getElementById('pac-f-nombre').focus(), 300);
+}
+
+/* ── Modal editar ── */
+function pacAbrirEditar() {
+  if (!_pacSeleccionado) return;
+  const p = _pacSeleccionado;
+  _pacModoEdicion = true;
+  _pacEditandoId  = p.id;
+
+  const set = (id, val) => { const el = document.getElementById(id); if (el) el.value = val || ''; };
+  set('pac-f-nombre',   p.nombre);
+  set('pac-f-apellido', p.apellido);
+  set('pac-f-telefono', p.telefono);
+  set('pac-f-email',    p.email);
+  set('pac-f-dni',      p.dni);
+  set('pac-f-fnac',     p.fecha_nacimiento);
+  set('pac-f-os',       p.obra_social);
+  set('pac-f-nroafil',  p.nro_afiliado);
+  set('pac-f-notas',    p.notas);
+
+  document.querySelector('#pac-overlay .pac-modal-title').textContent = '✏️ Editar paciente';
+  document.getElementById('pac-btnCrear').textContent = '✓ Guardar cambios';
+  document.getElementById('pac-msgError').style.display = 'none';
+
+  pacCerrarDetalle();
   document.getElementById('pac-overlay').classList.add('open');
   setTimeout(() => document.getElementById('pac-f-nombre').focus(), 300);
 }
@@ -586,11 +624,9 @@ async function pacCrearPaciente() {
   const btn = document.getElementById('pac-btnCrear');
   btn.disabled = true; btn.textContent = 'Guardando...';
 
-  const { error } = await sb.from('pacientes').insert({
-    user_id:          PsicoRouter.store.userId,
+  const campos = {
     nombre,
     apellido,
-    activo:           true,
     telefono:         document.getElementById('pac-f-telefono').value.trim() || null,
     email:            document.getElementById('pac-f-email').value.trim() || null,
     dni:              document.getElementById('pac-f-dni').value.trim() || null,
@@ -598,13 +634,28 @@ async function pacCrearPaciente() {
     obra_social:      document.getElementById('pac-f-os').value.trim() || null,
     nro_afiliado:     document.getElementById('pac-f-nroafil').value.trim() || null,
     notas:            document.getElementById('pac-f-notas').value.trim() || null,
-  });
+  };
 
-  btn.disabled = false; btn.textContent = '✓ Crear paciente';
+  let error;
+  if (_pacModoEdicion && _pacEditandoId) {
+    /* Edición */
+    ({ error } = await sb.from('pacientes')
+      .update(campos)
+      .eq('id', _pacEditandoId)
+      .eq('user_id', PsicoRouter.store.userId));
+  } else {
+    /* Creación */
+    ({ error } = await sb.from('pacientes').insert({
+      user_id: PsicoRouter.store.userId,
+      activo:  true,
+      ...campos,
+    }));
+  }
+
+  btn.disabled = false; btn.textContent = _pacModoEdicion ? '✓ Guardar cambios' : '✓ Crear paciente';
   if (error) { pacMostrarError('Error al guardar. Intentá de nuevo.'); return; }
   PsicoRouter.store.invalidatePacientes();
-  window.dispatchEvent(new Event('pacientesActualizados'));
-  window.dispatchEvent(new CustomEvent('storeUpdated', { detail: { key: 'pacientes' } }));
+  window.dispatchEvent(new CustomEvent('storeUpdated', { detail: { type: 'pacientes' } }));
   pacCerrarModal();
   await pacCargar();
 }
@@ -713,8 +764,7 @@ async function pacEliminarPaciente() {
   const _uid = PsicoRouter.store.userId;
   await sb.from('pacientes').update({ activo: false }).eq('id', _pacSeleccionado.id).eq('user_id', _uid);
   PsicoRouter.store.invalidatePacientes();
-  window.dispatchEvent(new Event('pacientesActualizados'));
-  window.dispatchEvent(new CustomEvent('storeUpdated', { detail: { key: 'pacientes' } }));
+  window.dispatchEvent(new CustomEvent('storeUpdated', { detail: { type: 'pacientes' } }));
   pacCerrarDetalle();
   await pacCargar();
 }

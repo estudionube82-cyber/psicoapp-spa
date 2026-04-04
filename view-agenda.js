@@ -713,7 +713,8 @@
 
     // Refrescar pacientes si otra vista los modificó
     window.addEventListener('storeUpdated', (e) => {
-      if (e.detail?.key === 'pacientes') {
+      const _agType = e.detail?.type;
+      if (_agType === 'pacientes' || !_agType) {
         PsicoRouter.store.ensurePacientes().then(p => {
           _todosPacientes = p;
           _rellenarSelectPaciente();

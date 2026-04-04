@@ -319,6 +319,7 @@ const _PerfilView = (() => {
 
       // Notificar a otras vistas (dashboard, sidebar) que el perfil cambió
       window.dispatchEvent(new Event('perfilActualizado'));
+      window.dispatchEvent(new CustomEvent('storeUpdated', { detail: { type: 'perfil' } }));
 
       console.log(`[Perfil] ✅ Perfil guardado correctamente`);
       _showToast(container, `✅ Datos guardados correctamente`, `ok`);

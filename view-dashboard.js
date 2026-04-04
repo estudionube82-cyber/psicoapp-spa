@@ -616,24 +616,27 @@ PsicoRouter.register('dashboard', {
   },
 });
 
-/* Refrescar si se actualizan turnos o pagos desde otra vista */
-window.addEventListener('storeUpdated', (e) => {
-  if (['turnos','pagos','pacientes'].includes(e.detail?.key)) {
-    _dashCargarDatos();
-  }
-});
+/* ── Tipos de storeUpdated que afectan al dashboard ── */
+const _DASH_RELEVANT_TYPES = new Set(['pacientes', 'perfil', 'turnos', 'pagos']);
 
-/* Refrescar cuando se crea/edita/elimina un paciente */
-window.addEventListener('pacientesActualizados', () => {
-  console.log('[Dashboard] 🔄 Pacientes actualizados — refrescando...');
-  _dashCargarDatos();
-});
+/* ── Debounce: colapsa ráfagas de eventos en una sola recarga ── */
+let _dashRefreshTimer = null;
+function _dashRefreshDebounced(e) {
+  /* Filtrar: si viene con type y NO es relevante, ignorar */
+  const type = e?.detail?.type;
+  if (type && !_DASH_RELEVANT_TYPES.has(type)) return;
 
-/* Refrescar cuando se actualiza el perfil */
-window.addEventListener('perfilActualizado', () => {
-  console.log('[Dashboard] 🔄 Perfil actualizado — refrescando...');
-  _dashCargarDatos();
-});
+  clearTimeout(_dashRefreshTimer);
+  _dashRefreshTimer = setTimeout(() => {
+    /* Solo renderizar si el dashboard ya fue inicializado */
+    if (document.getElementById('dash-stats-row')) _dashCargarDatos();
+  }, 150);
+}
+
+/* Escuchar storeUpdated con detail.type (nuevo) y sin detail (compatibilidad) */
+window.addEventListener('storeUpdated',       _dashRefreshDebounced);
+window.addEventListener('pacientesActualizados', _dashRefreshDebounced);
+window.addEventListener('perfilActualizado',     _dashRefreshDebounced);
 
 /* Compatibilidad legacy */
 window.onViewEnter_dashboard = () => PsicoRouter.navigate('dashboard');

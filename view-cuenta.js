@@ -294,7 +294,7 @@ function initCuenta() {
 window.onViewEnter_cuenta = initCuenta
 
 /* ══ PAGO VIA MERCADOPAGO ══ */
-async function irAPago(plan) {
+function irAPago(plan) {
   const btnIds = {
     pro:            '#vc-btn-upgrade-pro',
     max:            '#vc-btn-upgrade-max',
@@ -305,33 +305,20 @@ async function irAPago(plan) {
     max:            '💎 Activar Max',
     extra_whatsapp: '➕ Comprar 100 mensajes WhatsApp extra ($5.000)',
   }
-
-  const btn = document.querySelector(btnIds[plan])
-  if (btn) { btn.disabled = true; btn.textContent = '⏳ Redirigiendo…' }
-
-  try {
-    const { data: { session } } = await sb.auth.getSession()
-    if (!session) { vcToast('❌ Sesión no encontrada'); return }
-
-    const resp = await fetch(PSICOAPP_CONFIG.SUPA_URL + '/functions/v1/create-preference', {
-      method: 'POST',
-      headers: {
-        'Content-Type':  'application/json',
-        'Authorization': 'Bearer ' + session.access_token,
-      },
-      body: JSON.stringify({ email: session.user.email, plan }),
-    })
-
-    if (!resp.ok) throw new Error('Error al crear preferencia: ' + resp.status)
-
-    const data = await resp.json()
-    if (!data.init_point) throw new Error('No se recibió init_point')
-
-    window.location.href = data.init_point
-
-  } catch(e) {
-    console.error('[irAPago]', e)
-    vcToast('❌ Error al iniciar el pago. Intentá de nuevo.')
-    if (btn) { btn.disabled = false; btn.textContent = labels[plan] || 'Reintentar' }
+  const links = {
+    pro:            PSICOAPP_CONFIG.LINK_PAGO_PRO,
+    max:            PSICOAPP_CONFIG.LINK_PAGO_MAX,
+    extra_whatsapp: PSICOAPP_CONFIG.LINK_PAGO_EXTRA,
   }
+
+  const btn  = document.querySelector(btnIds[plan])
+  const link = links[plan]
+
+  if (!link || link.includes('TU_LINK')) {
+    vcToast('❌ Link de pago no configurado. Contactá al administrador.')
+    return
+  }
+
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Redirigiendo…' }
+  window.location.href = link
 }
