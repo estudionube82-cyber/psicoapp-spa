@@ -522,8 +522,8 @@ window.wpCargarHistorial = async function() {
   if (el) el.innerHTML = '<div class="empty-sec"><div class="empty-icon">⏳</div>Cargando...</div>';
 
   const { data, error } = await sb.from('wa_historial')
-    .select('id, created_at, tipo, mensaje, paciente_id, turno_id, pacientes(nombre, apellido)')
-    .eq('user_id', _wp.userId)
+    .select('*')
+    .eq('psicologo_id', _wp.userId)
     .order('created_at', { ascending: false })
     .limit(100);
 
@@ -585,7 +585,7 @@ function _wpRenderHistorial() {
   const tipoClass = { confirmacion:'tipo-confirmacion', recordatorio:'tipo-recordatorio', pago:'tipo-pago', automatico:'tipo-automatico' };
   const tipoLabel = { confirmacion:'Confirmación', recordatorio:'Recordatorio', pago:'Cobro', automatico:'Automático', libre:'Libre' };
   el.innerHTML = lista.map(h => {
-    const pac      = h.pacientes;
+    const pac      = _wp.todosPacientes.find(p => p.id === h.paciente_id) || null;
     const nombre   = pac ? `${pac.nombre} ${pac.apellido}` : 'Paciente desconocido';
     const iniciales = pac ? [(pac.nombre||'?')[0],(pac.apellido||'?')[0]].join('').toUpperCase() : '??';
     const color    = WP_COLORES[nombre.charCodeAt(0) % WP_COLORES.length];
