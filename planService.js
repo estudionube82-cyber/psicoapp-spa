@@ -49,8 +49,9 @@ const PlanService = (() => {
       /* ── 3. Verificar si expiró ── */
       const now       = new Date()
       const isExpired = planRow?.expires_at ? new Date(planRow.expires_at) < now : false
-      const plan      = (!planRow || isExpired) ? 'free'     : (planRow.plan   ?? 'free')
-      const status    = (!planRow || isExpired) ? 'inactive' : (planRow.status ?? 'active')
+      const plan      = (!planRow || isExpired) ? 'free'   : (planRow.plan   ?? 'free')
+      // Sin fila en users_plan = usuario en trial free → status active
+      const status    = (!planRow || isExpired) ? 'active' : (planRow.status ?? 'active')
 
       /* ── 4. Contar usos IA este mes ── */
       const inicioMes = new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
