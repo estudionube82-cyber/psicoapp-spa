@@ -36,6 +36,7 @@ const PlanService = (() => {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${session.access_token}`,
+          'apikey': PSICOAPP_CONFIG.SUPA_KEY,
           'Content-Type': 'application/json'
         }
       })

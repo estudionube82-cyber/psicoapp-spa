@@ -523,7 +523,7 @@ window.wpCargarHistorial = async function() {
 
   const { data, error } = await sb.from('wa_historial')
     .select('*')
-    .eq('psicologo_id', _wp.userId)
+    .eq('user_id', _wp.userId)
     .order('created_at', { ascending: false })
     .limit(100);
 
