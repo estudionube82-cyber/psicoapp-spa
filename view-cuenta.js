@@ -303,7 +303,46 @@ window.addEventListener('storeUpdated', (e) => {
 function initCuenta() {
   const c = document.getElementById('view-cuenta');
   if (!c) return;
-  renderCuenta();
+  renderCuenta().then(() => _chequearPagoExitoso());
+}
+
+/* ══ POLLING POST-PAGO ══
+   Cuando MP redirige de vuelta con ?pago=ok, mostramos
+   un toast y hacemos polling hasta que el plan se actualice.
+══════════════════════════════════════════════════════ */
+async function _chequearPagoExitoso() {
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('pago') !== 'ok') return;
+
+  // Limpiar el param de la URL sin recargar
+  const urlLimpia = window.location.pathname + window.location.hash;
+  history.replaceState({}, '', urlLimpia);
+
+  vcToast('✅ ¡Pago recibido! Actualizando tu plan…');
+
+  // Polling: reintentamos hasta 10 veces cada 3 segundos
+  let intentos = 0;
+  const poll = setInterval(async () => {
+    intentos++;
+    if (intentos > 10) {
+      clearInterval(poll);
+      vcToast('⚠️ Si el plan no se actualizó, recargá la página en unos segundos.');
+      return;
+    }
+    try {
+      if (typeof PlanService !== 'undefined') {
+        PlanService.invalidar();
+        const p = await PlanService.getPlan();
+        if (p.plan && p.plan !== 'free') {
+          clearInterval(poll);
+          vcToast(`🎉 ¡Plan ${p.plan.toUpperCase()} activado exitosamente!`);
+          await renderCuenta();
+        }
+      }
+    } catch (e) {
+      console.warn('[Cuenta] Polling plan error:', e.message);
+    }
+  }, 3000);
 }
 
 window.onViewEnter_cuenta = initCuenta;
