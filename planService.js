@@ -27,26 +27,13 @@ const PlanService = (() => {
         return _free()
       }
 
-      const { data: { session } } = await client.auth.getSession()
-      if (!session?.access_token) {
+      // Usar functions.invoke() — maneja auth y CORS automáticamente
+      const { data, error: fnErr } = await client.functions.invoke('getUserPlan')
+
+      if (fnErr) {
+        console.warn('PlanService: error al obtener plan, usando free', fnErr.message)
         return _free()
       }
-
-      const res = await fetch(EDGE_URL, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${session.access_token}`,
-          'apikey': PSICOAPP_CONFIG.SUPA_KEY,
-          'Content-Type': 'application/json'
-        }
-      })
-
-      if (!res.ok) {
-        console.warn('PlanService: error al obtener plan, usando free')
-        return _free()
-      }
-
-      const data = await res.json()
       _cache = data
       _cacheTime = Date.now()
       return data
