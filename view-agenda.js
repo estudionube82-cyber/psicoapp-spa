@@ -139,7 +139,7 @@
   function _renderHTML(container) {
     container.innerHTML = `
     <style>
-      #ag-wrap { font-family: var(--font, 'Plus Jakarta Sans', sans-serif); color: var(--text, #1E1040); }
+      #ag-wrap { font-family: var(--font, 'Plus Jakarta Sans', sans-serif); color: var(--text, #1E1040); height: 100vh; display: flex; flex-direction: column; position: relative; overflow: hidden; }
       #ag-toolbar {
         display: flex; align-items: center; gap: 10px;
         padding: 14px 16px 10px;
@@ -266,13 +266,36 @@
         border-left:3px solid;
       }
 
-      /* Month */
-      #ag-month-names { display:grid; grid-template-columns:repeat(7,1fr); background:var(--surface,#fff); border-bottom:1px solid var(--border,#E5E2F5); padding:6px 0 3px; }
+      /* Month — layout fijo tipo Google Calendar */
+      #ag-month-names { display:grid; grid-template-columns:repeat(7,1fr); background:var(--surface,#fff); border-bottom:1px solid var(--border,#E5E2F5); padding:6px 0 3px; flex-shrink:0; }
       .ag-mn { text-align:center; font-size:10px; font-weight:800; color:var(--text-muted,#7C6FAE); text-transform:uppercase; }
-      #ag-month-grid { display:grid; grid-template-columns:repeat(7,1fr); padding-bottom:80px; }
+      #ag-month-wrap { flex:1; display:flex; flex-direction:column; min-height:0; }
+
+      /* Vista mes: posición absoluta para garantizar que ocupa el espacio restante */
+      #ag-mes-view {
+        position: absolute;
+        top: var(--ag-mes-top, 95px);
+        left: 0; right: 0; bottom: 0;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        background: var(--surface, #fff);
+      }
+
+      /* Grid: 7 col x 6 filas iguales, llena todo */
+      #ag-month-grid {
+        flex: 1;
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        grid-template-rows: repeat(6, 1fr);
+        min-height: 0;
+        overflow: hidden;
+      }
+
       .ag-mc {
         border-right:1px solid var(--border,#E5E2F5); border-bottom:1px solid var(--border,#E5E2F5);
-        min-height:68px; padding:5px 3px; cursor:pointer; transition: all 0.15s ease;
+        min-height: 0; overflow:hidden; padding:4px 3px; cursor:pointer; transition: background 0.15s ease;
+        display:flex; flex-direction:column;
       }
       .ag-mc:hover { background:var(--primary-light,#EDE9FE); }
       .ag-mc.other { opacity:.35; }
@@ -291,7 +314,7 @@
         color: #fff;
         box-shadow: 0 4px 12px rgba(124,58,237,0.4);
       }
-      .ag-mc-pill { font-size:9px; font-weight:700; padding:2px 4px; border-radius:4px; margin-bottom:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+      .ag-mc-pill { font-size:9px; font-weight:700; padding:2px 4px; border-radius:4px; margin-bottom:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; display:block; flex-shrink:0; }
 
       /* Empty */
       .ag-empty { text-align:center; padding:40px 20px; color:var(--text-muted,#7C6FAE); }
@@ -1138,7 +1161,11 @@
         iniciarLineaHoraActual();
       }));
     }
-    if (v === 'mes') renderMes();
+    if (v === 'mes') {
+      const mesEl = agQ('ag-mes-view');
+      if (mesEl) mesEl.style.display = 'flex'; // forzar flex, no block
+      renderMes();
+    }
   }
 
   function actualizarHeader() {
@@ -1300,9 +1327,22 @@
   }
 
   // ── Month grid ───────────────────────────────────────────
+  function _ajustarTopMes() {
+    requestAnimationFrame(() => {
+      const toggle  = document.querySelector('.ag-view-toggle');
+      const mesView = agQ('ag-mes-view');
+      const wrap    = agQ('ag-wrap');
+      if (!toggle || !mesView || !wrap) return;
+      const wrapTop = wrap.getBoundingClientRect().top;
+      const togBot  = toggle.getBoundingClientRect().bottom;
+      mesView.style.top = Math.round(togBot - wrapTop) + 'px';
+    });
+  }
+
   function renderMes() {
     const grid = agQ('ag-month-grid');
     if (!grid) return;
+    _ajustarTopMes();
     grid.innerHTML = '';
     const y = _fechaActual.getFullYear(), m = _fechaActual.getMonth();
     const primerDia = (new Date(y, m, 1).getDay() + 6) % 7; // 0=Lun, 6=Dom
