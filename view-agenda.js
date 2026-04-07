@@ -1132,7 +1132,7 @@
         const sinTelDia = !esEvento && pacDia && !pacDia.telefono;
         html += `<div class="ag-ev-block${esEvento ? ' ag-ev-evento' : ''}" style="background:${bg};border-left-color:${brd}"
                       onclick="window._agDetalle('${turno.id}')">
-                   <div class="ag-ev-name">${tipoEmoji(turno.tipo)} ${escHtml(nom)}${sinTelDia ? ' <span title="Sin teléfono — no recibirá recordatorio WA" style="font-size:11px;cursor:help">⚠️</span>' : ''}</div>
+                   <div class="ag-ev-name">${tipoEmoji(turno.tipo)} ${escHtml(nom)}${sinTelDia ? ' <span title="Sin teléfono — no recibirá recordatorio WA. Editar paciente para agregarlo" style="font-size:11px;cursor:help">⚠️</span>' : ''}</div>
                    <div class="ag-ev-meta">${horaStr} · ${turno.duracion || 50} min · ${tipoLabel(turno.tipo)}</div>
                  </div>`;
       } else {

@@ -127,6 +127,52 @@ const PsicoRouter = (() => {
     }, dur);
   }
 
+  /* ── Banner plan vencido con botón "Renovar plan" ──────── */
+  function _bannerPlanVencido() {
+    const id = 'psico-banner-vencido';
+    if (document.getElementById(id)) return;   // ya visible, no duplicar
+
+    const banner = document.createElement('div');
+    banner.id = id;
+    banner.style.cssText = [
+      'position:fixed', 'top:0', 'left:0', 'right:0',
+      'background:linear-gradient(90deg,#7C3AED,#a855f7)',
+      'color:#fff', 'padding:10px 16px', 'z-index:9998',
+      'display:flex', 'align-items:center', 'justify-content:space-between',
+      'gap:10px', 'font-size:13px', 'font-weight:600',
+      'box-shadow:0 2px 14px rgba(124,58,237,0.35)',
+      'transition:opacity .3s',
+    ].join(';');
+
+    banner.innerHTML = `
+      <span>⚠️ Tu plan venció. Renovalo para recuperar todas las funciones.</span>
+      <div style="display:flex;gap:8px;flex-shrink:0">
+        <button id="psico-banner-renovar"
+          style="background:#fff;color:#7C3AED;border:none;padding:6px 14px;
+                 border-radius:8px;font-size:12px;font-weight:800;
+                 font-family:inherit;cursor:pointer;white-space:nowrap">
+          💳 Renovar plan
+        </button>
+        <button id="psico-banner-cerrar"
+          style="background:rgba(255,255,255,0.20);color:#fff;border:none;
+                 padding:6px 10px;border-radius:8px;font-size:13px;
+                 font-weight:700;font-family:inherit;cursor:pointer">
+          ✕
+        </button>
+      </div>`;
+
+    document.body.appendChild(banner);
+
+    document.getElementById('psico-banner-renovar').addEventListener('click', () => {
+      banner.remove();
+      PsicoRouter.navigate('cuenta');
+    });
+    document.getElementById('psico-banner-cerrar').addEventListener('click', () => {
+      banner.style.opacity = '0';
+      setTimeout(() => banner.remove(), 300);
+    });
+  }
+
   /* ── Registrar una vista ─────────────────────────────────── */
   function register(name, { init, onEnter, onLeave } = {}) {
     _views[name] = {
@@ -220,12 +266,13 @@ const PsicoRouter = (() => {
 
           _globalToast('✅ ¡Pago recibido! Actualizando tu plan…');
 
+          // Máximo 3 intentos × 3 s = 9 s de espera
           let intentos = 0;
           const poll = setInterval(async () => {
             intentos++;
-            if (intentos > 10) {
+            if (intentos > 3) {
               clearInterval(poll);
-              _globalToast('⚠️ Si el plan no se actualizó, recargá la página en unos segundos.', 7000);
+              _globalToast('⚠️ Si el plan no cambió, recargá la página en unos segundos.', 7000);
               return;
             }
             try {
@@ -233,7 +280,7 @@ const PsicoRouter = (() => {
                 PlanService.invalidar();
                 const p = await PlanService.getPlan();
                 if (p.plan && p.plan !== 'free') {
-                  clearInterval(poll);
+                  clearInterval(poll);   // ← detiene el polling inmediatamente
                   _globalToast(`🎉 ¡Plan ${p.plan.toUpperCase()} activado exitosamente!`, 7000);
                 }
               }
@@ -248,9 +295,7 @@ const PsicoRouter = (() => {
               const p = await PlanService.getPlan();
               // expires_at en el pasado + plan degradado a free = plan vencido
               if (p.plan === 'free' && p.expires_at && new Date(p.expires_at) < new Date()) {
-                setTimeout(() => {
-                  _globalToast('⚠️ Tu plan venció. Renovalo en Cuenta para recuperar todas las funciones.', 9000);
-                }, 2000);
+                setTimeout(() => _bannerPlanVencido(), 1500);
               }
             }
           } catch(e) { /* silencioso */ }
