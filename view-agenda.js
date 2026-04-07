@@ -729,7 +729,11 @@
     });
 
     ['dia','semana','mes'].forEach(v => {
-      agQ(`ag-btn-${v}`).addEventListener('click', () => setView(v));
+      agQ(`ag-btn-${v}`).addEventListener('click', () => {
+        // Al entrar en vista día siempre mostrar HOY, nunca el inicio de semana
+        if (v === 'dia') _fechaActual = new Date(getTodayLocal());
+        setView(v);
+      });
     });
 
     agQ('ag-btn-crear').addEventListener('click', crearTurno);
