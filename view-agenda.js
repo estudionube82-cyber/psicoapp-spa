@@ -790,7 +790,7 @@
     agQ('ag-btn-hoy').addEventListener('click', () => {
       _fechaActual = new Date(getTodayLocal());
       _hoy         = new Date(getTodayLocal());
-      setView(_currentView);
+      setView('dia');
     });
 
     // ── Autocomplete de paciente ────────────────────────────
@@ -1132,7 +1132,12 @@
   }
 
 
-  function setView(v) {
+  function setView(v, opcionFecha) {
+    // En vista día: si se pasa fecha explícita (ej: desde mes) usarla,
+    // si no, siempre mostrar HOY — nunca el lunes de la semana
+    if (v === 'dia') {
+      _fechaActual = opcionFecha ? new Date(opcionFecha) : new Date(getTodayLocal());
+    }
     _currentView = v;
     ['dia','semana','mes'].forEach(x => {
       const el  = agQ(`ag-${x}-view`);
@@ -1380,7 +1385,7 @@
         mas.textContent = `+${turnos.length - 3} más`;
         cell.appendChild(mas);
       }
-      cell.addEventListener('click', () => { _fechaActual = fecha; setView('dia'); });
+      cell.addEventListener('click', () => { setView('dia', fecha); });
       grid.appendChild(cell);
     }
   }
