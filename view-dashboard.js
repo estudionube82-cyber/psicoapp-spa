@@ -316,16 +316,14 @@ async function _dashCargarDatos() {
         .order('hora', { ascending: true }),
 
       sb.from('turnos')
-        .select('id,estado,precio')
+        .select('id,estado')
         .eq('user_id', uid)
         .gte('fecha', primerDiaMes)
-        .lte('fecha', ultimoDiaMes)
-        .neq('estado', 'cancelado'),
+        .lte('fecha', ultimoDiaMes),
 
       sb.from('pacientes')
         .select('id')
-        .eq('user_id', uid)
-        .eq('activo', true),
+        .eq('user_id', uid),
     ]);
 
     const pagos     = resPagos.data     || [];
@@ -340,15 +338,12 @@ async function _dashCargarDatos() {
 
     console.log('[Dashboard] pacientes reales:', pacUnicos);
 
-    const turnosPendientes = turnosMes.filter(t => {
-      const est = (t.estado || '').toLowerCase();
-      return est === 'pendiente' || est === 'confirmado';
-    });
-    const totalPendienteTurnos = turnosPendientes.reduce((s, t) => s + (Number(t.precio) || 0), 0);
-    const totalPendientePagos  = pagos.filter(p => p.metodo === 'pendiente').reduce((s, p) => s + (Number(p.monto) || 0), 0);
-    const totalPendiente = totalPendienteTurnos + totalPendientePagos;
+    const totalPendiente = pagos
+      .filter(p => p.metodo === 'pendiente')
+      .reduce((s, p) => s + (Number(p.monto) || 0), 0);
 
-    const sesionSinCobro = turnosMes.filter(t => {
+    const turnosMesValidos = (resTurnosMes.data || []).filter(t => (t.estado || '').toLowerCase() !== 'cancelado');
+    const sesionSinCobro = turnosMesValidos.filter(t => {
       const est = (t.estado || '').toLowerCase();
       return est === 'realizado' || est === 'completado';
     }).length;
