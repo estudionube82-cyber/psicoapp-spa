@@ -13,5 +13,5 @@ const PSICOAPP_CONFIG = {
   // Panel MP → Cobros → Cobrar con link → Crear link
   LINK_PAGO_PRO:   'https://mpago.la/21qpD68', // Pro $18.000/mes
   LINK_PAGO_MAX:   'https://mpago.la/2una14K', // Max $24.000/mes
-  LINK_PAGO_EXTRA: '', // ⚠️ Completar: Panel MP → Cobros → Cobrar con link → Crear link ($5.000)
+  LINK_PAGO_EXTRA: 'https://mpago.la/23Lff3N', // Pack WhatsApp Extra $5.000
 };
