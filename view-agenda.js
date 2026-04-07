@@ -19,8 +19,9 @@
   let _userId      = null;
   let _todosTurnos = [];
   let _todosPacientes = [];
-  let _fechaActual = new Date();
-  let _hoy         = new Date();
+  let _pacMatches     = [];   // resultados actuales del autocomplete
+  let _fechaActual = new Date(getTodayLocal());
+  let _hoy         = new Date(getTodayLocal());
   let _turnoSel    = null;
   let _modoModal   = 'turno';   // 'turno' | 'evento'
   let _currentView = 'dia';
@@ -55,6 +56,13 @@
     return {sesion:'#2D6A4F',online:'#1976D2',evaluacion:'#F9A825',
             judicial:'#7C3AED',evento:'#F97316',otro:'#9CA3AF'}[tipo] || '#2D6A4F';
   }
+  // ── Timezone-safe: devuelve 'YYYY-MM-DD' en hora local Argentina ──────────
+  function getTodayLocal() {
+    return new Date().toLocaleDateString('en-CA', {
+      timeZone: 'America/Argentina/Buenos_Aires'
+    });
+  }
+
   function turnosDeFecha(fecha) {
     const key = fmtDate(fecha);
     return _todosTurnos.filter(t => t.fecha === key).sort((a,b) => (a.hora||'').localeCompare(b.hora||''));
@@ -106,15 +114,8 @@
   // ────────────────────────────────────────────────────────
 
   function _rellenarSelectPaciente() {
-    const sel = agQ('ag-f-paciente');
-    if (!sel) return;
-    sel.innerHTML = '<option value="">— Seleccioná un paciente —</option>';
-    _todosPacientes.forEach(p => {
-      const o = document.createElement('option');
-      o.value = p.id;
-      o.textContent = `${p.apellido || ''}, ${p.nombre || ''}`.trim().replace(/^,\s*/,'');
-      sel.appendChild(o);
-    });
+    /* No-op: el select fue reemplazado por el autocomplete.
+       Se conserva la firma para no romper los listeners de storeUpdated. */
   }
 
   async function cargarTurnos() {
@@ -446,11 +447,24 @@
       .ag-free-slot,
       .ag-slot-area { position: relative; z-index: 2; }
 
-      /* ── Fila de hora actual (match violeta) ── */
+      /* ── Fila de hora actual (roja) ── */
       .ag-time-row.current-hour {
-        background: rgba(168,85,247,0.10);
-        border-left: 3px solid #a855f7;
+        background: rgba(239,68,68,0.07);
+        border-left: 3px solid #EF4444;
       }
+
+      /* ── Botón HOY ── */
+      .ag-vbtn-hoy {
+        padding: 6px 11px; border-radius: 9px; font-size: 11px; font-weight: 800;
+        background: var(--primary-light, #EDE9FE); color: var(--primary, #5B2FA8);
+        border: 1.5px solid var(--border, #E5E2F5); cursor: pointer;
+        font-family: inherit; transition: all .15s; white-space: nowrap;
+      }
+      .ag-vbtn-hoy:hover { background: var(--primary, #5B2FA8); color: #fff; border-color: var(--primary, #5B2FA8); }
+
+      /* ── Autocomplete paciente ── */
+      #ag-f-paciente-search:focus { border-color: var(--primary, #5B2FA8) !important; outline: none; }
+      .ag-pac-item:hover { background: var(--primary-light, #EDE9FE) !important; }
 
       /* Mobile: contenedor scrollable flexible */
       #ag-week-grid, #ag-time-grid {
@@ -463,11 +477,11 @@
         position: absolute;
         left: 0;
         width: 100%;
-        height: 3px;
-        background: #a855f7;
+        height: 2px;
+        background: #EF4444;
         z-index: 999;
         pointer-events: none;
-        box-shadow: 0 0 8px 2px rgba(168,85,247,0.6);
+        box-shadow: 0 0 6px 2px rgba(239,68,68,0.55);
       }
       .current-time-line::before {
         content: '';
@@ -475,11 +489,11 @@
         left: 44px;
         top: 50%;
         transform: translateY(-50%);
-        width: 12px;
-        height: 12px;
+        width: 10px;
+        height: 10px;
         border-radius: 50%;
-        background: #a855f7;
-        box-shadow: 0 0 10px 4px rgba(168,85,247,0.7);
+        background: #EF4444;
+        box-shadow: 0 0 8px 3px rgba(239,68,68,0.65);
       }
       /* En semana: el círculo va pegado al borde izquierdo de la columna */
       #ag-week-grid .current-time-line::before {
@@ -497,6 +511,7 @@
           <div class="ag-t-main" id="ag-t-main"></div>
           <div class="ag-t-sub"  id="ag-t-sub"></div>
         </div>
+        <button class="ag-vbtn-hoy" id="ag-btn-hoy">Hoy</button>
         <button class="ag-nav-btn" id="ag-nav-fwd">›</button>
       </div>
 
@@ -522,8 +537,8 @@
       <!-- MES VIEW -->
       <div id="ag-mes-view" style="display:none">
         <div id="ag-month-names">
-          <div class="ag-mn">D</div><div class="ag-mn">L</div><div class="ag-mn">M</div>
-          <div class="ag-mn">X</div><div class="ag-mn">J</div><div class="ag-mn">V</div><div class="ag-mn">S</div>
+          <div class="ag-mn">L</div><div class="ag-mn">M</div><div class="ag-mn">X</div>
+          <div class="ag-mn">J</div><div class="ag-mn">V</div><div class="ag-mn">S</div><div class="ag-mn">D</div>
         </div>
         <div id="ag-month-grid"></div>
       </div>
@@ -572,9 +587,22 @@
 
         <div class="ag-field" id="ag-sec-paciente">
           <label>Paciente <span style="color:#E53935">*</span></label>
-          <select id="ag-f-paciente">
-            <option value="">— Seleccioná un paciente —</option>
-          </select>
+          <div style="position:relative">
+            <input type="text" id="ag-f-paciente-search"
+                   placeholder="Buscar por nombre o apellido…"
+                   autocomplete="off"
+                   style="width:100%;padding:10px 12px;border-radius:10px;
+                          border:1.5px solid var(--border,#E5E2F5);font-size:14px;font-weight:500;
+                          background:var(--bg,#F8F7FF);color:var(--text,#1E1040);
+                          font-family:inherit;box-sizing:border-box;transition:border .15s">
+            <div id="ag-f-paciente-dropdown"
+                 style="display:none;position:absolute;top:calc(100% + 4px);left:0;right:0;
+                        background:var(--surface,#fff);border:1.5px solid var(--border,#E5E2F5);
+                        border-radius:10px;z-index:70;max-height:180px;overflow-y:auto;
+                        box-shadow:0 4px 16px rgba(0,0,0,.12)">
+            </div>
+          </div>
+          <input type="hidden" id="ag-f-paciente">
         </div>
 
         <div class="ag-field" id="ag-sec-titulo" style="display:none">
@@ -700,7 +728,7 @@
       requestAnimationFrame(() => {
         if (_currentView === 'semana') {
           const gridEl = document.getElementById('ag-week-grid');
-          if (gridEl) posicionarColumnaHoy(gridEl, lunesDe(_fechaActual), fmtDate(new Date()));
+          if (gridEl) posicionarColumnaHoy(gridEl, lunesDe(_fechaActual), getTodayLocal());
           actualizarLineaHoraActualSemana();
         }
         if (_currentView === 'dia') {
@@ -730,6 +758,78 @@
     agQ('ag-week-grid').addEventListener('scroll', () => {
       if (_currentView === 'semana') actualizarLineaHoraActualSemana();
     });
+
+    // ── Botón HOY ──────────────────────────────────────────
+    agQ('ag-btn-hoy').addEventListener('click', () => {
+      _fechaActual = new Date(getTodayLocal());
+      _hoy         = new Date(getTodayLocal());
+      setView(_currentView);
+    });
+
+    // ── Autocomplete de paciente ────────────────────────────
+    const _pacSearch   = agQ('ag-f-paciente-search');
+    const _pacDropdown = agQ('ag-f-paciente-dropdown');
+    const _pacHidden   = agQ('ag-f-paciente');
+
+    function _renderDropdown() {
+      const q = (_pacSearch.value || '').toLowerCase().trim();
+      _pacHidden.value = '';
+      if (!q) { _pacDropdown.style.display = 'none'; return; }
+
+      _pacMatches = _todosPacientes.filter(p => {
+        const full = `${p.nombre || ''} ${p.apellido || ''}`.toLowerCase();
+        const inv  = `${p.apellido || ''} ${p.nombre || ''}`.toLowerCase();
+        return full.includes(q) || inv.includes(q);
+      });
+
+      if (!_pacMatches.length) {
+        _pacDropdown.innerHTML = '<div style="padding:10px 14px;font-size:13px;color:var(--text-muted,#7C6FAE)">Sin resultados</div>';
+        _pacDropdown.style.display = 'block';
+        return;
+      }
+
+      _pacDropdown.innerHTML = _pacMatches.map((p, i) => {
+        const nombre = `${p.apellido || ''}, ${p.nombre || ''}`.trim().replace(/^,\s*/, '');
+        return `<div class="ag-pac-item" data-i="${i}"
+                     style="padding:10px 14px;cursor:pointer;font-size:13px;font-weight:600;
+                            border-bottom:1px solid var(--border,#E5E2F5);transition:background .1s">
+                  ${escHtml(nombre)}
+                </div>`;
+      }).join('');
+      _pacDropdown.style.display = 'block';
+
+      _pacDropdown.querySelectorAll('.ag-pac-item').forEach(item => {
+        item.addEventListener('mousedown', e => e.preventDefault()); // evita blur antes del click
+        item.addEventListener('click', () => {
+          const p      = _pacMatches[parseInt(item.dataset.i)];
+          const nombre = `${p.apellido || ''}, ${p.nombre || ''}`.trim().replace(/^,\s*/, '');
+          _pacHidden.value = p.id;
+          _pacSearch.value = nombre;
+          _pacDropdown.style.display = 'none';
+        });
+      });
+    }
+
+    _pacSearch.addEventListener('input',  _renderDropdown);
+    _pacSearch.addEventListener('focus',  () => { if (_pacSearch.value.trim()) _renderDropdown(); });
+    _pacSearch.addEventListener('blur',   () => setTimeout(() => { _pacDropdown.style.display = 'none'; }, 160));
+
+    // ── Swipe horizontal para navegar (mobile) ──────────────
+    let _swipeX = 0, _swipeY = 0;
+    const _agWrap = agQ('ag-wrap');
+    _agWrap.addEventListener('touchstart', e => {
+      if (e.target.closest('.ag-overlay')) return;
+      _swipeX = e.touches[0].clientX;
+      _swipeY = e.touches[0].clientY;
+    }, { passive: true });
+    _agWrap.addEventListener('touchend', e => {
+      if (e.target.closest('.ag-overlay')) return;
+      const dx = e.changedTouches[0].clientX - _swipeX;
+      const dy = e.changedTouches[0].clientY - _swipeY;
+      if (Math.abs(dy) > Math.abs(dx) * 1.5) return; // principalmente vertical → ignorar
+      if (Math.abs(dx) < 60) return;                   // demasiado corto → ignorar
+      if (dx < 0) navFwd(); else navBack();
+    }, { passive: true });
   }
 
   // ────────────────────────────────────────────────────────
@@ -792,7 +892,7 @@
     // Limpiar overlay previo
     grid.querySelectorAll('.today-column').forEach(el => el.remove());
 
-    const esHoy = fmtDate(_fechaActual) === fmtDate(_hoy);
+    const esHoy = fmtDate(_fechaActual) === getTodayLocal();
     if (!esHoy) return;
 
     const col = document.createElement('div');
@@ -924,7 +1024,7 @@
   function actualizarLineaHoraActualDia() {
     const grid = document.getElementById('ag-time-grid');
     if (!grid) return;
-    const esHoy = fmtDate(_fechaActual) === fmtDate(_hoy);
+    const esHoy = fmtDate(_fechaActual) === getTodayLocal();
     if (!esHoy) {
       // Limpiar overlay si existe
       const overlay = document.getElementById('ag-time-grid-time-overlay');
@@ -945,7 +1045,7 @@
     const overlay = document.getElementById('ag-week-grid-time-overlay');
     if (overlay) overlay.querySelectorAll('.current-time-line').forEach(el => el.remove());
 
-    const todayKey = fmtDate(new Date());
+    const todayKey = getTodayLocal();
     const lunes = lunesDe(_fechaActual);
     let hoyIdx = -1;
     for (let i = 0; i < 7; i++) {
@@ -1049,7 +1149,7 @@
     if (!el) return;
 
     // Header highlight: solo en vista día cuando es HOY
-    const esHoyDia = _currentView === 'dia' && fmtDate(_fechaActual) === fmtDate(_hoy);
+    const esHoyDia = _currentView === 'dia' && fmtDate(_fechaActual) === getTodayLocal();
     title?.classList.toggle('ag-dia-hoy-header', esHoyDia);
 
     if (_currentView === 'dia') {
@@ -1113,7 +1213,7 @@
     const grid = agQ('ag-time-grid');
     if (!grid) return;
     const turnos  = turnosDeFecha(_fechaActual);
-    const esHoy   = fmtDate(_fechaActual) === fmtDate(_hoy);
+    const esHoy   = fmtDate(_fechaActual) === getTodayLocal();
     const horaAct = esHoy ? new Date().getHours() : -1;
     let html = '';
     HORAS.forEach(h => {
@@ -1156,7 +1256,7 @@
     if (!hdrEl || !gridEl) return;
     const lunes = lunesDe(_fechaActual);
 
-    const _todayKey = fmtDate(new Date());
+    const _todayKey = getTodayLocal();
     let hdr = '<div class="ag-wh-col"></div>';
     for (let i = 0; i < 7; i++) {
       const d    = new Date(lunes); d.setDate(lunes.getDate() + i);
@@ -1205,7 +1305,7 @@
     if (!grid) return;
     grid.innerHTML = '';
     const y = _fechaActual.getFullYear(), m = _fechaActual.getMonth();
-    const primerDia = new Date(y, m, 1).getDay();
+    const primerDia = (new Date(y, m, 1).getDay() + 6) % 7; // 0=Lun, 6=Dom
     const diasEnMes = new Date(y, m + 1, 0).getDate();
 
     for (let i = 0; i < primerDia; i++) {
@@ -1215,7 +1315,7 @@
     }
     for (let d = 1; d <= diasEnMes; d++) {
       const fecha  = new Date(y, m, d);
-      const esHoy  = fmtDate(fecha) === fmtDate(_hoy);
+      const esHoy  = fmtDate(fecha) === getTodayLocal();
       const turnos = turnosDeFecha(fecha);
       const cell   = document.createElement('div');
       cell.className = 'ag-mc' + (esHoy ? ' today-cell' : '');
@@ -1277,7 +1377,10 @@
 
     agQ('ag-f-fecha').value    = fecha || fmtDate(_fechaActual);
     agQ('ag-f-hora').value     = hora  || (String(new Date().getHours()).padStart(2,'0') + ':00');
-    agQ('ag-f-paciente').value = '';
+    agQ('ag-f-paciente-search').value = '';
+    agQ('ag-f-paciente').value        = '';
+    const _dd = agQ('ag-f-paciente-dropdown');
+    if (_dd) _dd.style.display = 'none';
     agQ('ag-f-titulo').value   = '';
     agQ('ag-f-notas').value    = '';
     agQ('ag-f-tipo').value     = 'sesion';
@@ -1323,7 +1426,7 @@
 
       if (_modoModal === 'turno') {
         const pacId = agQ('ag-f-paciente').value;
-        if (!pacId) { btn.disabled = false; btn.textContent = '✓ Agendar turno'; mostrarError('Seleccioná un paciente.'); return; }
+        if (!pacId) { btn.disabled = false; btn.textContent = '✓ Agendar turno'; mostrarError('Buscá y seleccioná un paciente de la lista.'); return; }
         insertData.paciente_id = pacId;
         insertData.tipo = agQ('ag-f-tipo').value;
       } else {
@@ -1494,8 +1597,8 @@
 
     /* onEnter — refresca datos en cada visita, NO re-renderiza el DOM */
     async onEnter() {
-      _hoy         = new Date();
-      _fechaActual = new Date();
+      _hoy         = new Date(getTodayLocal());
+      _fechaActual = new Date(getTodayLocal());
       _currentView = 'dia';
 
       // userId desde store (sin getSession adicional)
