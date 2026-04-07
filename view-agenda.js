@@ -1124,13 +1124,15 @@
                  <div class="ag-time-lbl">${horaStr}</div>
                  <div class="ag-slot-area">`;
       if (turno) {
-        const bg      = evBg(turno.tipo);
-        const brd     = evBorder(turno.tipo);
-        const nom     = nombreDisplay(turno);
+        const bg       = evBg(turno.tipo);
+        const brd      = evBorder(turno.tipo);
+        const nom      = nombreDisplay(turno);
         const esEvento = turno.tipo === 'evento';
+        const pacDia   = _todosPacientes.find(x => x.id === turno.paciente_id);
+        const sinTelDia = !esEvento && pacDia && !pacDia.telefono;
         html += `<div class="ag-ev-block${esEvento ? ' ag-ev-evento' : ''}" style="background:${bg};border-left-color:${brd}"
                       onclick="window._agDetalle('${turno.id}')">
-                   <div class="ag-ev-name">${tipoEmoji(turno.tipo)} ${escHtml(nom)}</div>
+                   <div class="ag-ev-name">${tipoEmoji(turno.tipo)} ${escHtml(nom)}${sinTelDia ? ' <span title="Sin teléfono — no recibirá recordatorio WA" style="font-size:11px;cursor:help">⚠️</span>' : ''}</div>
                    <div class="ag-ev-meta">${horaStr} · ${turno.duracion || 50} min · ${tipoLabel(turno.tipo)}</div>
                  </div>`;
       } else {
@@ -1176,12 +1178,14 @@
         const turno = _todosTurnos.find(t => t.fecha === fecha && parseInt((t.hora||'0').split(':')[0]) === h);
         const esCeldaHoy = fecha === _todayKey;
         if (turno) {
-          const bg  = evBg(turno.tipo);
-          const brd = evBorder(turno.tipo);
-          const nom = nombreDisplay(turno);
+          const bg     = evBg(turno.tipo);
+          const brd    = evBorder(turno.tipo);
+          const nom    = nombreDisplay(turno);
+          const pacSem = _todosPacientes.find(x => x.id === turno.paciente_id);
+          const sinTelSem = turno.tipo !== 'evento' && pacSem && !pacSem.telefono;
           rows += `<div class="ag-week-cell has-turno">
                      <div class="ag-week-ev" style="background:${bg};border-left-color:${brd};color:${brd}"
-                          onclick="window._agDetalle('${turno.id}')">${escHtml(nom)}</div>
+                          onclick="window._agDetalle('${turno.id}')">${sinTelSem ? '⚠️ ' : ''}${escHtml(nom)}</div>
                    </div>`;
         } else {
           rows += `<div class="ag-week-cell" onclick="window._agModalFechaHora('${fecha}','${horaStr}')"></div>`;

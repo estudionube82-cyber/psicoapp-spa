@@ -101,6 +101,32 @@ const PsicoRouter = (() => {
     },
   };
 
+  /* ── Toast global del router ────────────────────────────── */
+  function _globalToast(msg, dur = 4000) {
+    let el = document.getElementById('psico-global-toast');
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'psico-global-toast';
+      el.style.cssText = [
+        'position:fixed', 'bottom:88px', 'left:50%', 'transform:translateX(-50%)',
+        'background:#1A1040', 'color:#fff', 'padding:11px 24px',
+        'border-radius:12px', 'font-size:13px', 'font-weight:600',
+        'z-index:9999', 'max-width:360px', 'text-align:center',
+        'transition:opacity .3s', 'pointer-events:none',
+        'box-shadow:0 4px 20px rgba(0,0,0,0.30)',
+      ].join(';');
+      document.body.appendChild(el);
+    }
+    el.textContent = msg;
+    el.style.opacity = '1';
+    el.style.display = 'block';
+    clearTimeout(el._t);
+    if (dur > 0) el._t = setTimeout(() => {
+      el.style.opacity = '0';
+      setTimeout(() => { el.style.display = 'none'; }, 300);
+    }, dur);
+  }
+
   /* ── Registrar una vista ─────────────────────────────────── */
   function register(name, { init, onEnter, onLeave } = {}) {
     _views[name] = {
@@ -179,7 +205,57 @@ const PsicoRouter = (() => {
       // solo cuando getSession() confirmó sesión válida. Esto elimina la
       // race condition: el router nunca navega antes de que auth esté listo.
       const authReady = window._psicoAuthReady || Promise.resolve();
-      authReady.then(() => navigate(initial));
+
+      authReady.then(async () => {
+        await navigate(initial);
+
+        const pagandoAhora = params.get('pago') === 'ok';
+
+        /* ── Item 3: retorno de pago — toast + polling desde cualquier vista ── */
+        if (pagandoAhora) {
+          // Limpiar ?pago=ok de la URL sin recargar
+          const vParam    = params.get('v');
+          const urlLimpia = vParam ? '/?v=' + vParam : '/';
+          history.replaceState({}, '', urlLimpia);
+
+          _globalToast('✅ ¡Pago recibido! Actualizando tu plan…');
+
+          let intentos = 0;
+          const poll = setInterval(async () => {
+            intentos++;
+            if (intentos > 10) {
+              clearInterval(poll);
+              _globalToast('⚠️ Si el plan no se actualizó, recargá la página en unos segundos.', 7000);
+              return;
+            }
+            try {
+              if (typeof PlanService !== 'undefined') {
+                PlanService.invalidar();
+                const p = await PlanService.getPlan();
+                if (p.plan && p.plan !== 'free') {
+                  clearInterval(poll);
+                  _globalToast(`🎉 ¡Plan ${p.plan.toUpperCase()} activado exitosamente!`, 7000);
+                }
+              }
+            } catch(e) { /* silencioso */ }
+          }, 3000);
+        }
+
+        /* ── Item 4: aviso de plan vencido (solo si no viene de pagar ahora) ── */
+        if (!pagandoAhora) {
+          try {
+            if (typeof PlanService !== 'undefined') {
+              const p = await PlanService.getPlan();
+              // expires_at en el pasado + plan degradado a free = plan vencido
+              if (p.plan === 'free' && p.expires_at && new Date(p.expires_at) < new Date()) {
+                setTimeout(() => {
+                  _globalToast('⚠️ Tu plan venció. Renovalo en Cuenta para recuperar todas las funciones.', 9000);
+                }, 2000);
+              }
+            }
+          } catch(e) { /* silencioso */ }
+        }
+      });
     });
   }
 
