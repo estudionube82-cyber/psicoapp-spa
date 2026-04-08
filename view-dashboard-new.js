@@ -47,59 +47,17 @@
   display: flex; align-items: center; justify-content: center; font-size: 16px;
 }
 
-/* ── HERO BANNER ── */
-#view-dashboard-new .dn-hero {
-  margin: 16px 16px 0;
-  background: linear-gradient(135deg, #7C3AED, #EC4899);
-  border-radius: 20px;
-  padding: 24px 20px;
-  position: relative; overflow: hidden;
-  box-shadow: 0 8px 32px rgba(124,58,237,0.35);
+/* ── MINI SUMMARY ── */
+#view-dashboard-new .dn-mini-summary {
+  margin: 10px 16px 0;
+  background: rgba(124,58,237,0.07);
+  border: 1px solid rgba(124,58,237,0.14);
+  border-radius: 12px;
+  padding: 9px 14px;
+  font-size: 12px; font-weight: 600; color: var(--primary, #7C3AED);
+  display: flex; align-items: center; gap: 6px;
+  min-height: 36px;
 }
-#view-dashboard-new .dn-hero::before {
-  content: '';
-  position: absolute; right: -30px; top: -30px;
-  width: 160px; height: 160px; border-radius: 50%;
-  background: rgba(255,255,255,0.06);
-}
-#view-dashboard-new .dn-hero::after {
-  content: '';
-  position: absolute; left: -20px; bottom: -50px;
-  width: 130px; height: 130px; border-radius: 50%;
-  background: rgba(167,139,250,0.10);
-}
-#view-dashboard-new .dn-hero-greeting {
-  font-size: 11px; color: rgba(255,255,255,0.55);
-  text-transform: uppercase; letter-spacing: 1.2px; font-weight: 700;
-  position: relative; z-index: 1;
-}
-#view-dashboard-new .dn-hero-name {
-  font-size: 24px; font-weight: 800; color: white;
-  margin-top: 4px; line-height: 1.15;
-  position: relative; z-index: 1;
-}
-#view-dashboard-new .dn-hero-date {
-  font-size: 12px; color: rgba(255,255,255,0.55);
-  margin-top: 4px; position: relative; z-index: 1;
-}
-#view-dashboard-new .dn-hero-amount-row {
-  margin-top: 20px; display: flex; align-items: flex-end; gap: 12px;
-  position: relative; z-index: 1;
-}
-#view-dashboard-new .dn-hero-amount {
-  font-size: 38px; font-weight: 900; color: white; line-height: 1;
-}
-#view-dashboard-new .dn-hero-amount-label {
-  font-size: 12px; color: rgba(255,255,255,0.55); margin-bottom: 5px;
-}
-#view-dashboard-new .dn-hero-pill {
-  margin-left: auto; margin-bottom: 4px;
-  background: rgba(255,255,255,0.15); border: none; border-radius: 20px;
-  padding: 6px 14px; font-size: 12px; font-weight: 700; color: white;
-  cursor: pointer; font-family: var(--font);
-  transition: background .15s;
-}
-#view-dashboard-new .dn-hero-pill:hover { background: rgba(255,255,255,0.25); }
 
 /* ── KPI GRID ── */
 #view-dashboard-new .dn-kpi-grid {
@@ -304,8 +262,8 @@
 #view-dashboard-new .dn-profile-header {
   display: flex; align-items: center; gap: 14px;
   padding: 20px 20px 16px;
-  background: var(--surface);
-  border-bottom: 1.5px solid var(--border);
+  background: linear-gradient(180deg, rgba(236,72,153,0.08), rgba(124,58,237,0.05));
+  border-bottom: 1px solid rgba(124,58,237,0.10);
 }
 #view-dashboard-new .dn-ph-avatar {
   width: 48px; height: 48px; border-radius: 50%; flex-shrink: 0;
@@ -451,19 +409,9 @@ function _dnRenderHTML(container) {
     </div>
   </div>
 
-  <!-- HERO — ACTIVIDAD DEL MES -->
-  <div style="padding: 14px 16px 0">
-    <div class="dn-hero" style="cursor:default">
-      <div class="dn-hero-amount-row" style="margin-top:0">
-        <div>
-          <div class="dn-hero-amount-label">🗓️ Actividad del mes</div>
-          <div class="dn-hero-amount" id="dn-hero-amount">
-            <span class="dn-skel" style="display:inline-block;width:130px;height:36px;border-radius:10px"></span>
-          </div>
-          <div style="font-size:12px;color:rgba(255,255,255,0.5);margin-top:5px" id="dn-hero-sub"> </div>
-        </div>
-      </div>
-    </div>
+  <!-- MINI RESUMEN DEL MES -->
+  <div class="dn-mini-summary" id="dn-mini-summary">
+    <span class="dn-skel" style="display:inline-block;width:200px;height:14px;border-radius:6px"></span>
   </div>
 
   <!-- KPIs -->
@@ -597,7 +545,7 @@ async function _dnCargarDatos() {
       return est === 'realizado' || est === 'completado';
     }).length;
 
-    _dnRenderHero(totalCobrado, cantCobros, pacUnicos, turnosMesValidos.length);
+    _dnRenderMiniResumen(totalCobrado, cantCobros, pacUnicos, turnosMesValidos.length);
     _dnRenderProgreso(turnosHoyCant, completadosHoy);
     _dnRenderKPIs(totalCobrado, totalPendiente, pacUnicos, turnosHoyCant, turnosMesValidos.length, pagosPendientes);
     _dnRenderAlertas(sesionSinCobro, pacUnicos, pagos, pagosPendientes, turnosHoyCant);
@@ -614,15 +562,14 @@ async function _dnCargarDatos() {
 /* ══════════════════════════════════════════
    RENDERS
    ══════════════════════════════════════════ */
-function _dnRenderHero(total, cant, pacUnicos, sesionesDelMes) {
-  const mes      = new Date().toLocaleString('es-AR', { month: 'long' });
-  const amountEl = document.getElementById('dn-hero-amount');
-  const subEl    = document.getElementById('dn-hero-sub');
-  if (amountEl) {
-    const s = sesionesDelMes !== undefined ? sesionesDelMes : cant;
-    amountEl.textContent = s !== 1 ? 'Realizaste ' + s + ' sesiones este mes' : 'Realizaste 1 sesión este mes';
-  }
-  if (subEl) subEl.textContent = 'Generaste ' + _dnFmt(total) + ' en ' + mes;
+function _dnRenderMiniResumen(total, cant, pacUnicos, sesionesDelMes) {
+  const el = document.getElementById('dn-mini-summary');
+  if (!el) return;
+  const s = sesionesDelMes !== undefined ? sesionesDelMes : cant;
+  el.innerHTML =
+    '🗓 <strong>' + s + ' sesión' + (s !== 1 ? 'es' : '') + ' este mes</strong>' +
+    '<span style="opacity:.4;margin:0 4px">·</span>' +
+    _dnFmt(total) + ' generados';
 }
 
 function _dnRenderProgreso(turnosHoy, completadosHoy) {
