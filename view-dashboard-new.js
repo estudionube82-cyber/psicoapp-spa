@@ -50,10 +50,11 @@
 /* ── HERO BANNER ── */
 #view-dashboard-new .dn-hero {
   margin: 16px 16px 0;
-  background: linear-gradient(135deg, #1E1040 0%, #3B1F8C 50%, #5B2FA8 100%);
+  background: linear-gradient(135deg, #7C3AED, #EC4899);
   border-radius: 20px;
   padding: 24px 20px;
   position: relative; overflow: hidden;
+  box-shadow: 0 8px 32px rgba(124,58,237,0.35);
 }
 #view-dashboard-new .dn-hero::before {
   content: '';
@@ -116,13 +117,13 @@
   padding: 16px 14px;
   box-shadow: var(--shadow-sm);
   cursor: pointer;
-  transition: transform .12s, box-shadow .12s;
+  transition: transform .15s, box-shadow .15s;
   border: 1.5px solid transparent;
+  border-left: 4px solid transparent;
 }
 #view-dashboard-new .dn-kpi:hover {
-  transform: translateY(-2px);
+  transform: translateY(-3px) scale(1.01);
   box-shadow: var(--shadow-md);
-  border-color: rgba(124,58,237,0.15);
 }
 #view-dashboard-new .dn-kpi-icon-wrap {
   width: 36px; height: 36px; border-radius: 10px;
@@ -132,7 +133,7 @@
 #view-dashboard-new .dn-kpi-icon-wrap.violet { background: rgba(124,58,237,0.12); }
 #view-dashboard-new .dn-kpi-icon-wrap.amber  { background: rgba(251,191,36,0.12); }
 #view-dashboard-new .dn-kpi-icon-wrap.teal   { background: rgba(20,184,166,0.12); }
-#view-dashboard-new .dn-kpi-icon-wrap.rose   { background: rgba(244,63,94,0.10); }
+#view-dashboard-new .dn-kpi-icon-wrap.rose   { background: rgba(236,72,153,0.10); }
 #view-dashboard-new .dn-kpi-value {
   font-size: 22px; font-weight: 800; color: var(--text); line-height: 1;
 }
@@ -157,10 +158,10 @@
 }
 #view-dashboard-new .dn-alert:hover { transform: translateX(2px); }
 #view-dashboard-new .dn-alert.warn {
-  background: rgba(251,191,36,0.08); border: 1.5px solid rgba(251,191,36,0.25);
+  background: rgba(245,158,11,0.12); border: 1.5px solid rgba(245,158,11,0.45);
 }
 #view-dashboard-new .dn-alert.ok {
-  background: rgba(124,58,237,0.08); border: 1.5px solid rgba(124,58,237,0.2);
+  background: rgba(16,185,129,0.10); border: 1.5px solid rgba(16,185,129,0.40);
 }
 #view-dashboard-new .dn-alert-icon { font-size: 20px; flex-shrink: 0; }
 #view-dashboard-new .dn-alert-body { flex: 1; }
@@ -372,7 +373,7 @@
 }
 #view-dashboard-new .dn-progress-fill {
   height: 100%; border-radius: 99px;
-  background: linear-gradient(90deg, #7C3AED, #A78BFA);
+  background: linear-gradient(90deg, #7C3AED, #EC4899);
   transition: width .4s ease;
 }
   `;
@@ -647,25 +648,25 @@ function _dnRenderKPIs(cobrado, pendiente, pacUnicos, turnosHoy, sesionesDelMes,
   const el = document.getElementById('dn-kpi-grid');
   if (!el) return;
   el.innerHTML =
-    '<div class="dn-kpi" onclick="navigate(\'agenda\')">' +
+    '<div class="dn-kpi" style="border-left-color:#7C3AED" onclick="navigate(\'agenda\')">' +
       '<div class="dn-kpi-icon-wrap violet">🗓️</div>' +
       '<div class="dn-kpi-value">' + sesionesDelMes + '</div>' +
       '<div class="dn-kpi-label">Sesiones del mes</div>' +
       '<div class="dn-kpi-tag">Realizadas</div>' +
     '</div>' +
-    '<div class="dn-kpi" onclick="window._dnIrPendientes()">' +
+    '<div class="dn-kpi" style="border-left-color:#F59E0B" onclick="window._dnIrPendientes()">' +
       '<div class="dn-kpi-icon-wrap amber">⏳</div>' +
       '<div class="dn-kpi-value">' + pendiente_cant + '</div>' +
       '<div class="dn-kpi-label">Pendientes</div>' +
       '<div class="dn-kpi-tag muted">Sin cobrar</div>' +
     '</div>' +
-    '<div class="dn-kpi" onclick="navigate(\'pacientes\')">' +
+    '<div class="dn-kpi" style="border-left-color:#14B8A6" onclick="navigate(\'pacientes\')">' +
       '<div class="dn-kpi-icon-wrap teal">👥</div>' +
       '<div class="dn-kpi-value">' + pacUnicos + '</div>' +
       '<div class="dn-kpi-label">Pacientes activos</div>' +
       '<div class="dn-kpi-tag muted">Total</div>' +
     '</div>' +
-    '<div class="dn-kpi" onclick="navigate(\'agenda\')">' +
+    '<div class="dn-kpi" style="border-left-color:#EC4899" onclick="navigate(\'agenda\')">' +
       '<div class="dn-kpi-icon-wrap rose">📅</div>' +
       '<div class="dn-kpi-value">' + turnosHoy + '</div>' +
       '<div class="dn-kpi-label">Turnos de hoy</div>' +
