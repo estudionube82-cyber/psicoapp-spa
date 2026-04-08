@@ -619,10 +619,10 @@
                           background:var(--bg,#F8F7FF);color:var(--text,#1E1040);
                           font-family:inherit;box-sizing:border-box;transition:border .15s">
             <div id="ag-f-paciente-dropdown"
-                 style="display:none;position:absolute;top:calc(100% + 4px);left:0;right:0;
+                 style="display:none;position:fixed;
                         background:var(--surface,#fff);border:1.5px solid var(--border,#E5E2F5);
-                        border-radius:10px;z-index:70;max-height:180px;overflow-y:auto;
-                        box-shadow:0 4px 16px rgba(0,0,0,.12)">
+                        border-radius:10px;z-index:200;max-height:180px;overflow-y:auto;
+                        box-shadow:0 4px 16px rgba(0,0,0,.18)">
             </div>
           </div>
           <input type="hidden" id="ag-f-paciente">
@@ -798,35 +798,43 @@
     const _pacDropdown = agQ('ag-f-paciente-dropdown');
     const _pacHidden   = agQ('ag-f-paciente');
 
-    function _renderDropdown() {
+    // mostrarTodos=true: muestra todos los pacientes sin filtrar (comportamiento de <select>)
+    function _renderDropdown(mostrarTodos = false) {
       const q = (_pacSearch.value || '').toLowerCase().trim();
-      _pacHidden.value = '';
-      if (!q) { _pacDropdown.style.display = 'none'; return; }
 
-      _pacMatches = _todosPacientes.filter(p => {
-        const full = `${p.nombre || ''} ${p.apellido || ''}`.toLowerCase();
-        const inv  = `${p.apellido || ''} ${p.nombre || ''}`.toLowerCase();
-        return full.includes(q) || inv.includes(q);
-      });
+      if (!q && !mostrarTodos) { _pacDropdown.style.display = 'none'; return; }
+
+      _pacMatches = q
+        ? _todosPacientes.filter(p => {
+            const full = `${p.nombre || ''} ${p.apellido || ''}`.toLowerCase();
+            const inv  = `${p.apellido || ''} ${p.nombre || ''}`.toLowerCase();
+            return full.includes(q) || inv.includes(q);
+          })
+        : [..._todosPacientes];
 
       if (!_pacMatches.length) {
-        _pacDropdown.innerHTML = '<div style="padding:10px 14px;font-size:13px;color:var(--text-muted,#7C6FAE)">Sin resultados</div>';
-        _pacDropdown.style.display = 'block';
-        return;
+        _pacDropdown.innerHTML = `<div style="padding:10px 14px;font-size:13px;color:var(--text-muted,#7C6FAE)">
+          ${q ? 'Sin resultados' : 'No hay pacientes cargados'}</div>`;
+      } else {
+        _pacDropdown.innerHTML = _pacMatches.map((p, i) => {
+          const nombre = `${p.apellido || ''}, ${p.nombre || ''}`.trim().replace(/^,\s*/, '');
+          return `<div class="ag-pac-item" data-i="${i}"
+                       style="padding:10px 14px;cursor:pointer;font-size:13px;font-weight:600;
+                              border-bottom:1px solid var(--border,#E5E2F5);transition:background .1s">
+                    ${escHtml(nombre)}
+                  </div>`;
+        }).join('');
       }
 
-      _pacDropdown.innerHTML = _pacMatches.map((p, i) => {
-        const nombre = `${p.apellido || ''}, ${p.nombre || ''}`.trim().replace(/^,\s*/, '');
-        return `<div class="ag-pac-item" data-i="${i}"
-                     style="padding:10px 14px;cursor:pointer;font-size:13px;font-weight:600;
-                            border-bottom:1px solid var(--border,#E5E2F5);transition:background .1s">
-                  ${escHtml(nombre)}
-                </div>`;
-      }).join('');
+      // Posicionar fixed bajo el input — escapa el overflow:auto del modal
+      const rect = _pacSearch.getBoundingClientRect();
+      _pacDropdown.style.top   = (rect.bottom + 4) + 'px';
+      _pacDropdown.style.left  = rect.left + 'px';
+      _pacDropdown.style.width = rect.width + 'px';
       _pacDropdown.style.display = 'block';
 
       _pacDropdown.querySelectorAll('.ag-pac-item').forEach(item => {
-        item.addEventListener('mousedown', e => e.preventDefault()); // evita blur antes del click
+        item.addEventListener('mousedown', e => e.preventDefault());
         item.addEventListener('click', () => {
           const p      = _pacMatches[parseInt(item.dataset.i)];
           const nombre = `${p.apellido || ''}, ${p.nombre || ''}`.trim().replace(/^,\s*/, '');
@@ -837,8 +845,9 @@
       });
     }
 
-    _pacSearch.addEventListener('input',  _renderDropdown);
-    _pacSearch.addEventListener('focus',  () => { if (_pacSearch.value.trim()) _renderDropdown(); });
+    // Al tipear: filtrar. Al hacer foco: mostrar todos (igual que un <select>)
+    _pacSearch.addEventListener('input',  () => _renderDropdown(false));
+    _pacSearch.addEventListener('focus',  () => _renderDropdown(true));
     _pacSearch.addEventListener('blur',   () => setTimeout(() => { _pacDropdown.style.display = 'none'; }, 160));
 
     // ── Swipe horizontal para navegar (mobile) ──────────────
@@ -1426,10 +1435,9 @@
 
     agQ('ag-f-fecha').value    = fecha || fmtDate(_fechaActual);
     agQ('ag-f-hora').value     = hora  || (String(new Date().getHours()).padStart(2,'0') + ':00');
-    agQ('ag-f-paciente-search').value = '';
-    agQ('ag-f-paciente').value        = '';
-    const _dd = agQ('ag-f-paciente-dropdown');
-    if (_dd) _dd.style.display = 'none';
+    const _ps = agQ('ag-f-paciente-search'); if (_ps) _ps.value = '';
+    const _ph = agQ('ag-f-paciente');       if (_ph) _ph.value = '';
+    const _dd = agQ('ag-f-paciente-dropdown'); if (_dd) _dd.style.display = 'none';
     agQ('ag-f-titulo').value   = '';
     agQ('ag-f-notas').value    = '';
     agQ('ag-f-tipo').value     = 'sesion';
