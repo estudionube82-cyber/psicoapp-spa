@@ -1,0 +1,787 @@
+/**
+ * view-dashboard-new.js — PsicoApp · Dashboard v2 (SaaS moderno)
+ * Ruta: dashboard-new
+ * Reutiliza: PsicoRouter.store, sb (Supabase), navigate()
+ * NO toca: view-dashboard.js ni ningún otro archivo existente
+ */
+
+/* ══════════════════════════════════════════
+   ESTILOS — inyectados una sola vez
+   ══════════════════════════════════════════ */
+(function injectDashNewStyles() {
+  if (document.getElementById('view-dashboard-new-styles')) return;
+  const style = document.createElement('style');
+  style.id = 'view-dashboard-new-styles';
+  style.textContent = `
+/* ── BASE ── */
+#view-dashboard-new {
+  min-height: 100vh;
+  background: var(--bg);
+  font-family: var(--font);
+}
+
+/* ── TOPBAR ── */
+#view-dashboard-new .dn-topbar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 20px;
+  background: var(--surface);
+  border-bottom: 1.5px solid var(--border);
+  position: sticky; top: 0; z-index: 50;
+}
+#view-dashboard-new .dn-topbar-logo {
+  font-size: 18px; font-weight: 800; color: var(--text);
+  font-family: var(--font-display, var(--font));
+}
+#view-dashboard-new .dn-topbar-logo span { color: var(--primary, #7C3AED); }
+#view-dashboard-new .dn-topbar-right { display: flex; align-items: center; gap: 10px; }
+#view-dashboard-new .dn-avatar {
+  width: 34px; height: 34px; border-radius: 50%;
+  background: linear-gradient(135deg, #7C3AED, #A78BFA);
+  color: white; font-size: 14px; font-weight: 800;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; flex-shrink: 0;
+}
+#view-dashboard-new .dn-theme-btn {
+  width: 34px; height: 34px; border-radius: 10px;
+  background: var(--surface2, var(--border)); border: none; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; font-size: 16px;
+}
+
+/* ── HERO BANNER ── */
+#view-dashboard-new .dn-hero {
+  margin: 16px 16px 0;
+  background: linear-gradient(135deg, #1E1040 0%, #3B1F8C 50%, #5B2FA8 100%);
+  border-radius: 20px;
+  padding: 24px 20px;
+  position: relative; overflow: hidden;
+}
+#view-dashboard-new .dn-hero::before {
+  content: '';
+  position: absolute; right: -30px; top: -30px;
+  width: 160px; height: 160px; border-radius: 50%;
+  background: rgba(255,255,255,0.06);
+}
+#view-dashboard-new .dn-hero::after {
+  content: '';
+  position: absolute; left: -20px; bottom: -50px;
+  width: 130px; height: 130px; border-radius: 50%;
+  background: rgba(167,139,250,0.10);
+}
+#view-dashboard-new .dn-hero-greeting {
+  font-size: 11px; color: rgba(255,255,255,0.55);
+  text-transform: uppercase; letter-spacing: 1.2px; font-weight: 700;
+  position: relative; z-index: 1;
+}
+#view-dashboard-new .dn-hero-name {
+  font-size: 24px; font-weight: 800; color: white;
+  margin-top: 4px; line-height: 1.15;
+  position: relative; z-index: 1;
+}
+#view-dashboard-new .dn-hero-date {
+  font-size: 12px; color: rgba(255,255,255,0.55);
+  margin-top: 4px; position: relative; z-index: 1;
+}
+#view-dashboard-new .dn-hero-amount-row {
+  margin-top: 20px; display: flex; align-items: flex-end; gap: 12px;
+  position: relative; z-index: 1;
+}
+#view-dashboard-new .dn-hero-amount {
+  font-size: 38px; font-weight: 900; color: white; line-height: 1;
+}
+#view-dashboard-new .dn-hero-amount-label {
+  font-size: 12px; color: rgba(255,255,255,0.55); margin-bottom: 5px;
+}
+#view-dashboard-new .dn-hero-pill {
+  margin-left: auto; margin-bottom: 4px;
+  background: rgba(255,255,255,0.15); border: none; border-radius: 20px;
+  padding: 6px 14px; font-size: 12px; font-weight: 700; color: white;
+  cursor: pointer; font-family: var(--font);
+  transition: background .15s;
+}
+#view-dashboard-new .dn-hero-pill:hover { background: rgba(255,255,255,0.25); }
+
+/* ── KPI GRID ── */
+#view-dashboard-new .dn-kpi-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  padding: 14px 16px 0;
+}
+@media (min-width: 640px) {
+  #view-dashboard-new .dn-kpi-grid { grid-template-columns: repeat(4, 1fr); }
+}
+#view-dashboard-new .dn-kpi {
+  background: var(--surface);
+  border-radius: 16px;
+  padding: 16px 14px;
+  box-shadow: var(--shadow-sm);
+  cursor: pointer;
+  transition: transform .12s, box-shadow .12s;
+  border: 1.5px solid transparent;
+}
+#view-dashboard-new .dn-kpi:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+  border-color: rgba(124,58,237,0.15);
+}
+#view-dashboard-new .dn-kpi-icon-wrap {
+  width: 36px; height: 36px; border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 17px; margin-bottom: 12px;
+}
+#view-dashboard-new .dn-kpi-icon-wrap.violet { background: rgba(124,58,237,0.12); }
+#view-dashboard-new .dn-kpi-icon-wrap.amber  { background: rgba(251,191,36,0.12); }
+#view-dashboard-new .dn-kpi-icon-wrap.teal   { background: rgba(20,184,166,0.12); }
+#view-dashboard-new .dn-kpi-icon-wrap.rose   { background: rgba(244,63,94,0.10); }
+#view-dashboard-new .dn-kpi-value {
+  font-size: 22px; font-weight: 800; color: var(--text); line-height: 1;
+}
+#view-dashboard-new .dn-kpi-label {
+  font-size: 11px; font-weight: 600; color: var(--text-muted); margin-top: 4px;
+}
+#view-dashboard-new .dn-kpi-tag {
+  display: inline-block; margin-top: 6px;
+  font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 20px;
+  background: rgba(124,58,237,0.10); color: var(--primary, #7C3AED);
+}
+#view-dashboard-new .dn-kpi-tag.muted {
+  background: var(--surface2, var(--border)); color: var(--text-muted);
+}
+
+/* ── ALERTAS ── */
+#view-dashboard-new .dn-alerts { padding: 14px 16px 0; display: flex; flex-direction: column; gap: 8px; }
+#view-dashboard-new .dn-alert {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 14px; border-radius: 14px;
+  cursor: pointer; transition: transform .12s;
+}
+#view-dashboard-new .dn-alert:hover { transform: translateX(2px); }
+#view-dashboard-new .dn-alert.warn {
+  background: rgba(251,191,36,0.08); border: 1.5px solid rgba(251,191,36,0.25);
+}
+#view-dashboard-new .dn-alert.ok {
+  background: rgba(124,58,237,0.08); border: 1.5px solid rgba(124,58,237,0.2);
+}
+#view-dashboard-new .dn-alert-icon { font-size: 20px; flex-shrink: 0; }
+#view-dashboard-new .dn-alert-body { flex: 1; }
+#view-dashboard-new .dn-alert-title { font-size: 13px; font-weight: 700; color: var(--text); }
+#view-dashboard-new .dn-alert-sub   { font-size: 11px; color: var(--text-muted); margin-top: 1px; }
+#view-dashboard-new .dn-alert-arrow { font-size: 18px; color: var(--text-muted); }
+
+/* ── SECCIÓN ── */
+#view-dashboard-new .dn-section { padding: 16px 16px 0; }
+#view-dashboard-new .dn-section-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 10px;
+}
+#view-dashboard-new .dn-section-title {
+  font-size: 11px; font-weight: 800; color: var(--text-muted);
+  text-transform: uppercase; letter-spacing: 1px;
+}
+#view-dashboard-new .dn-section-link {
+  font-size: 12px; font-weight: 600; color: var(--primary, #7C3AED); cursor: pointer;
+}
+
+/* ── QUICK ACCESS ── */
+#view-dashboard-new .dn-quick {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px;
+}
+#view-dashboard-new .dn-qa {
+  background: var(--surface); border-radius: 14px;
+  padding: 16px 8px; display: flex; flex-direction: column;
+  align-items: center; gap: 7px; border: 1.5px solid var(--border);
+  cursor: pointer; transition: transform .12s, border-color .12s;
+  font-family: var(--font); font-size: inherit;
+}
+#view-dashboard-new .dn-qa:hover { transform: translateY(-2px); border-color: rgba(124,58,237,0.3); }
+#view-dashboard-new .dn-qa-icon  { font-size: 22px; }
+#view-dashboard-new .dn-qa-label { font-size: 10px; font-weight: 700; color: var(--text-muted); text-align: center; }
+
+/* ── TURNOS ── */
+#view-dashboard-new .dn-turnos { display: flex; flex-direction: column; gap: 8px; }
+#view-dashboard-new .dn-turno {
+  background: var(--surface); border-radius: 14px;
+  padding: 13px 14px; display: flex; align-items: center; gap: 12px;
+  box-shadow: var(--shadow-sm); border-left: 3px solid var(--primary, #7C3AED);
+  cursor: pointer; transition: transform .12s;
+}
+#view-dashboard-new .dn-turno:hover { transform: translateX(2px); }
+#view-dashboard-new .dn-turno.past  { opacity: .5; }
+#view-dashboard-new .dn-turno.now   { box-shadow: 0 0 0 2px rgba(124,58,237,.2); }
+#view-dashboard-new .dn-turno.evento { border-left-color: #F97316; background: rgba(249,115,22,0.08); }
+#view-dashboard-new .dn-t-hora  { font-size: 15px; font-weight: 800; color: var(--text); min-width: 46px; }
+#view-dashboard-new .dn-t-hora.now { color: var(--primary, #7C3AED); }
+#view-dashboard-new .dn-t-body  { flex: 1; }
+#view-dashboard-new .dn-t-name  { font-size: 14px; font-weight: 700; color: var(--text); }
+#view-dashboard-new .dn-t-meta  { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+#view-dashboard-new .dn-t-chip  {
+  font-size: 10px; font-weight: 700; padding: 3px 9px; border-radius: 20px;
+}
+#view-dashboard-new .dn-t-chip.done { background: var(--surface2, var(--border)); color: var(--text-muted); }
+#view-dashboard-new .dn-t-chip.ok   { background: rgba(124,58,237,.12); color: #7C3AED; }
+#view-dashboard-new .dn-t-chip.wait { background: rgba(251,191,36,.15); color: #D97706; }
+
+/* ── NOW LINE ── */
+#view-dashboard-new .dn-now-line {
+  display: flex; align-items: center; gap: 8px; margin: 4px 0;
+}
+#view-dashboard-new .dn-now-dot  { width: 9px; height: 9px; border-radius: 50%; background: var(--primary, #7C3AED); flex-shrink: 0; }
+#view-dashboard-new .dn-now-lbl  { font-size: 10px; font-weight: 800; color: var(--primary, #7C3AED); white-space: nowrap; letter-spacing: .5px; }
+#view-dashboard-new .dn-now-line-bar { flex: 1; height: 1px; background: var(--primary, #7C3AED); opacity: .3; }
+
+/* ── NOTAS ── */
+#view-dashboard-new .dn-notas-wrap {
+  background: var(--surface); border-radius: 16px;
+  padding: 14px 16px; box-shadow: var(--shadow-sm);
+}
+#view-dashboard-new .dn-nota-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 0; border-bottom: 1px solid var(--border);
+}
+#view-dashboard-new .dn-nota-item:last-child { border-bottom: none; }
+#view-dashboard-new .dn-nota-check {
+  width: 20px; height: 20px; border-radius: 6px;
+  border: 2px solid var(--border); background: transparent;
+  cursor: pointer; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; color: white; font-weight: 800; transition: all .15s;
+}
+#view-dashboard-new .dn-nota-check.done { background: var(--primary, #7C3AED); border-color: var(--primary, #7C3AED); }
+#view-dashboard-new .dn-nota-texto {
+  flex: 1; font-size: 13px; font-weight: 600; color: var(--text); line-height: 1.4;
+}
+#view-dashboard-new .dn-nota-texto.done { text-decoration: line-through; color: var(--text-muted); }
+#view-dashboard-new .dn-nota-del {
+  border: none; background: none; cursor: pointer;
+  color: var(--text-muted); font-size: 17px; padding: 2px 4px; opacity: .6;
+  transition: opacity .15s;
+}
+#view-dashboard-new .dn-nota-del:hover { opacity: 1; color: var(--danger, #E53E3E); }
+#view-dashboard-new .dn-nota-input-row {
+  display: flex; gap: 8px; margin-top: 10px;
+}
+#view-dashboard-new .dn-nota-input {
+  flex: 1; padding: 9px 12px; border-radius: 10px;
+  border: 1.5px solid var(--border); font-size: 13px;
+  background: var(--bg); color: var(--text); font-family: var(--font);
+  outline: none; transition: border .15s;
+}
+#view-dashboard-new .dn-nota-input:focus { border-color: var(--primary, #7C3AED); }
+#view-dashboard-new .dn-nota-add-btn {
+  padding: 9px 16px; border-radius: 10px; background: var(--primary, #7C3AED);
+  color: white; border: none; font-size: 13px; font-weight: 800;
+  font-family: var(--font); cursor: pointer; transition: opacity .15s;
+}
+#view-dashboard-new .dn-nota-add-btn:hover { opacity: .88; }
+
+/* ── SKELETON ── */
+#view-dashboard-new .dn-skel {
+  background: linear-gradient(90deg, var(--border) 25%, var(--surface2, var(--border)) 50%, var(--border) 75%);
+  background-size: 200% 100%; animation: dnSkel 1.4s infinite; border-radius: 8px;
+}
+@keyframes dnSkel { 0% { background-position: 200%; } 100% { background-position: -200%; } }
+
+/* ── EMPTY STATE ── */
+#view-dashboard-new .dn-empty {
+  padding: 28px; text-align: center; color: var(--text-muted); font-size: 13px; font-weight: 600;
+}
+
+/* ── LINK VOLVER ── */
+#view-dashboard-new .dn-back-bar {
+  display: flex; align-items: center; justify-content: center;
+  padding: 10px 16px 0;
+}
+#view-dashboard-new .dn-back-link {
+  font-size: 12px; color: var(--text-muted); font-weight: 600;
+  cursor: pointer; text-decoration: underline; background: none; border: none;
+  font-family: var(--font);
+}
+
+#view-dashboard-new .dn-pad { height: 40px; }
+  `;
+  document.head.appendChild(style);
+})();
+
+
+/* ══════════════════════════════════════════
+   ESTADO INTERNO
+   ══════════════════════════════════════════ */
+const _dn = { refreshTimer: null };
+const _dnFmt = v => '$' + Number(v || 0).toLocaleString('es-AR');
+const _dnEsc = s => String(s)
+  .replace(/&/g, '&amp;')
+  .replace(/</g, '&lt;')
+  .replace(/>/g, '&gt;');
+
+
+/* ══════════════════════════════════════════
+   RENDER HTML — una sola vez en init()
+   ══════════════════════════════════════════ */
+function _dnRenderHTML(container) {
+  const hoy      = new Date();
+  const fechaStr = hoy.toLocaleDateString('es-AR', { weekday:'long', day:'numeric', month:'long' });
+  const fechaCap = fechaStr.charAt(0).toUpperCase() + fechaStr.slice(1);
+  const tema     = document.documentElement.getAttribute('data-theme') || 'light';
+
+  container.innerHTML = `
+<div id="dn-root">
+
+  <!-- TOPBAR -->
+  <div class="dn-topbar">
+    <div class="dn-topbar-logo">Psico<span>App</span></div>
+    <div class="dn-topbar-right">
+      <button class="dn-theme-btn" onclick="toggleTheme()" title="Cambiar tema">
+        <span id="dn-toggle-thumb">${tema === 'dark' ? '🌙' : '☀️'}</span>
+      </button>
+      <div class="dn-avatar" id="dn-avatar" title="Perfil">?</div>
+    </div>
+  </div>
+
+  <!-- HERO BANNER -->
+  <div class="dn-hero" onclick="navigate('pagos')" style="cursor:pointer">
+    <div class="dn-hero-greeting">Bienvenido/a</div>
+    <div class="dn-hero-name" id="dn-hero-name">…</div>
+    <div class="dn-hero-date">${fechaCap}</div>
+    <div class="dn-hero-amount-row">
+      <div>
+        <div class="dn-hero-amount-label">💰 Cobrado este mes</div>
+        <div class="dn-hero-amount" id="dn-hero-amount">
+          <span class="dn-skel" style="display:inline-block;width:130px;height:36px;border-radius:10px"></span>
+        </div>
+        <div style="font-size:12px;color:rgba(255,255,255,0.5);margin-top:5px" id="dn-hero-sub"> </div>
+      </div>
+      <button class="dn-hero-pill" onclick="event.stopPropagation();navigate('pagos')">Ver pagos →</button>
+    </div>
+  </div>
+
+  <!-- KPIs -->
+  <div class="dn-kpi-grid" id="dn-kpi-grid">
+    ${['Cobrado','Por cobrar','Pacientes','Turnos hoy'].map(l => `
+      <div class="dn-kpi">
+        <div class="dn-skel" style="height:20px;width:80%;margin-bottom:8px;"></div>
+        <div class="dn-kpi-label">${l}</div>
+      </div>`).join('')}
+  </div>
+
+  <!-- ALERTAS -->
+  <div class="dn-alerts" id="dn-alerts"></div>
+
+  <!-- ACCESOS RÁPIDOS -->
+  <div class="dn-section" style="margin-top:6px">
+    <div class="dn-section-header">
+      <span class="dn-section-title">Accesos rápidos</span>
+    </div>
+    <div class="dn-quick">
+      <button class="dn-qa" onclick="navigate('agenda')">
+        <div class="dn-qa-icon">📅</div><div class="dn-qa-label">Agenda</div>
+      </button>
+      <button class="dn-qa" onclick="navigate('pacientes')">
+        <div class="dn-qa-icon">👥</div><div class="dn-qa-label">Pacientes</div>
+      </button>
+      <button class="dn-qa" onclick="navigate('pagos')">
+        <div class="dn-qa-icon">💰</div><div class="dn-qa-label">Pagos</div>
+      </button>
+      <button class="dn-qa" onclick="navigate('whatsapp')">
+        <div class="dn-qa-icon">💬</div><div class="dn-qa-label">WhatsApp</div>
+      </button>
+    </div>
+  </div>
+
+  <!-- TURNOS HOY -->
+  <div class="dn-section" style="margin-top:18px">
+    <div class="dn-section-header">
+      <span class="dn-section-title">Turnos de hoy</span>
+      <span class="dn-section-link" onclick="navigate('agenda')">Ver agenda →</span>
+    </div>
+    <div class="dn-turnos" id="dn-turnos-list">
+      <div class="dn-empty">⏳ Cargando…</div>
+    </div>
+  </div>
+
+  <!-- NOTAS DEL DÍA -->
+  <div class="dn-section" style="margin-top:18px">
+    <div class="dn-section-header">
+      <span class="dn-section-title">📝 Notas del día</span>
+    </div>
+    <div class="dn-notas-wrap">
+      <div id="dn-notas-list"></div>
+      <div class="dn-nota-input-row">
+        <input id="dn-nota-input" type="text" class="dn-nota-input"
+               placeholder="Nueva nota para hoy…"
+               onkeydown="if(event.key==='Enter') window._dnNotaAgregar()">
+        <button class="dn-nota-add-btn" onclick="window._dnNotaAgregar()">+ Agregar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- LINK AL DASHBOARD ORIGINAL -->
+  <div class="dn-back-bar">
+    <button class="dn-back-link" onclick="navigate('dashboard')">← Ir al dashboard anterior</button>
+  </div>
+
+  <div class="dn-pad"></div>
+</div>
+  `;
+}
+
+
+/* ══════════════════════════════════════════
+   CARGA DE DATOS — misma lógica que dashboard original
+   ══════════════════════════════════════════ */
+async function _dnCargarDatos() {
+  try {
+    const uid = await PsicoRouter.store.ensureUserId();
+    if (!uid) return;
+
+    const hoy          = new Date();
+    const fechaHoy     = `${hoy.getFullYear()}-${String(hoy.getMonth()+1).padStart(2,'0')}-${String(hoy.getDate()).padStart(2,'0')}`;
+    const primerDiaMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1).toISOString().split('T')[0];
+    const ultimoDiaMes = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0).toISOString().split('T')[0];
+
+    const [resPagos, resTurnosHoy, resTurnosMes, resPacientes] = await Promise.all([
+      sb.from('pagos')
+        .select('id,paciente_id,monto,fecha,metodo')
+        .eq('user_id', uid)
+        .gte('fecha', primerDiaMes)
+        .lte('fecha', ultimoDiaMes),
+
+      sb.from('turnos')
+        .select('id,fecha,hora,duracion,estado,tipo,notas,paciente_id,pacientes(nombre,apellido)')
+        .eq('user_id', uid)
+        .eq('fecha', fechaHoy)
+        .order('hora', { ascending: true }),
+
+      sb.from('turnos')
+        .select('id,estado')
+        .eq('user_id', uid)
+        .gte('fecha', primerDiaMes)
+        .lte('fecha', ultimoDiaMes),
+
+      sb.from('pacientes')
+        .select('id')
+        .eq('user_id', uid),
+    ]);
+
+    const pagos        = resPagos.data || [];
+    const turnos       = resTurnosHoy.data || [];
+    const pacUnicos    = resPacientes.data?.length || 0;
+
+    const totalCobrado    = pagos.filter(p => p.metodo !== 'pendiente').reduce((s, p) => s + (Number(p.monto) || 0), 0);
+    const cantCobros      = pagos.filter(p => p.metodo !== 'pendiente').length;
+    const totalPendiente  = pagos.filter(p => p.metodo === 'pendiente').reduce((s, p) => s + (Number(p.monto) || 0), 0);
+    const pagosPendientes = pagos.filter(p => p.metodo === 'pendiente').length;
+    const turnosHoyCant   = turnos.length;
+
+    const turnosMesValidos = (resTurnosMes.data || []).filter(t => (t.estado || '').toLowerCase() !== 'cancelado');
+    const sesionSinCobro   = turnosMesValidos.filter(t => {
+      const est = (t.estado || '').toLowerCase();
+      return est === 'realizado' || est === 'completado';
+    }).length;
+
+    _dnRenderHero(totalCobrado, cantCobros, pacUnicos);
+    _dnRenderKPIs(totalCobrado, totalPendiente, pacUnicos, turnosHoyCant);
+    _dnRenderAlertas(sesionSinCobro, pacUnicos, pagos, pagosPendientes);
+    _dnRenderTurnos(turnos, hoy);
+    await _dnRenderNombre();
+    await _dnRenderNotas();
+
+  } catch(e) {
+    console.error('[DashboardNew]', e.message);
+  }
+}
+
+
+/* ══════════════════════════════════════════
+   RENDERS
+   ══════════════════════════════════════════ */
+function _dnRenderHero(total, cant, pacUnicos) {
+  const mes      = new Date().toLocaleString('es-AR', { month: 'long' });
+  const amountEl = document.getElementById('dn-hero-amount');
+  const subEl    = document.getElementById('dn-hero-sub');
+  if (amountEl) amountEl.textContent = _dnFmt(total);
+  if (subEl)    subEl.textContent    = `${cant} cobro${cant !== 1 ? 's' : ''} · ${pacUnicos} paciente${pacUnicos !== 1 ? 's' : ''} · ${mes}`;
+}
+
+function _dnRenderKPIs(cobrado, pendiente, pacUnicos, turnosHoy) {
+  const el = document.getElementById('dn-kpi-grid');
+  if (!el) return;
+  el.innerHTML = `
+    <div class="dn-kpi" onclick="navigate('pagos')">
+      <div class="dn-kpi-icon-wrap violet">💰</div>
+      <div class="dn-kpi-value">${_dnFmt(cobrado)}</div>
+      <div class="dn-kpi-label">Cobrado</div>
+      <div class="dn-kpi-tag">Este mes</div>
+    </div>
+    <div class="dn-kpi" onclick="window._dnIrPendientes()">
+      <div class="dn-kpi-icon-wrap amber">⏳</div>
+      <div class="dn-kpi-value">${_dnFmt(pendiente)}</div>
+      <div class="dn-kpi-label">Por cobrar</div>
+      <div class="dn-kpi-tag muted">Pendiente</div>
+    </div>
+    <div class="dn-kpi" onclick="navigate('pacientes')">
+      <div class="dn-kpi-icon-wrap teal">👥</div>
+      <div class="dn-kpi-value">${pacUnicos}</div>
+      <div class="dn-kpi-label">Pacientes activos</div>
+      <div class="dn-kpi-tag muted">Total</div>
+    </div>
+    <div class="dn-kpi" onclick="navigate('agenda')">
+      <div class="dn-kpi-icon-wrap rose">📅</div>
+      <div class="dn-kpi-value">${turnosHoy}</div>
+      <div class="dn-kpi-label">Turnos de hoy</div>
+      <div class="dn-kpi-tag muted">Hoy</div>
+    </div>`;
+}
+
+function _dnRenderAlertas(sesionSinCobro, pacUnicos, pagos, pagosPendientes) {
+  const el = document.getElementById('dn-alerts');
+  if (!el) return;
+  const items = [];
+
+  if (pagosPendientes > 0) {
+    items.push(`
+      <div class="dn-alert warn" onclick="window._dnIrPendientes()">
+        <div class="dn-alert-icon">⏳</div>
+        <div class="dn-alert-body">
+          <div class="dn-alert-title">${pagosPendientes} pago${pagosPendientes > 1 ? 's' : ''} pendiente${pagosPendientes > 1 ? 's' : ''} de cobro</div>
+          <div class="dn-alert-sub">Registrá el cobro en Pagos →</div>
+        </div>
+        <div class="dn-alert-arrow">›</div>
+      </div>`);
+  }
+
+  if (sesionSinCobro > 0) {
+    items.push(`
+      <div class="dn-alert warn" onclick="window._dnIrPendientes()">
+        <div class="dn-alert-icon">⚠️</div>
+        <div class="dn-alert-body">
+          <div class="dn-alert-title">${sesionSinCobro} sesión${sesionSinCobro > 1 ? 'es realizadas' : ' realizada'} sin cobro</div>
+          <div class="dn-alert-sub">Registrá el pago en Pagos →</div>
+        </div>
+        <div class="dn-alert-arrow">›</div>
+      </div>`);
+  }
+
+  if (pagos.length === 0) {
+    items.push(`
+      <div class="dn-alert ok" onclick="navigate('pagos')">
+        <div class="dn-alert-icon">💡</div>
+        <div class="dn-alert-body">
+          <div class="dn-alert-title">Registrá tu primer cobro del mes</div>
+          <div class="dn-alert-sub">Llevá el control de tus ingresos →</div>
+        </div>
+        <div class="dn-alert-arrow">›</div>
+      </div>`);
+  } else if (pacUnicos > 0) {
+    items.push(`
+      <div class="dn-alert ok" onclick="navigate('pagos')">
+        <div class="dn-alert-icon">🎉</div>
+        <div class="dn-alert-body">
+          <div class="dn-alert-title">${pacUnicos} paciente${pacUnicos > 1 ? 's pagaron' : ' pagó'} este mes</div>
+          <div class="dn-alert-sub">Ver detalle de cobros →</div>
+        </div>
+        <div class="dn-alert-arrow">›</div>
+      </div>`);
+  }
+
+  el.innerHTML = items.join('');
+}
+
+function _dnRenderTurnos(turnos, hoy) {
+  const el = document.getElementById('dn-turnos-list');
+  if (!el) return;
+
+  if (!turnos.length) {
+    el.innerHTML = `<div class="dn-empty">📭 Sin turnos para hoy</div>`;
+    return;
+  }
+
+  const ahoraMs   = hoy.getTime();
+  const aFmt      = hoy.toLocaleTimeString('es-AR', { hour:'2-digit', minute:'2-digit' });
+  let nowInserted = false;
+  let html        = '';
+
+  turnos.forEach(t => {
+    const dt       = new Date(t.fecha + 'T' + t.hora);
+    const horaFmt  = dt.toLocaleTimeString('es-AR', { hour:'2-digit', minute:'2-digit' });
+    const duracion = t.duracion ? `${t.duracion} min` : '50 min';
+    const pac      = t.pacientes;
+    const tipo     = (t.tipo || '').toLowerCase();
+    const esEvento = tipo === 'evento' || !t.paciente_id;
+    const nombre   = esEvento
+      ? (t.notas || 'Evento')
+      : (pac && (pac.nombre || pac.apellido)
+          ? `${pac.nombre || ''} ${pac.apellido || ''}`.trim()
+          : 'Paciente');
+    const meta     = esEvento ? `Evento · ${duracion}` : `Sesión · ${duracion}`;
+    const esPasado = dt.getTime() < ahoraMs - 30 * 60 * 1000;
+    const esAhora  = !esPasado && dt.getTime() <= ahoraMs + 60 * 60 * 1000;
+    const est      = (t.estado || '').toLowerCase();
+
+    if (!nowInserted && !esPasado) {
+      html += `<div class="dn-now-line">
+        <div class="dn-now-dot"></div>
+        <div class="dn-now-lbl">AHORA · ${aFmt}</div>
+        <div class="dn-now-line-bar"></div>
+      </div>`;
+      nowInserted = true;
+    }
+
+    let chip = '';
+    if      (est === 'realizado' || est === 'completado') chip = `<div class="dn-t-chip done">Realizada</div>`;
+    else if (est === 'confirmado')                        chip = `<div class="dn-t-chip ok">✓ Confirmó</div>`;
+    else if (est === 'cancelado')                         chip = `<div class="dn-t-chip done" style="color:var(--danger,#E53E3E)">Cancelado</div>`;
+    else                                                  chip = `<div class="dn-t-chip wait">⏳ Pendiente</div>`;
+
+    html += `
+      <div class="dn-turno${esPasado ? ' past' : ''}${esAhora ? ' now' : ''}${esEvento ? ' evento' : ''}" onclick="navigate('agenda')">
+        <div class="dn-t-hora${esAhora ? ' now' : ''}">${horaFmt}</div>
+        <div class="dn-t-body">
+          <div class="dn-t-name">${esEvento ? '🟠' : '🟢'} ${_dnEsc(nombre)}</div>
+          <div class="dn-t-meta">${meta}</div>
+        </div>
+        ${chip}
+      </div>`;
+  });
+
+  if (!nowInserted) {
+    html += `<div class="dn-now-line">
+      <div class="dn-now-dot"></div>
+      <div class="dn-now-lbl">AHORA · ${aFmt}</div>
+      <div class="dn-now-line-bar"></div>
+    </div>`;
+  }
+
+  el.innerHTML = html;
+}
+
+async function _dnRenderNombre() {
+  const perfil = await PsicoRouter.store.ensurePerfil().catch(() => ({}));
+  const nombre = perfil.nombre_completo || perfil.nombre || 'Psicólogo/a';
+
+  const nameEl = document.getElementById('dn-hero-name');
+  if (nameEl) nameEl.textContent = nombre;
+
+  /* Iniciales en avatar */
+  const avatarEl = document.getElementById('dn-avatar');
+  if (avatarEl) {
+    const partes   = nombre.split(' ').filter(Boolean);
+    const iniciales = partes.length >= 2
+      ? partes[0][0] + partes[1][0]
+      : nombre.slice(0, 2);
+    avatarEl.textContent = iniciales.toUpperCase();
+  }
+}
+
+
+/* ══════════════════════════════════════════
+   NOTAS DEL DÍA
+   Usa la MISMA clave localStorage que el dashboard original
+   (psico_notas_UID_FECHA) → las notas son compartidas entre vistas
+   ══════════════════════════════════════════ */
+function _dnNotasFechaHoy() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+function _dnNotasKey(uid)  { return `psico_notas_${uid}_${_dnNotasFechaHoy()}`; }
+function _dnNotasLoad(uid) {
+  try { return JSON.parse(localStorage.getItem(_dnNotasKey(uid)) || '[]'); } catch { return []; }
+}
+function _dnNotasSave(uid, notas) {
+  localStorage.setItem(_dnNotasKey(uid), JSON.stringify(notas));
+}
+
+async function _dnRenderNotas() {
+  const uid = await PsicoRouter.store.ensureUserId();
+  if (!uid) return;
+  const el = document.getElementById('dn-notas-list');
+  if (!el) return;
+  el.dataset.uid = uid;
+
+  const notas = _dnNotasLoad(uid);
+  if (!notas.length) {
+    el.innerHTML = '<div style="color:var(--text-muted);font-size:12px;font-weight:600;padding:4px 0 6px">Sin notas para hoy. ¡Agregá una!</div>';
+    return;
+  }
+  el.innerHTML = notas.map((n, i) => `
+    <div class="dn-nota-item">
+      <button class="dn-nota-check${n.hecha ? ' done' : ''}" onclick="window._dnNotaToggle(${i})">
+        ${n.hecha ? '✓' : ''}
+      </button>
+      <span class="dn-nota-texto${n.hecha ? ' done' : ''}">${_dnEsc(n.texto)}</span>
+      <button class="dn-nota-del" onclick="window._dnNotaEliminar(${i})">×</button>
+    </div>`).join('');
+}
+
+window._dnNotaToggle = function(i) {
+  const uid = document.getElementById('dn-notas-list')?.dataset.uid;
+  if (!uid) return;
+  const notas = _dnNotasLoad(uid);
+  if (notas[i] !== undefined) {
+    notas[i].hecha = !notas[i].hecha;
+    _dnNotasSave(uid, notas);
+    _dnRenderNotas();
+  }
+};
+
+window._dnNotaEliminar = function(i) {
+  const uid = document.getElementById('dn-notas-list')?.dataset.uid;
+  if (!uid) return;
+  const notas = _dnNotasLoad(uid);
+  notas.splice(i, 1);
+  _dnNotasSave(uid, notas);
+  _dnRenderNotas();
+};
+
+window._dnNotaAgregar = function() {
+  const input = document.getElementById('dn-nota-input');
+  const uid   = document.getElementById('dn-notas-list')?.dataset.uid;
+  if (!uid || !input) return;
+  const texto = input.value.trim();
+  if (!texto) { input.focus(); return; }
+  const notas = _dnNotasLoad(uid);
+  notas.push({ texto, hecha: false });
+  _dnNotasSave(uid, notas);
+  input.value = '';
+  _dnRenderNotas();
+};
+
+window._dnIrPendientes = function() {
+  localStorage.setItem('pv_filtro_default', 'pendiente');
+  navigate('pagos');
+};
+
+
+/* ══════════════════════════════════════════
+   REGISTRO EN EL ROUTER
+   ══════════════════════════════════════════ */
+PsicoRouter.register('dashboard-new', {
+
+  init(container) {
+    _dnRenderHTML(container);
+  },
+
+  async onEnter() {
+    await _dnCargarDatos();
+    clearInterval(_dn.refreshTimer);
+    _dn.refreshTimer = setInterval(_dnCargarDatos, 5 * 60 * 1000);
+  },
+
+  onLeave() {
+    clearInterval(_dn.refreshTimer);
+    _dn.refreshTimer = null;
+  },
+});
+
+/* Reaccionar a cambios del store (misma lógica que dashboard original) */
+const _DN_RELEVANT = new Set(['pacientes', 'perfil', 'turnos', 'pagos']);
+let _dnRefreshDebounceTimer = null;
+function _dnStoreHandler(e) {
+  const type = e?.detail?.type;
+  if (type && !_DN_RELEVANT.has(type)) return;
+  clearTimeout(_dnRefreshDebounceTimer);
+  _dnRefreshDebounceTimer = setTimeout(() => {
+    if (document.getElementById('dn-kpi-grid')) _dnCargarDatos();
+  }, 150);
+}
+window.addEventListener('storeUpdated',          _dnStoreHandler);
+window.addEventListener('pacientesActualizados', _dnStoreHandler);

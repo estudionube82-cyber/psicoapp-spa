@@ -19,7 +19,7 @@ const PsicoRouter = (() => {
   let   _current    = null;
 
   const VALID_VIEWS = [
-    'dashboard','agenda','pacientes','historia',
+    'dashboard','dashboard-new','agenda','pacientes','historia',
     'whatsapp','pagos','informes','pericias','perfil','cuenta'
   ];
 
