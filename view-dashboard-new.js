@@ -755,7 +755,7 @@ async function _dnRenderNombre(turnosHoy) {
   const avatarEl = document.getElementById('dn-ph-avatar');
   if (avatarEl) {
     if (foto) {
-      avatarEl.innerHTML = `<img src="${foto}" alt="${nombre}">`;
+      avatarEl.innerHTML = `<img src="${foto}" alt="${nombre}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`;
     } else {
       const partes    = nombre.split(' ').filter(Boolean);
       const iniciales = partes.length >= 2
@@ -866,16 +866,31 @@ PsicoRouter.register('dashboard', {
   },
 });
 
-/* Reaccionar a cambios del store (misma lógica que dashboard original) */
+/* Reaccionar a cambios del store */
 const _DN_RELEVANT = new Set(['pacientes', 'perfil', 'turnos', 'pagos']);
 let _dnRefreshDebounceTimer = null;
 function _dnStoreHandler(e) {
   const type = e?.detail?.type;
   if (type && !_DN_RELEVANT.has(type)) return;
+
+  /* Actualización rápida de avatar cuando cambia el perfil —
+     no esperar a _dnCargarDatos completo */
+  if (type === 'perfil') {
+    const p       = PsicoRouter.store.perfil;
+    const foto    = p?.foto_url || p?.foto || null;
+    const nombre  = p?.nombre_completo || p?.nombre || '';
+    const avatarEl = document.getElementById('dn-ph-avatar');
+    if (avatarEl && foto) {
+      avatarEl.innerHTML = `<img src="${foto}" alt="${nombre}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`;
+    }
+    const nameEl = document.getElementById('dn-ph-name');
+    if (nameEl && nombre) nameEl.textContent = nombre;
+  }
+
   clearTimeout(_dnRefreshDebounceTimer);
   _dnRefreshDebounceTimer = setTimeout(() => {
     if (document.getElementById('dn-kpi-grid')) _dnCargarDatos();
-  }, 150);
+  }, 300);
 }
 window.addEventListener('storeUpdated',          _dnStoreHandler);
 window.addEventListener('pacientesActualizados', _dnStoreHandler);
