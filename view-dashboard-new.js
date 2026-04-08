@@ -477,11 +477,6 @@ function _dnRenderHTML(container) {
     </div>
   </div>
 
-  <!-- LINK AL DASHBOARD ORIGINAL -->
-  <div class="dn-back-bar">
-    <button class="dn-back-link" onclick="navigate('dashboard')">← Ir al dashboard anterior</button>
-  </div>
-
   <div class="dn-pad"></div>
 </div>
   `;
@@ -852,7 +847,7 @@ window._dnIrPendientes = function() {
 /* ══════════════════════════════════════════
    REGISTRO EN EL ROUTER
    ══════════════════════════════════════════ */
-PsicoRouter.register('dashboard-new', {
+PsicoRouter.register('dashboard', {
 
   init(container) {
     _dnRenderHTML(container);

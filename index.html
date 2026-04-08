@@ -218,9 +218,6 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); min-
       <button class="sb-item" onclick="navigate('dashboard')" data-view="dashboard">
         <span class="sb-icon">🏠</span> Inicio
       </button>
-      <button class="sb-item" onclick="navigate('dashboard-new')" data-view="dashboard-new">
-        <span class="sb-icon">✨</span> Inicio v2
-      </button>
       <button class="sb-item" onclick="navigate('agenda')" data-view="agenda">
         <span class="sb-icon">📅</span> Agenda
       </button>
@@ -270,8 +267,8 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); min-
   <!-- ── CONTENEDOR DE VISTAS ── -->
   <main id="view-container">
 
-    <section id="view-dashboard" class="view-section"></section>
-    <section id="view-pacientes" class="view-section"></section>
+    <section id="view-dashboard"     class="view-section"></section>
+    <section id="view-pacientes"     class="view-section"></section>
     <section id="view-agenda"    class="view-section"></section>
     <section id="view-historia"  class="view-section"></section>
     <section id="view-whatsapp"  class="view-section"></section>
@@ -280,7 +277,6 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); min-
     <section id="view-pericias"  class="view-section"></section>
     <section id="view-perfil"    class="view-section"></section>
     <section id="view-cuenta"    class="view-section"></section>
-    <section id="view-dashboard-new" class="view-section"></section>
 
   </main>
 
@@ -290,9 +286,6 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); min-
   <div class="bn-more-sheet" id="bn-more-sheet">
     <div class="bn-more-title">Más opciones</div>
     <div class="bn-more-grid">
-      <button class="bn-more-item" onclick="bnMoreNav('dashboard-new')">
-        <span class="bm-icon">✨</span><span class="bm-label">Inicio v2</span>
-      </button>
       <button class="bn-more-item" onclick="bnMoreNav('historia')">
         <span class="bm-icon">📋</span><span class="bm-label">Historia</span>
       </button>
@@ -347,7 +340,7 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); min-
   if (match) {
     const viewName = match[1].toLowerCase();
     const validViews = [
-      'dashboard','dashboard-new','agenda','pacientes','historia',
+      'dashboard','agenda','pacientes','historia',
       'whatsapp','pagos','informes','pericias','perfil','cuenta'
     ];
     const dest = validViews.includes(viewName) ? viewName : 'dashboard';
@@ -513,7 +506,7 @@ document.addEventListener('DOMContentLoaded', () => {
 <!-- Scripts de vistas -->
 <script src="planService.js"          onerror="console.warn('planService.js no encontrado')"></script>
 <script src="suscripcion-control.js"  onerror="console.warn('suscripcion-control.js no encontrado')"></script>
-<script src="view-dashboard.js"       onerror="console.warn('view-dashboard.js no encontrado')"></script>
+<script src="view-dashboard-new.js"   onerror="console.warn('view-dashboard-new.js no encontrado')"></script>
 <script src="view-pacientes.js"       onerror="console.warn('view-pacientes.js no encontrado')"></script>
 <script src="view-agenda.js"          onerror="console.warn('view-agenda.js no encontrado')"></script>
 <script src="view-historia.js"        onerror="console.warn('view-historia.js no encontrado')"></script>
@@ -523,7 +516,6 @@ document.addEventListener('DOMContentLoaded', () => {
 <script src="view-pericias.js"        onerror="console.warn('view-pericias.js no encontrado')"></script>
 <script src="view-cuenta.js"          onerror="console.warn('view-cuenta.js no encontrado')"></script>
 <script src="view-perfil.js"          onerror="console.warn('view-perfil.js no encontrado')"></script>
-<script src="view-dashboard-new.js"   onerror="console.warn('view-dashboard-new.js no encontrado')"></script>
 
 </body>
 </html>
