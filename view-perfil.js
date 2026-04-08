@@ -310,13 +310,13 @@ const _PerfilView = (() => {
         return;
       }
 
-      // Actualizar cache del store con datos frescos (sin invalidar — ya los tenemos)
-      // Así los listeners del evento reciben store.perfil ya poblado
+      // Preservar foto_url ya guardada en el store (no la pisamos con null)
+      const fotoActual = PsicoRouter.store.perfil?.foto_url || null;
       PsicoRouter.store.setPerfil({ nombre_completo, telefono_profesional, especialidad });
 
-      // Actualizar UI de la propia vista
-      _updateHeader(container, nombre_completo, null);
-      _syncSidebar(nombre_completo, null);
+      // Actualizar UI de la propia vista (pasar foto actual para no perderla)
+      _updateHeader(container, nombre_completo, fotoActual);
+      _syncSidebar(nombre_completo, fotoActual);
 
       // Notificar a todas las vistas — el store ya tiene los datos nuevos
       window.dispatchEvent(new CustomEvent('storeUpdated', { detail: { type: 'perfil' } }));
@@ -448,7 +448,9 @@ const _PerfilView = (() => {
               { id: userId, foto_url: fotoUrl },
               { onConflict: 'id' }
             );
-            PsicoRouter.store.invalidatePerfil();
+            // Actualizar cache con la URL conocida antes de notificar al dashboard
+            PsicoRouter.store.setPerfil({ foto_url: fotoUrl });
+            window.dispatchEvent(new CustomEvent('storeUpdated', { detail: { type: 'perfil' } }));
           }
         } catch (e) {
           console.warn('[Perfil] No se pudo subir foto a Storage:', e.message);

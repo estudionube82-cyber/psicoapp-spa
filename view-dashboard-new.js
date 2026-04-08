@@ -492,9 +492,10 @@ async function _dnCargarDatos() {
     if (!uid) return;
 
     const hoy          = new Date();
-    const fechaHoy     = `${hoy.getFullYear()}-${String(hoy.getMonth()+1).padStart(2,'0')}-${String(hoy.getDate()).padStart(2,'0')}`;
-    const primerDiaMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1).toISOString().split('T')[0];
-    const ultimoDiaMes = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0).toISOString().split('T')[0];
+    const fechaHoy     = hoy.toLocaleDateString('en-CA', { timeZone: 'America/Argentina/Buenos_Aires' });
+    const _y = hoy.getFullYear(), _m = hoy.getMonth();
+    const primerDiaMes = new Date(_y, _m, 1).toLocaleDateString('en-CA', { timeZone: 'America/Argentina/Buenos_Aires' });
+    const ultimoDiaMes = new Date(_y, _m + 1, 0).toLocaleDateString('en-CA', { timeZone: 'America/Argentina/Buenos_Aires' });
 
     const [resPagos, resTurnosHoy, resTurnosMes, resPacientes] = await Promise.all([
       sb.from('pagos')
