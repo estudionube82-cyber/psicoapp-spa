@@ -15,10 +15,10 @@
   style.textContent = `
 /* ── HEADER PACIENTES ── */
 #view-pacientes .pac-header {
-  background: var(--surface);
-  border-bottom: 1px solid var(--border);
+  background: linear-gradient(180deg, rgba(236,72,153,0.07) 0%, rgba(124,58,237,0.04) 100%);
+  border-bottom: 1px solid rgba(124,58,237,0.10);
   position: sticky; top: 0; z-index: 50;
-  box-shadow: var(--shadow-sm);
+  backdrop-filter: blur(8px);
 }
 #view-pacientes .pac-header-top {
   display: flex; align-items: center;
@@ -76,6 +76,7 @@
   background: var(--surface); border-radius: var(--radius);
   padding: 13px 14px; display: flex; align-items: center; gap: 12px;
   box-shadow: var(--shadow-sm); cursor: pointer; transition: all 0.15s;
+  border: 1px solid var(--border);
 }
 #view-pacientes .pac-patient-card:active { transform: scale(0.98); }
 #view-pacientes .pac-patient-avatar {

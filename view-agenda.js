@@ -143,9 +143,10 @@
       #ag-toolbar {
         display: flex; align-items: center; gap: 10px;
         padding: 14px 16px 10px;
-        background: var(--surface, #fff);
-        border-bottom: 1px solid var(--border, #E5E2F5);
+        background: linear-gradient(180deg, rgba(236,72,153,0.07) 0%, rgba(124,58,237,0.04) 100%);
+        border-bottom: 1px solid rgba(124,58,237,0.10);
         position: sticky; top: 0; z-index: 20;
+        backdrop-filter: blur(8px);
       }
       #ag-title { flex: 1; }
       #ag-title .ag-t-main { font-size: 16px; font-weight: 800; }
@@ -155,7 +156,7 @@
         background: var(--bg, #F8F7FF); border: 1px solid var(--border, #E5E2F5);
         font-size: 15px; cursor: pointer; display: flex; align-items: center; justify-content: center;
       }
-      .ag-view-toggle { display: flex; padding: 8px 16px; gap: 0; background: var(--surface, #fff); border-bottom: 1px solid var(--border, #E5E2F5); }
+      .ag-view-toggle { display: flex; padding: 8px 16px; gap: 0; background: linear-gradient(180deg, rgba(124,58,237,0.04) 0%, rgba(124,58,237,0.01) 100%); border-bottom: 1px solid rgba(124,58,237,0.08); }
       .ag-vbtn {
         flex: 1; padding: 7px 4px; font-size: 12px; font-weight: 700;
         font-family: inherit; border: 1.5px solid var(--border, #E5E2F5);

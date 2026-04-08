@@ -1,0 +1,138 @@
+/* ================================================================
+   PsicoApp — UI System
+   ui-system.css
+   Clases utilitarias globales. Complementa psicoapp-shared.css.
+   ================================================================ */
+
+/* ── FONDO APP ─────────────────────────────────────────────── */
+.ui-app-bg {
+  background: var(--bg, #F8F7FF);
+  min-height: 100vh;
+}
+
+/* ── HEADER SUAVE (estilo dashboard) ──────────────────────── */
+.ui-header-soft {
+  background: linear-gradient(180deg,
+    rgba(236, 72, 153, 0.07) 0%,
+    rgba(124, 58, 237, 0.04) 100%
+  );
+  border-bottom: 1px solid rgba(124, 58, 237, 0.10);
+  position: sticky;
+  top: 0;
+  z-index: 50;
+}
+
+/* ── CARD ──────────────────────────────────────────────────── */
+.ui-card {
+  background: var(--surface, #fff);
+  border-radius: 16px;
+  box-shadow: var(--shadow-sm, 0 2px 8px rgba(108,63,197,0.07));
+  border: 1px solid var(--border, #E5E2F5);
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+.ui-card:active {
+  transform: scale(0.985);
+}
+.ui-card-hover:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md, 0 6px 24px rgba(108,63,197,0.12));
+}
+
+/* ── BOTÓN PRIMARIO ────────────────────────────────────────── */
+.ui-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 12px 20px;
+  border: none;
+  border-radius: 12px;
+  background: var(--primary, #5B2FA8);
+  color: #fff;
+  font-family: var(--font, 'Plus Jakarta Sans', sans-serif);
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(91, 47, 168, 0.25);
+  transition: opacity 0.15s, transform 0.12s;
+}
+.ui-btn-primary:hover  { opacity: 0.88; }
+.ui-btn-primary:active { transform: scale(0.96); }
+
+.ui-btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px 16px;
+  border: 1.5px solid var(--border, #E5E2F5);
+  border-radius: 12px;
+  background: var(--bg, #F8F7FF);
+  color: var(--text-muted, #7C6FAE);
+  font-family: var(--font, 'Plus Jakarta Sans', sans-serif);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+}
+.ui-btn-ghost:hover { border-color: var(--primary, #5B2FA8); color: var(--primary, #5B2FA8); }
+
+/* ── BADGES ────────────────────────────────────────────────── */
+.ui-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+}
+.ui-badge-violet  { background: rgba(124,58,237,0.10); color: #7C3AED; }
+.ui-badge-amber   { background: rgba(251,191,36,0.14); color: #D97706; }
+.ui-badge-green   { background: rgba(16,185,129,0.12); color: #059669; }
+.ui-badge-rose    { background: rgba(236,72,153,0.10); color: #DB2777; }
+.ui-badge-muted   { background: var(--surface2, #F3F0FF); color: var(--text-muted, #7C6FAE); }
+.ui-badge-red     { background: rgba(239,68,68,0.10);  color: #DC2626; }
+
+/* ── SECTION TITLE ─────────────────────────────────────────── */
+.ui-section-title {
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--text-muted, #7C6FAE);
+}
+
+/* ── EMPTY STATE ───────────────────────────────────────────── */
+.ui-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 24px;
+  text-align: center;
+  color: var(--text-muted, #7C6FAE);
+  font-size: 13px;
+  font-weight: 600;
+  gap: 8px;
+}
+
+/* ── DIVIDER ───────────────────────────────────────────────── */
+.ui-divider {
+  height: 1px;
+  background: var(--border, #E5E2F5);
+  margin: 0;
+}
+
+/* ── AVATAR ────────────────────────────────────────────────── */
+.ui-avatar {
+  border-radius: 50%;
+  background: linear-gradient(135deg, #5B2FA8, #A78BFA);
+  color: #fff;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  overflow: hidden;
+}

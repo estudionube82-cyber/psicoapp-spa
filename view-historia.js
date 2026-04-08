@@ -21,29 +21,29 @@
 #view-historia .hc-panel { display: none; }
 #view-historia .hc-panel.hc-active { display: block; animation: hcFadeIn .18s ease; }
 @keyframes hcFadeIn { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }
-#view-historia .hc-header { background: linear-gradient(145deg, #2D1B69 0%, #5B2FA8 55%, #7C3AED 100%); padding: 20px 20px 26px; position: relative; overflow: hidden; }
-#view-historia .hc-header::after { content:''; position:absolute; right:-40px; top:-40px; width:180px; height:180px; border-radius:50%; background:rgba(255,255,255,0.05); }
-#view-historia .hc-header-row { display:flex; align-items:center; gap:12px; position:relative; z-index:1; }
-#view-historia .hc-back-btn { width:34px; height:34px; border-radius:10px; background:rgba(255,255,255,0.15); border:1.5px solid rgba(255,255,255,0.2); color:white; font-size:18px; cursor:pointer; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
-#view-historia .hc-back-btn:hover { background:rgba(255,255,255,0.25); }
-#view-historia .hc-header-title { font-family:var(--font-display); font-size:20px; font-weight:700; color:white; flex:1; }
-#view-historia .hc-header-subtitle { font-size:12px; color:rgba(255,255,255,0.6); margin-top:3px; }
+#view-historia .hc-header { background: linear-gradient(180deg, rgba(236,72,153,0.07) 0%, rgba(124,58,237,0.04) 100%); border-bottom: 1px solid rgba(124,58,237,0.10); padding: 20px 20px 22px; position: sticky; top: 0; z-index: 50; backdrop-filter: blur(8px); }
+#view-historia .hc-header::after { display: none; }
+#view-historia .hc-header-row { display:flex; align-items:center; gap:12px; }
+#view-historia .hc-back-btn { width:34px; height:34px; border-radius:10px; background:var(--bg); border:1.5px solid var(--border); color:var(--text); font-size:18px; cursor:pointer; display:flex; align-items:center; justify-content:center; flex-shrink:0; transition: border-color .15s; }
+#view-historia .hc-back-btn:hover { border-color: var(--primary); color: var(--primary); }
+#view-historia .hc-header-title { font-family:var(--font); font-size:17px; font-weight:800; color:var(--text); flex:1; }
+#view-historia .hc-header-subtitle { font-size:12px; color:var(--text-muted); margin-top:3px; }
 #view-historia .hc-stats { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; padding:14px 16px; }
-#view-historia .hc-stat { background:var(--surface); border-radius:14px; padding:12px 10px; box-shadow:var(--shadow-sm); text-align:center; }
+#view-historia .hc-stat { background:var(--surface); border-radius:14px; padding:12px 10px; box-shadow:var(--shadow-sm); border:1px solid var(--border); text-align:center; }
 #view-historia .hc-stat-num { font-size:20px; font-weight:800; color:var(--primary); }
 #view-historia .hc-stat-label { font-size:10px; color:var(--text-muted); font-weight:600; margin-top:2px; }
 #view-historia .hc-search-wrap { margin:0 16px 12px; display:flex; align-items:center; gap:8px; background:var(--surface); border-radius:14px; padding:0 14px; border:1.5px solid var(--border); box-shadow:var(--shadow-sm); }
 #view-historia .hc-search-wrap input { flex:1; border:none; background:transparent; padding:12px 0; font-size:14px; font-family:var(--font); color:var(--text); outline:none; }
-#view-historia .hc-pac-card { display:flex; align-items:center; gap:12px; background:var(--surface); border-radius:14px; margin:0 16px 8px; padding:13px 14px; box-shadow:var(--shadow-sm); cursor:pointer; transition:transform .12s; }
+#view-historia .hc-pac-card { display:flex; align-items:center; gap:12px; background:var(--surface); border-radius:14px; margin:0 16px 8px; padding:13px 14px; box-shadow:var(--shadow-sm); border:1px solid var(--border); cursor:pointer; transition:transform .12s; }
 #view-historia .hc-pac-card:active { transform:scale(0.98); }
 #view-historia .hc-pac-avatar { width:42px; height:42px; border-radius:50%; color:white; font-size:15px; font-weight:800; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
 #view-historia .hc-pac-name { font-size:15px; font-weight:700; color:var(--text); }
 #view-historia .hc-pac-sub  { font-size:12px; color:var(--text-muted); margin-top:2px; }
 #view-historia .hc-pac-arrow { font-size:20px; color:var(--text-muted); margin-left:auto; }
 #view-historia .hc-det-avatar-wrap { display:flex; align-items:center; gap:14px; position:relative; z-index:1; }
-#view-historia .hc-det-avatar { width:52px; height:52px; border-radius:50%; color:white; font-size:19px; font-weight:800; display:flex; align-items:center; justify-content:center; flex-shrink:0; border:2px solid rgba(255,255,255,0.3); }
-#view-historia .hc-det-nombre { font-size:18px; font-weight:800; color:white; }
-#view-historia .hc-det-sub    { font-size:12px; color:rgba(255,255,255,0.65); margin-top:2px; }
+#view-historia .hc-det-avatar { width:52px; height:52px; border-radius:50%; color:white; font-size:19px; font-weight:800; display:flex; align-items:center; justify-content:center; flex-shrink:0; border:2px solid rgba(124,58,237,0.2); }
+#view-historia .hc-det-nombre { font-size:18px; font-weight:800; color:var(--text); }
+#view-historia .hc-det-sub    { font-size:12px; color:var(--text-muted); margin-top:2px; }
 #view-historia .hc-tabs { display:flex; border-bottom:1.5px solid var(--border); background:var(--surface); }
 #view-historia .hc-tab { flex:1; padding:12px 8px; text-align:center; font-size:13px; font-weight:700; color:var(--text-muted); cursor:pointer; border-bottom:3px solid transparent; border:none; background:transparent; font-family:var(--font); transition:color .15s,border-color .15s; }
 #view-historia .hc-tab-active { color:var(--primary); border-bottom:3px solid var(--primary) !important; }
@@ -52,7 +52,7 @@
 #view-historia .hc-ses-header { display:flex; align-items:center; justify-content:space-between; padding:14px 16px 8px; }
 #view-historia .hc-ses-header-title { font-size:15px; font-weight:800; }
 #view-historia .hc-btn-nueva { background:var(--primary); color:white; border:none; border-radius:10px; padding:8px 14px; font-size:13px; font-weight:700; font-family:var(--font); cursor:pointer; }
-#view-historia .hc-ses-card { background:var(--surface); border-radius:14px; margin:0 16px 10px; padding:13px 14px; box-shadow:var(--shadow-sm); cursor:pointer; border-left:3px solid var(--primary-mid); transition:transform .12s; }
+#view-historia .hc-ses-card { background:var(--surface); border-radius:14px; margin:0 16px 10px; padding:13px 14px; box-shadow:var(--shadow-sm); border:1px solid var(--border); cursor:pointer; border-left:3px solid var(--primary-mid); transition:transform .12s; }
 #view-historia .hc-ses-card:active { transform:scale(0.98); }
 #view-historia .hc-ses-pendiente { opacity:.75; border-left-color:#FBBF24; }
 #view-historia .hc-ses-cancelada { opacity:.55; border-left-color:#F87171; }
@@ -75,9 +75,9 @@
 #view-historia .hc-info-value { font-size:13px; font-weight:600; color:var(--text); line-height:1.5; }
 #view-historia .hc-info-empty { color:var(--text-muted); font-weight:400; }
 #view-historia .hc-btn-edit { width:100%; margin-top:12px; padding:10px; border-radius:10px; border:1.5px solid var(--border); background:var(--bg); color:var(--text); font-family:var(--font); font-size:13px; font-weight:700; cursor:pointer; }
-#view-historia .hc-sd-header { background:linear-gradient(145deg,#2D1B69 0%,#5B2FA8 55%,#7C3AED 100%); padding:18px 18px 16px; position:relative; overflow:hidden; }
-#view-historia .hc-sd-title  { font-size:16px; font-weight:800; color:white; }
-#view-historia .hc-sd-meta   { font-size:12px; color:rgba(255,255,255,0.65); margin-top:3px; }
+#view-historia .hc-sd-header { background:linear-gradient(180deg, rgba(236,72,153,0.07) 0%, rgba(124,58,237,0.04) 100%); border-bottom:1px solid rgba(124,58,237,0.10); padding:18px 18px 16px; position:sticky; top:0; z-index:50; backdrop-filter:blur(8px); }
+#view-historia .hc-sd-title  { font-size:16px; font-weight:800; color:var(--text); }
+#view-historia .hc-sd-meta   { font-size:12px; color:var(--text-muted); margin-top:3px; }
 #view-historia .hc-sd-actions { display:flex; gap:8px; margin-top:12px; position:relative; z-index:1; }
 #view-historia .hc-sd-btn { padding:9px 16px; border-radius:10px; border:none; font-family:var(--font); font-size:12px; font-weight:700; cursor:pointer; background:rgba(255,255,255,0.15); color:white; }
 #view-historia .hc-section { padding:12px 16px; border-bottom:1px solid var(--border); }

@@ -13,7 +13,7 @@
   s.id = 'view-pagos-styles';
   s.textContent = `
 #view-pagos { min-height: 100vh; background: var(--bg); }
-#view-pagos .pv-header { background: var(--surface); border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 50; box-shadow: var(--shadow-sm); }
+#view-pagos .pv-header { background: linear-gradient(180deg, rgba(236,72,153,0.07) 0%, rgba(124,58,237,0.04) 100%); border-bottom: 1px solid rgba(124,58,237,0.10); position: sticky; top: 0; z-index: 50; backdrop-filter: blur(8px); }
 #view-pagos .pv-header-top { display: flex; align-items: center; padding: 14px 18px 10px; gap: 10px; }
 #view-pagos .pv-header-title { flex: 1; text-align: center; font-size: 16px; font-weight: 800; color: var(--text); }
 #view-pagos .pv-month-nav-row { display: flex; align-items: center; justify-content: center; gap: 16px; padding: 6px 16px 12px; }
@@ -34,7 +34,7 @@
 #view-pagos .pv-fchip.on { background: var(--primary); color: white; border-color: var(--primary); }
 #view-pagos .pv-list-wrap { padding: 6px 16px 100px; }
 #view-pagos .pv-date-group { font-size: 11px; font-weight: 800; color: var(--text-muted); text-transform: uppercase; letter-spacing: .8px; padding: 12px 4px 6px; }
-#view-pagos .pv-card { background: var(--surface); border-radius: var(--radius-sm); padding: 13px 14px; display: flex; align-items: center; gap: 12px; box-shadow: var(--shadow-sm); margin-bottom: 8px; cursor: pointer; transition: transform .12s; border-left: 3px solid transparent; }
+#view-pagos .pv-card { background: var(--surface); border-radius: var(--radius-sm); padding: 13px 14px; display: flex; align-items: center; gap: 12px; box-shadow: var(--shadow-sm); margin-bottom: 8px; cursor: pointer; transition: transform .12s; border: 1px solid var(--border); border-left: 3px solid transparent; }
 #view-pagos .pv-card:hover { transform: translateX(2px); }
 #view-pagos .pv-card-icon { width: 38px; height: 38px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; }
 #view-pagos .pv-icon-efectivo { background: rgba(124,58,237,0.12); }
