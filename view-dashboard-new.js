@@ -298,6 +298,83 @@
 }
 
 #view-dashboard-new .dn-pad { height: 40px; }
+
+/* ── PROFILE HEADER (nuevo) ── */
+#view-dashboard-new .dn-profile-header {
+  display: flex; align-items: center; gap: 14px;
+  padding: 20px 20px 16px;
+  background: var(--surface);
+  border-bottom: 1.5px solid var(--border);
+}
+#view-dashboard-new .dn-ph-avatar {
+  width: 48px; height: 48px; border-radius: 50%; flex-shrink: 0;
+  background: linear-gradient(135deg, #5B2FA8, #A78BFA);
+  color: white; font-size: 17px; font-weight: 800;
+  display: flex; align-items: center; justify-content: center;
+  overflow: hidden; border: 2px solid rgba(124,58,237,0.2);
+}
+#view-dashboard-new .dn-ph-avatar img {
+  width: 100%; height: 100%; object-fit: cover; border-radius: 50%;
+}
+#view-dashboard-new .dn-ph-body { flex: 1; min-width: 0; }
+#view-dashboard-new .dn-ph-greeting {
+  font-size: 11px; font-weight: 700; color: var(--text-muted);
+  text-transform: uppercase; letter-spacing: 1px;
+}
+#view-dashboard-new .dn-ph-name {
+  font-size: 18px; font-weight: 800; color: var(--text);
+  margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+#view-dashboard-new .dn-ph-context {
+  font-size: 11px; font-weight: 600; color: var(--text-muted); margin-top: 3px;
+}
+#view-dashboard-new .dn-ph-frase {
+  font-size: 11px; font-style: italic; color: var(--text-muted);
+  margin-top: 6px; line-height: 1.5; opacity: 0.7; max-width: 420px;
+}
+#view-dashboard-new .dn-ph-frase-autor {
+  font-size: 10px; font-weight: 700; color: var(--primary, #7C3AED);
+  margin-top: 3px; opacity: 0.8;
+}
+#view-dashboard-new .dn-ph-right {
+  display: flex; align-items: center; gap: 8px; flex-shrink: 0;
+}
+#view-dashboard-new .dn-ph-theme-btn {
+  width: 34px; height: 34px; border-radius: 10px;
+  background: var(--surface2, var(--border)); border: none; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; font-size: 16px;
+}
+
+/* ── PROGRESO DEL DÍA ── */
+#view-dashboard-new .dn-progress-bar {
+  margin: 10px 16px 0;
+  background: var(--surface);
+  border-radius: 14px;
+  padding: 12px 16px;
+  box-shadow: var(--shadow-sm);
+}
+#view-dashboard-new .dn-progress-row {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 8px;
+}
+#view-dashboard-new .dn-progress-label {
+  font-size: 12px; font-weight: 700; color: var(--text);
+}
+#view-dashboard-new .dn-progress-badge {
+  font-size: 10px; font-weight: 700; padding: 2px 10px; border-radius: 20px;
+}
+#view-dashboard-new .dn-progress-badge.tranquila { background: rgba(20,184,166,0.12); color: #0D9488; }
+#view-dashboard-new .dn-progress-badge.estable   { background: rgba(124,58,237,0.12); color: #7C3AED; }
+#view-dashboard-new .dn-progress-badge.alta       { background: rgba(251,191,36,0.12); color: #D97706; }
+#view-dashboard-new .dn-progress-track {
+  height: 6px; border-radius: 99px;
+  background: var(--border); overflow: hidden;
+}
+#view-dashboard-new .dn-progress-fill {
+  height: 100%; border-radius: 99px;
+  background: linear-gradient(90deg, #7C3AED, #A78BFA);
+  transition: width .4s ease;
+}
   `;
   document.head.appendChild(style);
 })();
@@ -313,6 +390,34 @@ const _dnEsc = s => String(s)
   .replace(/</g, '&lt;')
   .replace(/>/g, '&gt;');
 
+/* ── SALUDO DINÁMICO ── */
+function _dnSaludo() {
+  const h = new Date().getHours();
+  if (h >= 6  && h < 13) return 'Buenos días';
+  if (h >= 13 && h < 20) return 'Buenas tardes';
+  return 'Buenas noches';
+}
+
+/* ── FRASES PSICOANALÍTICAS — elegida una sola vez por sesión ── */
+const _DN_FRASES = [
+  { texto: 'Donde ello era, yo debo advenir.',                                        autor: 'S. Freud' },
+  { texto: 'El inconsciente está estructurado como un lenguaje.',                     autor: 'J. Lacan' },
+  { texto: 'Amar es dar lo que no se tiene.',                                         autor: 'J. Lacan' },
+  { texto: 'El síntoma es una solución, no solo un problema.',                        autor: 'J.-A. Miller' },
+  { texto: 'La transferencia es la puesta en acto de la realidad del inconsciente.',  autor: 'J. Lacan' },
+  { texto: 'El sueño es la vía regia hacia el inconsciente.',                         autor: 'S. Freud' },
+  { texto: 'El deseo del hombre es el deseo del Otro.',                               autor: 'J. Lacan' },
+  { texto: 'La interpretación no apunta al sentido, sino al goce.',                   autor: 'J.-A. Miller' },
+  { texto: 'Recordar, repetir, reelaborar: las tres tareas del análisis.',            autor: 'S. Freud' },
+  { texto: 'La angustia no engaña.',                                                  autor: 'J. Lacan' },
+  { texto: 'El inconsciente no conoce el tiempo.',                                    autor: 'S. Freud' },
+  { texto: 'El amor es siempre recíproco.',                                           autor: 'J.-A. Miller' },
+  { texto: 'El sujeto habla, pero no sabe lo que dice.',                              autor: 'J. Lacan' },
+  { texto: 'No hay relación sexual.',                                                 autor: 'J. Lacan' },
+  { texto: 'El analista paga con sus palabras, con su persona y con su juicio.',      autor: 'J. Lacan' },
+];
+const _dnFraseHoy = _DN_FRASES[Math.floor(Math.random() * _DN_FRASES.length)];
+
 
 /* ══════════════════════════════════════════
    RENDER HTML — una sola vez en init()
@@ -326,33 +431,42 @@ function _dnRenderHTML(container) {
   container.innerHTML = `
 <div id="dn-root">
 
-  <!-- TOPBAR -->
-  <div class="dn-topbar">
-    <div class="dn-topbar-logo">Psico<span>App</span></div>
-    <div class="dn-topbar-right">
-      <button class="dn-theme-btn" onclick="toggleTheme()" title="Cambiar tema">
+  <!-- PROFILE HEADER -->
+  <div class="dn-profile-header">
+    <div class="dn-ph-avatar" id="dn-ph-avatar">?</div>
+    <div class="dn-ph-body">
+      <div class="dn-ph-greeting" id="dn-ph-greeting">${_dnSaludo()}</div>
+      <div class="dn-ph-name" id="dn-ph-name">…</div>
+      <div class="dn-ph-context" id="dn-ph-context">Cargando agenda…</div>
+      <div class="dn-ph-frase">
+        "${_dnFraseHoy.texto}"
+        <div class="dn-ph-frase-autor">— ${_dnFraseHoy.autor}</div>
+      </div>
+    </div>
+    <div class="dn-ph-right">
+      <button class="dn-ph-theme-btn" onclick="toggleTheme()" title="Cambiar tema">
         <span id="dn-toggle-thumb">${tema === 'dark' ? '🌙' : '☀️'}</span>
       </button>
-      <div class="dn-avatar" id="dn-avatar" title="Perfil">?</div>
     </div>
   </div>
 
-  <!-- HERO BANNER -->
-  <div class="dn-hero" onclick="navigate('pagos')" style="cursor:pointer">
-    <div class="dn-hero-greeting">Bienvenido/a</div>
-    <div class="dn-hero-name" id="dn-hero-name">…</div>
-    <div class="dn-hero-date">${fechaCap}</div>
-    <div class="dn-hero-amount-row">
-      <div>
-        <div class="dn-hero-amount-label">💰 Cobrado este mes</div>
-        <div class="dn-hero-amount" id="dn-hero-amount">
-          <span class="dn-skel" style="display:inline-block;width:130px;height:36px;border-radius:10px"></span>
+  <!-- HERO — ACTIVIDAD DEL MES -->
+  <div style="padding: 14px 16px 0">
+    <div class="dn-hero" style="cursor:default">
+      <div class="dn-hero-amount-row" style="margin-top:0">
+        <div>
+          <div class="dn-hero-amount-label">🗓️ Actividad del mes</div>
+          <div class="dn-hero-amount" id="dn-hero-amount">
+            <span class="dn-skel" style="display:inline-block;width:130px;height:36px;border-radius:10px"></span>
+          </div>
+          <div style="font-size:12px;color:rgba(255,255,255,0.5);margin-top:5px" id="dn-hero-sub"> </div>
         </div>
-        <div style="font-size:12px;color:rgba(255,255,255,0.5);margin-top:5px" id="dn-hero-sub"> </div>
       </div>
-      <button class="dn-hero-pill" onclick="event.stopPropagation();navigate('pagos')">Ver pagos →</button>
     </div>
   </div>
+
+  <!-- KPIs -->
+  <div class="dn-progress-bar" id="dn-progress-bar" style="display:none"></div>
 
   <!-- KPIs -->
   <div class="dn-kpi-grid" id="dn-kpi-grid">
@@ -367,7 +481,7 @@ function _dnRenderHTML(container) {
   <div class="dn-alerts" id="dn-alerts"></div>
 
   <!-- ACCESOS RÁPIDOS -->
-  <div class="dn-section" style="margin-top:6px">
+  <div class="dn-section" style="margin-top:20px">
     <div class="dn-section-header">
       <span class="dn-section-title">Accesos rápidos</span>
     </div>
@@ -379,16 +493,16 @@ function _dnRenderHTML(container) {
         <div class="dn-qa-icon">👥</div><div class="dn-qa-label">Pacientes</div>
       </button>
       <button class="dn-qa" onclick="navigate('pagos')">
-        <div class="dn-qa-icon">💰</div><div class="dn-qa-label">Pagos</div>
+        <div class="dn-qa-icon">💳</div><div class="dn-qa-label">Pagos</div>
       </button>
-      <button class="dn-qa" onclick="navigate('whatsapp')">
-        <div class="dn-qa-icon">💬</div><div class="dn-qa-label">WhatsApp</div>
+      <button class="dn-qa" onclick="navigate('historia')">
+        <div class="dn-qa-icon">📋</div><div class="dn-qa-label">Historia</div>
       </button>
     </div>
   </div>
 
   <!-- TURNOS HOY -->
-  <div class="dn-section" style="margin-top:18px">
+  <div class="dn-section" style="margin-top:24px">
     <div class="dn-section-header">
       <span class="dn-section-title">Turnos de hoy</span>
       <span class="dn-section-link" onclick="navigate('agenda')">Ver agenda →</span>
@@ -399,7 +513,7 @@ function _dnRenderHTML(container) {
   </div>
 
   <!-- NOTAS DEL DÍA -->
-  <div class="dn-section" style="margin-top:18px">
+  <div class="dn-section" style="margin-top:24px">
     <div class="dn-section-header">
       <span class="dn-section-title">📝 Notas del día</span>
     </div>
@@ -471,6 +585,10 @@ async function _dnCargarDatos() {
     const totalPendiente  = pagos.filter(p => p.metodo === 'pendiente').reduce((s, p) => s + (Number(p.monto) || 0), 0);
     const pagosPendientes = pagos.filter(p => p.metodo === 'pendiente').length;
     const turnosHoyCant   = turnos.length;
+    const completadosHoy  = turnos.filter(t => {
+      const est = (t.estado || '').toLowerCase();
+      return est === 'realizado' || est === 'completado';
+    }).length;
 
     const turnosMesValidos = (resTurnosMes.data || []).filter(t => (t.estado || '').toLowerCase() !== 'cancelado');
     const sesionSinCobro   = turnosMesValidos.filter(t => {
@@ -478,11 +596,12 @@ async function _dnCargarDatos() {
       return est === 'realizado' || est === 'completado';
     }).length;
 
-    _dnRenderHero(totalCobrado, cantCobros, pacUnicos);
-    _dnRenderKPIs(totalCobrado, totalPendiente, pacUnicos, turnosHoyCant);
-    _dnRenderAlertas(sesionSinCobro, pacUnicos, pagos, pagosPendientes);
+    _dnRenderHero(totalCobrado, cantCobros, pacUnicos, turnosMesValidos.length);
+    _dnRenderProgreso(turnosHoyCant, completadosHoy);
+    _dnRenderKPIs(totalCobrado, totalPendiente, pacUnicos, turnosHoyCant, turnosMesValidos.length, pagosPendientes);
+    _dnRenderAlertas(sesionSinCobro, pacUnicos, pagos, pagosPendientes, turnosHoyCant);
     _dnRenderTurnos(turnos, hoy);
-    await _dnRenderNombre();
+    await _dnRenderNombre(turnosHoyCant);
     await _dnRenderNotas();
 
   } catch(e) {
@@ -494,45 +613,67 @@ async function _dnCargarDatos() {
 /* ══════════════════════════════════════════
    RENDERS
    ══════════════════════════════════════════ */
-function _dnRenderHero(total, cant, pacUnicos) {
+function _dnRenderHero(total, cant, pacUnicos, sesionesDelMes) {
   const mes      = new Date().toLocaleString('es-AR', { month: 'long' });
   const amountEl = document.getElementById('dn-hero-amount');
   const subEl    = document.getElementById('dn-hero-sub');
-  if (amountEl) amountEl.textContent = _dnFmt(total);
-  if (subEl)    subEl.textContent    = `${cant} cobro${cant !== 1 ? 's' : ''} · ${pacUnicos} paciente${pacUnicos !== 1 ? 's' : ''} · ${mes}`;
+  if (amountEl) {
+    const s = sesionesDelMes !== undefined ? sesionesDelMes : cant;
+    amountEl.textContent = s !== 1 ? 'Realizaste ' + s + ' sesiones este mes' : 'Realizaste 1 sesión este mes';
+  }
+  if (subEl) subEl.textContent = 'Generaste ' + _dnFmt(total) + ' en ' + mes;
 }
 
-function _dnRenderKPIs(cobrado, pendiente, pacUnicos, turnosHoy) {
+function _dnRenderProgreso(turnosHoy, completadosHoy) {
+  const el = document.getElementById('dn-progress-bar');
+  if (!el) return;
+  if (turnosHoy === 0) { el.style.display = 'none'; return; }
+  el.style.display = '';
+  const pct   = Math.round((completadosHoy / turnosHoy) * 100);
+  const label = turnosHoy <= 3 ? 'tranquila' : turnosHoy <= 6 ? 'estable' : 'alta';
+  const emoji = label === 'tranquila' ? '🌿' : label === 'estable' ? '⚡' : '🔥';
+  el.innerHTML =
+    '<div class="dn-progress-row">' +
+      '<span class="dn-progress-label">' + completadosHoy + ' de ' + turnosHoy + ' turnos completados hoy</span>' +
+      '<span class="dn-progress-badge ' + label + '">' + emoji + ' Práctica ' + label + '</span>' +
+    '</div>' +
+    '<div class="dn-progress-track">' +
+      '<div class="dn-progress-fill" style="width:' + pct + '%"></div>' +
+    '</div>' +
+    '<div style="font-size:11px;color:var(--text-muted);margin-top:7px;font-weight:600">Buen ritmo de trabajo hoy</div>';
+}
+
+function _dnRenderKPIs(cobrado, pendiente, pacUnicos, turnosHoy, sesionesDelMes, pendiente_cant) {
   const el = document.getElementById('dn-kpi-grid');
   if (!el) return;
-  el.innerHTML = `
-    <div class="dn-kpi" onclick="navigate('pagos')">
-      <div class="dn-kpi-icon-wrap violet">💰</div>
-      <div class="dn-kpi-value">${_dnFmt(cobrado)}</div>
-      <div class="dn-kpi-label">Cobrado</div>
-      <div class="dn-kpi-tag">Este mes</div>
-    </div>
-    <div class="dn-kpi" onclick="window._dnIrPendientes()">
-      <div class="dn-kpi-icon-wrap amber">⏳</div>
-      <div class="dn-kpi-value">${_dnFmt(pendiente)}</div>
-      <div class="dn-kpi-label">Por cobrar</div>
-      <div class="dn-kpi-tag muted">Pendiente</div>
-    </div>
-    <div class="dn-kpi" onclick="navigate('pacientes')">
-      <div class="dn-kpi-icon-wrap teal">👥</div>
-      <div class="dn-kpi-value">${pacUnicos}</div>
-      <div class="dn-kpi-label">Pacientes activos</div>
-      <div class="dn-kpi-tag muted">Total</div>
-    </div>
-    <div class="dn-kpi" onclick="navigate('agenda')">
-      <div class="dn-kpi-icon-wrap rose">📅</div>
-      <div class="dn-kpi-value">${turnosHoy}</div>
-      <div class="dn-kpi-label">Turnos de hoy</div>
-      <div class="dn-kpi-tag muted">Hoy</div>
-    </div>`;
+  el.innerHTML =
+    '<div class="dn-kpi" onclick="navigate(\'agenda\')">' +
+      '<div class="dn-kpi-icon-wrap violet">🗓️</div>' +
+      '<div class="dn-kpi-value">' + sesionesDelMes + '</div>' +
+      '<div class="dn-kpi-label">Sesiones del mes</div>' +
+      '<div class="dn-kpi-tag">Realizadas</div>' +
+    '</div>' +
+    '<div class="dn-kpi" onclick="window._dnIrPendientes()">' +
+      '<div class="dn-kpi-icon-wrap amber">⏳</div>' +
+      '<div class="dn-kpi-value">' + pendiente_cant + '</div>' +
+      '<div class="dn-kpi-label">Pendientes</div>' +
+      '<div class="dn-kpi-tag muted">Sin cobrar</div>' +
+    '</div>' +
+    '<div class="dn-kpi" onclick="navigate(\'pacientes\')">' +
+      '<div class="dn-kpi-icon-wrap teal">👥</div>' +
+      '<div class="dn-kpi-value">' + pacUnicos + '</div>' +
+      '<div class="dn-kpi-label">Pacientes activos</div>' +
+      '<div class="dn-kpi-tag muted">Total</div>' +
+    '</div>' +
+    '<div class="dn-kpi" onclick="navigate(\'agenda\')">' +
+      '<div class="dn-kpi-icon-wrap rose">📅</div>' +
+      '<div class="dn-kpi-value">' + turnosHoy + '</div>' +
+      '<div class="dn-kpi-label">Turnos de hoy</div>' +
+      '<div class="dn-kpi-tag muted">Hoy</div>' +
+    '</div>';
 }
 
-function _dnRenderAlertas(sesionSinCobro, pacUnicos, pagos, pagosPendientes) {
+function _dnRenderAlertas(sesionSinCobro, pacUnicos, pagos, pagosPendientes, turnosHoyCant) {
   const el = document.getElementById('dn-alerts');
   if (!el) return;
   const items = [];
@@ -561,25 +702,14 @@ function _dnRenderAlertas(sesionSinCobro, pacUnicos, pagos, pagosPendientes) {
       </div>`);
   }
 
-  if (pagos.length === 0) {
+  if (pagosPendientes === 0 && turnosHoyCant > 0) {
     items.push(`
-      <div class="dn-alert ok" onclick="navigate('pagos')">
-        <div class="dn-alert-icon">💡</div>
+      <div class="dn-alert ok">
+        <div class="dn-alert-icon">✔️</div>
         <div class="dn-alert-body">
-          <div class="dn-alert-title">Registrá tu primer cobro del mes</div>
-          <div class="dn-alert-sub">Llevá el control de tus ingresos →</div>
+          <div class="dn-alert-title">Todo al día</div>
+          <div class="dn-alert-sub">Tu gestión está al día</div>
         </div>
-        <div class="dn-alert-arrow">›</div>
-      </div>`);
-  } else if (pacUnicos > 0) {
-    items.push(`
-      <div class="dn-alert ok" onclick="navigate('pagos')">
-        <div class="dn-alert-icon">🎉</div>
-        <div class="dn-alert-body">
-          <div class="dn-alert-title">${pacUnicos} paciente${pacUnicos > 1 ? 's pagaron' : ' pagó'} este mes</div>
-          <div class="dn-alert-sub">Ver detalle de cobros →</div>
-        </div>
-        <div class="dn-alert-arrow">›</div>
       </div>`);
   }
 
@@ -654,21 +784,41 @@ function _dnRenderTurnos(turnos, hoy) {
   el.innerHTML = html;
 }
 
-async function _dnRenderNombre() {
+async function _dnRenderNombre(turnosHoy) {
   const perfil = await PsicoRouter.store.ensurePerfil().catch(() => ({}));
   const nombre = perfil.nombre_completo || perfil.nombre || 'Psicólogo/a';
+  const foto   = perfil.foto_url || perfil.foto || null;
 
-  const nameEl = document.getElementById('dn-hero-name');
+  /* Nombre en profile header */
+  const nameEl = document.getElementById('dn-ph-name');
   if (nameEl) nameEl.textContent = nombre;
 
-  /* Iniciales en avatar */
-  const avatarEl = document.getElementById('dn-avatar');
+  /* Saludo dinámico (se actualiza al entrar por si cambia el horario) */
+  const greetEl = document.getElementById('dn-ph-greeting');
+  if (greetEl) greetEl.textContent = _dnSaludo();
+
+  /* Contexto humano */
+  const ctxEl = document.getElementById('dn-ph-context');
+  if (ctxEl && turnosHoy !== undefined) {
+    if (turnosHoy === 0) {
+      ctxEl.textContent = 'Sin sesiones programadas para hoy';
+    } else {
+      ctxEl.textContent = 'Hoy acompañás a ' + turnosHoy + (turnosHoy !== 1 ? ' personas en su proceso' : ' persona en su proceso');
+    }
+  }
+
+  /* Avatar: foto real o iniciales */
+  const avatarEl = document.getElementById('dn-ph-avatar');
   if (avatarEl) {
-    const partes   = nombre.split(' ').filter(Boolean);
-    const iniciales = partes.length >= 2
-      ? partes[0][0] + partes[1][0]
-      : nombre.slice(0, 2);
-    avatarEl.textContent = iniciales.toUpperCase();
+    if (foto) {
+      avatarEl.innerHTML = `<img src="${foto}" alt="${nombre}">`;
+    } else {
+      const partes    = nombre.split(' ').filter(Boolean);
+      const iniciales = partes.length >= 2
+        ? partes[0][0] + partes[1][0]
+        : nombre.slice(0, 2);
+      avatarEl.textContent = iniciales.toUpperCase();
+    }
   }
 }
 
