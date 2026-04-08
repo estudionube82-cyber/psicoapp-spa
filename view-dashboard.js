@@ -186,6 +186,47 @@
   border-radius: 8px;
 }
 @keyframes dashSkel { 0%{background-position:200%} 100%{background-position:-200%} }
+
+/* ── NOTAS DEL DÍA ── */
+#view-dashboard .dash-nota-item {
+  display:flex; align-items:center; gap:8px; padding:9px 0;
+  border-bottom:1px solid var(--border);
+}
+#view-dashboard .dash-nota-item:last-child { border-bottom: none; }
+#view-dashboard .dash-nota-check {
+  width:20px; height:20px; border-radius:6px; border:2px solid var(--border);
+  background:transparent; cursor:pointer; flex-shrink:0;
+  display:flex; align-items:center; justify-content:center;
+  font-size:11px; color:#fff; font-weight:800; transition:all .15s;
+}
+#view-dashboard .dash-nota-check.hecha { background:var(--primary); border-color:var(--primary); }
+#view-dashboard .dash-nota-texto {
+  flex:1; font-size:13px; font-weight:600; color:var(--text); line-height:1.4;
+}
+#view-dashboard .dash-nota-texto.hecha { text-decoration:line-through; color:var(--text-muted); }
+#view-dashboard .dash-nota-del {
+  border:none; background:none; cursor:pointer;
+  color:var(--text-muted); font-size:17px; padding:2px 4px; line-height:1;
+  opacity:.6; transition:opacity .15s;
+}
+#view-dashboard .dash-nota-del:hover { opacity:1; color:var(--danger,#E53E3E); }
+#view-dashboard .dash-nota-input-row {
+  display:flex; gap:8px; margin-top:10px;
+}
+#view-dashboard .dash-nota-input {
+  flex:1; padding:9px 12px; border-radius:9px;
+  border:1.5px solid var(--border); font-size:13px; font-weight:500;
+  background:var(--bg); color:var(--text); font-family:var(--font); outline:none;
+  transition:border .15s;
+}
+#view-dashboard .dash-nota-input:focus { border-color:var(--primary); }
+#view-dashboard .dash-nota-add-btn {
+  padding:9px 16px; border-radius:9px; background:var(--primary);
+  color:#fff; border:none; font-size:13px; font-weight:800;
+  font-family:var(--font); cursor:pointer; white-space:nowrap;
+  transition:opacity .15s;
+}
+#view-dashboard .dash-nota-add-btn:hover { opacity:.88; }
   `;
   document.head.appendChild(style);
 })();
@@ -282,6 +323,20 @@ function _dashRenderHTML(container) {
   </div>
 </div>
 
+<!-- NOTAS DEL DÍA -->
+<div class="dash-section" style="margin-top:18px">
+  <div class="dash-section-title">📝 Notas del día</div>
+  <div style="background:var(--surface);border-radius:var(--radius-sm);padding:14px 16px;box-shadow:var(--shadow-sm)">
+    <div id="dash-notas-list"></div>
+    <div class="dash-nota-input-row">
+      <input id="dash-nota-input" type="text" class="dash-nota-input"
+             placeholder="Nueva nota para hoy…"
+             onkeydown="if(event.key==='Enter') window._notaAgregar()">
+      <button class="dash-nota-add-btn" onclick="window._notaAgregar()">+ Agregar</button>
+    </div>
+  </div>
+</div>
+
 <div class="dash-pad"></div>
   `;
 }
@@ -296,8 +351,10 @@ async function _dashCargarDatos() {
     const uid = await PsicoRouter.store.ensureUserId();
     if (!uid) return;
 
-    const hoy          = new Date();
-    const fechaHoy     = hoy.toISOString().split('T')[0];
+    const hoy      = new Date();
+    // ⚠️ toISOString() es UTC — usar métodos locales para no adelantar un día
+    // en Argentina después de las 21 hs (UTC-3 → UTC sería el día siguiente).
+    const fechaHoy = `${hoy.getFullYear()}-${String(hoy.getMonth()+1).padStart(2,'0')}-${String(hoy.getDate()).padStart(2,'0')}`;
     const primerDiaMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1).toISOString().split('T')[0];
     const ultimoDiaMes = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0).toISOString().split('T')[0];
 
@@ -356,6 +413,7 @@ async function _dashCargarDatos() {
     _dashRenderStats(totalCobrado, totalPendiente, pacUnicos, turnosHoyCant);
     _dashRenderTurnos(turnos, hoy);
     await _dashRenderNombre();
+    await _dashRenderNotas();
 
   } catch(e) {
     console.error('[Dashboard]', e.message);
@@ -568,6 +626,80 @@ async function _dashRenderNombre() {
   if (nameEl) nameEl.textContent = nombre;
 }
 
+
+/* ══════════════════════════════════════════
+   NOTAS DEL DÍA — localStorage por usuario/fecha
+   ══════════════════════════════════════════ */
+function _notasFechaHoy() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+function _notasKey(uid)  { return `psico_notas_${uid}_${_notasFechaHoy()}`; }
+function _notasLoad(uid) {
+  try { return JSON.parse(localStorage.getItem(_notasKey(uid)) || '[]'); } catch { return []; }
+}
+function _notasSave(uid, notas) {
+  localStorage.setItem(_notasKey(uid), JSON.stringify(notas));
+}
+
+async function _dashRenderNotas() {
+  const uid = await PsicoRouter.store.ensureUserId();
+  if (!uid) return;
+  const el = document.getElementById('dash-notas-list');
+  if (!el) return;
+  el.dataset.uid = uid;
+
+  const notas = _notasLoad(uid);
+  if (!notas.length) {
+    el.innerHTML = '<div style="color:var(--text-muted);font-size:12px;font-weight:600;padding:4px 0 6px">Sin notas para hoy. ¡Agregá una!</div>';
+    return;
+  }
+  el.innerHTML = notas.map((n, i) => `
+    <div class="dash-nota-item">
+      <button class="dash-nota-check${n.hecha ? ' hecha' : ''}"
+              onclick="window._notaToggle(${i})"
+              title="${n.hecha ? 'Marcar pendiente' : 'Marcar como hecha'}">
+        ${n.hecha ? '✓' : ''}
+      </button>
+      <span class="dash-nota-texto${n.hecha ? ' hecha' : ''}">
+        ${escHtml(n.texto)}
+      </span>
+      <button class="dash-nota-del" onclick="window._notaEliminar(${i})" title="Eliminar nota">×</button>
+    </div>`).join('');
+}
+
+window._notaToggle = function(i) {
+  const uid = document.getElementById('dash-notas-list')?.dataset.uid;
+  if (!uid) return;
+  const notas = _notasLoad(uid);
+  if (notas[i] !== undefined) {
+    notas[i].hecha = !notas[i].hecha;
+    _notasSave(uid, notas);
+    _dashRenderNotas();
+  }
+};
+
+window._notaEliminar = function(i) {
+  const uid = document.getElementById('dash-notas-list')?.dataset.uid;
+  if (!uid) return;
+  const notas = _notasLoad(uid);
+  notas.splice(i, 1);
+  _notasSave(uid, notas);
+  _dashRenderNotas();
+};
+
+window._notaAgregar = function() {
+  const input = document.getElementById('dash-nota-input');
+  const uid   = document.getElementById('dash-notas-list')?.dataset.uid;
+  if (!uid || !input) return;
+  const texto = input.value.trim();
+  if (!texto) { input.focus(); return; }
+  const notas = _notasLoad(uid);
+  notas.push({ texto, hecha: false });
+  _notasSave(uid, notas);
+  input.value = '';
+  _dashRenderNotas();
+};
 
 /* ══════════════════════════════════════════
    REGISTRO EN EL ROUTER
