@@ -610,19 +610,22 @@
 
         <div class="ag-field" id="ag-sec-paciente">
           <label>Paciente <span style="color:#E53935">*</span></label>
-          <div style="position:relative">
-            <input type="text" id="ag-f-paciente-search"
-                   placeholder="Buscar por nombre o apellido…"
-                   autocomplete="off"
-                   style="width:100%;padding:10px 12px;border-radius:10px;
-                          border:1.5px solid var(--border,#E5E2F5);font-size:14px;font-weight:500;
-                          background:var(--bg,#F8F7FF);color:var(--text,#1E1040);
-                          font-family:inherit;box-sizing:border-box;transition:border .15s">
+          <!-- Buscador inline: el dropdown expande en flujo normal, sin trucos de posicionamiento -->
+          <div style="border:1.5px solid var(--border,#E5E2F5);border-radius:10px;
+                      overflow:hidden;background:var(--bg,#F8F7FF);transition:border .15s"
+               id="ag-pac-wrap">
+            <div style="display:flex;align-items:center;gap:8px;padding:0 12px">
+              <span style="font-size:14px;color:var(--text-muted,#7C6FAE)">🔍</span>
+              <input type="text" id="ag-f-paciente-search"
+                     placeholder="Buscar por nombre o apellido…"
+                     autocomplete="off"
+                     style="flex:1;padding:11px 0;border:none;font-size:14px;font-weight:500;
+                            background:transparent;color:var(--text,#1E1040);
+                            font-family:inherit;outline:none">
+            </div>
             <div id="ag-f-paciente-dropdown"
-                 style="display:none;position:fixed;
-                        background:var(--surface,#fff);border:1.5px solid var(--border,#E5E2F5);
-                        border-radius:10px;z-index:200;max-height:180px;overflow-y:auto;
-                        box-shadow:0 4px 16px rgba(0,0,0,.18)">
+                 style="display:none;border-top:1px solid var(--border,#E5E2F5);
+                        max-height:200px;overflow-y:auto">
             </div>
           </div>
           <input type="hidden" id="ag-f-paciente">
@@ -793,22 +796,21 @@
       setView('dia');
     });
 
-    // ── Autocomplete de paciente ────────────────────────────
+    // ── Buscador de paciente ────────────────────────────────
     const _pacSearch   = agQ('ag-f-paciente-search');
     const _pacDropdown = agQ('ag-f-paciente-dropdown');
     const _pacHidden   = agQ('ag-f-paciente');
+    const _pacWrap     = agQ('ag-pac-wrap');
 
-    // Mover el dropdown al <body> para salir del stacking context del modal
-    // (.ag-overlay tiene z-index:60 y encapsula todo lo que está adentro).
-    // Con position:fixed + z-index:9999 en body es siempre visible.
-    document.body.appendChild(_pacDropdown);
-    _pacDropdown.style.zIndex = '9999';
-
-    // mostrarTodos=true: muestra todos los pacientes sin filtrar (comportamiento de <select>)
+    // Renderiza la lista de pacientes filtrada dentro del wrap (flujo normal, sin position tricks)
     function _renderDropdown(mostrarTodos = false) {
       const q = (_pacSearch.value || '').toLowerCase().trim();
 
-      if (!q && !mostrarTodos) { _pacDropdown.style.display = 'none'; return; }
+      if (!q && !mostrarTodos) {
+        _pacDropdown.style.display = 'none';
+        if (_pacWrap) _pacWrap.style.borderColor = 'var(--border,#E5E2F5)';
+        return;
+      }
 
       _pacMatches = q
         ? _todosPacientes.filter(p => {
@@ -819,42 +821,50 @@
         : [..._todosPacientes];
 
       if (!_pacMatches.length) {
-        _pacDropdown.innerHTML = `<div style="padding:10px 14px;font-size:13px;color:var(--text-muted,#7C6FAE)">
-          ${q ? 'Sin resultados' : 'No hay pacientes cargados'}</div>`;
+        _pacDropdown.innerHTML = `<div style="padding:12px 14px;font-size:13px;
+          color:var(--text-muted,#7C6FAE)">
+          ${q ? '😕 Sin resultados para "' + escHtml(q) + '"' : 'No hay pacientes cargados'}</div>`;
       } else {
         _pacDropdown.innerHTML = _pacMatches.map((p, i) => {
           const nombre = `${p.apellido || ''}, ${p.nombre || ''}`.trim().replace(/^,\s*/, '');
           return `<div class="ag-pac-item" data-i="${i}"
-                       style="padding:10px 14px;cursor:pointer;font-size:13px;font-weight:600;
-                              border-bottom:1px solid var(--border,#E5E2F5);transition:background .1s">
+                       style="padding:11px 14px;cursor:pointer;font-size:13px;font-weight:600;
+                              border-bottom:1px solid var(--border,#E5E2F5);
+                              color:var(--text,#1E1040);background:var(--surface,#fff);
+                              transition:background .1s">
                     ${escHtml(nombre)}
                   </div>`;
         }).join('');
+
+        _pacDropdown.querySelectorAll('.ag-pac-item').forEach(item => {
+          item.addEventListener('mousedown', e => e.preventDefault()); // evita blur antes del click
+          item.addEventListener('click', () => {
+            const p      = _pacMatches[parseInt(item.dataset.i)];
+            const nombre = `${p.apellido || ''}, ${p.nombre || ''}`.trim().replace(/^,\s*/, '');
+            _pacHidden.value = p.id;
+            _pacSearch.value = nombre;
+            _pacDropdown.style.display = 'none';
+            if (_pacWrap) _pacWrap.style.borderColor = 'var(--primary,#5B2FA8)';
+          });
+          item.addEventListener('mouseover', () => { item.style.background = 'var(--primary-light,#EDE9FE)'; });
+          item.addEventListener('mouseout',  () => { item.style.background = 'var(--surface,#fff)'; });
+        });
       }
 
-      // Posicionar fixed bajo el input — escapa el overflow:auto del modal
-      const rect = _pacSearch.getBoundingClientRect();
-      _pacDropdown.style.top   = (rect.bottom + 4) + 'px';
-      _pacDropdown.style.left  = rect.left + 'px';
-      _pacDropdown.style.width = rect.width + 'px';
       _pacDropdown.style.display = 'block';
-
-      _pacDropdown.querySelectorAll('.ag-pac-item').forEach(item => {
-        item.addEventListener('mousedown', e => e.preventDefault());
-        item.addEventListener('click', () => {
-          const p      = _pacMatches[parseInt(item.dataset.i)];
-          const nombre = `${p.apellido || ''}, ${p.nombre || ''}`.trim().replace(/^,\s*/, '');
-          _pacHidden.value = p.id;
-          _pacSearch.value = nombre;
-          _pacDropdown.style.display = 'none';
-        });
-      });
+      if (_pacWrap) _pacWrap.style.borderColor = 'var(--primary,#5B2FA8)';
     }
 
-    // Al tipear: filtrar. Al hacer foco: mostrar todos (igual que un <select>)
-    _pacSearch.addEventListener('input',  () => _renderDropdown(false));
+    // Foco → mostrar todos. Tipeo → filtrar. Click → por si el foco ya estaba activo.
     _pacSearch.addEventListener('focus',  () => _renderDropdown(true));
-    _pacSearch.addEventListener('blur',   () => setTimeout(() => { _pacDropdown.style.display = 'none'; }, 160));
+    _pacSearch.addEventListener('click',  () => _renderDropdown(true));
+    _pacSearch.addEventListener('input',  () => _renderDropdown(false));
+    _pacSearch.addEventListener('blur',   () => {
+      setTimeout(() => {
+        _pacDropdown.style.display = 'none';
+        if (_pacWrap) _pacWrap.style.borderColor = 'var(--border,#E5E2F5)';
+      }, 200);
+    });
 
     // ── Swipe horizontal para navegar (mobile) ──────────────
     let _swipeX = 0, _swipeY = 0;
