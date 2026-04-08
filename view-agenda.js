@@ -798,6 +798,12 @@
     const _pacDropdown = agQ('ag-f-paciente-dropdown');
     const _pacHidden   = agQ('ag-f-paciente');
 
+    // Mover el dropdown al <body> para salir del stacking context del modal
+    // (.ag-overlay tiene z-index:60 y encapsula todo lo que está adentro).
+    // Con position:fixed + z-index:9999 en body es siempre visible.
+    document.body.appendChild(_pacDropdown);
+    _pacDropdown.style.zIndex = '9999';
+
     // mostrarTodos=true: muestra todos los pacientes sin filtrar (comportamiento de <select>)
     function _renderDropdown(mostrarTodos = false) {
       const q = (_pacSearch.value || '').toLowerCase().trim();
