@@ -610,22 +610,24 @@
 
         <div class="ag-field" id="ag-sec-paciente">
           <label>Paciente <span style="color:#E53935">*</span></label>
-          <!-- Buscador inline: el dropdown expande en flujo normal, sin trucos de posicionamiento -->
+          <!-- Dropdown aparece ARRIBA del input (antes en el DOM) para evitar que el teclado mobile lo tape -->
           <div style="border:1.5px solid var(--border,#E5E2F5);border-radius:10px;
-                      overflow:hidden;background:var(--bg,#F8F7FF);transition:border .15s"
+                      background:var(--bg,#F8F7FF);transition:border .15s"
                id="ag-pac-wrap">
+            <div id="ag-f-paciente-dropdown"
+                 style="display:none;border-bottom:1px solid var(--border,#E5E2F5);
+                        border-radius:10px 10px 0 0;
+                        max-height:220px;overflow-y:auto">
+            </div>
             <div style="display:flex;align-items:center;gap:8px;padding:0 12px">
               <span style="font-size:14px;color:var(--text-muted,#7C6FAE)">🔍</span>
               <input type="text" id="ag-f-paciente-search"
                      placeholder="Buscar por nombre o apellido…"
                      autocomplete="off"
+                     inputmode="search"
                      style="flex:1;padding:11px 0;border:none;font-size:14px;font-weight:500;
                             background:transparent;color:var(--text,#1E1040);
                             font-family:inherit;outline:none">
-            </div>
-            <div id="ag-f-paciente-dropdown"
-                 style="display:none;border-top:1px solid var(--border,#E5E2F5);
-                        max-height:200px;overflow-y:auto">
             </div>
           </div>
           <input type="hidden" id="ag-f-paciente">
@@ -855,11 +857,12 @@
       if (_pacWrap) _pacWrap.style.borderColor = 'var(--primary,#5B2FA8)';
     }
 
-    // Foco → mostrar todos. Tipeo → filtrar. Click → por si el foco ya estaba activo.
-    _pacSearch.addEventListener('focus',  () => _renderDropdown(true));
-    _pacSearch.addEventListener('click',  () => _renderDropdown(true));
-    _pacSearch.addEventListener('input',  () => _renderDropdown(false));
-    _pacSearch.addEventListener('blur',   () => {
+    // Foco/Click/Touch → mostrar todos. Tipeo → filtrar.
+    _pacSearch.addEventListener('focus',      () => _renderDropdown(true));
+    _pacSearch.addEventListener('click',      () => _renderDropdown(true));
+    _pacSearch.addEventListener('touchstart', () => _renderDropdown(true), { passive: true });
+    _pacSearch.addEventListener('input',      () => _renderDropdown(false));
+    _pacSearch.addEventListener('blur',       () => {
       setTimeout(() => {
         _pacDropdown.style.display = 'none';
         if (_pacWrap) _pacWrap.style.borderColor = 'var(--border,#E5E2F5)';
