@@ -20,8 +20,8 @@
   let _todosTurnos = [];
   let _todosPacientes = [];
   let _pacMatches     = [];   // resultados actuales del autocomplete
-  let _fechaActual = new Date();
-  let _hoy         = new Date();
+  let _fechaActual = new Date(getTodayLocal());
+  let _hoy         = new Date(getTodayLocal());
   let _turnoSel    = null;
   let _modoModal   = 'turno';   // 'turno' | 'evento'
   let _currentView = 'dia';
@@ -56,6 +56,13 @@
     return {sesion:'#2D6A4F',online:'#1976D2',evaluacion:'#F9A825',
             judicial:'#7C3AED',evento:'#F97316',otro:'#9CA3AF'}[tipo] || '#2D6A4F';
   }
+  // ── Timezone-safe: devuelve 'YYYY-MM-DD' en hora local Argentina ──────────
+  function getTodayLocal() {
+    return new Date().toLocaleDateString('en-CA', {
+      timeZone: 'America/Argentina/Buenos_Aires'
+    });
+  }
+
   function turnosDeFecha(fecha) {
     const key = fmtDate(fecha);
     return _todosTurnos.filter(t => t.fecha === key).sort((a,b) => (a.hora||'').localeCompare(b.hora||''));
@@ -132,7 +139,7 @@
   function _renderHTML(container) {
     container.innerHTML = `
     <style>
-      #ag-wrap { font-family: var(--font, 'Plus Jakarta Sans', sans-serif); color: var(--text, #1E1040); }
+      #ag-wrap { font-family: var(--font, 'Plus Jakarta Sans', sans-serif); color: var(--text, #1E1040); height: 100vh; display: flex; flex-direction: column; position: relative; overflow: hidden; }
       #ag-toolbar {
         display: flex; align-items: center; gap: 10px;
         padding: 14px 16px 10px;
@@ -259,13 +266,36 @@
         border-left:3px solid;
       }
 
-      /* Month */
-      #ag-month-names { display:grid; grid-template-columns:repeat(7,1fr); background:var(--surface,#fff); border-bottom:1px solid var(--border,#E5E2F5); padding:6px 0 3px; }
+      /* Month — layout fijo tipo Google Calendar */
+      #ag-month-names { display:grid; grid-template-columns:repeat(7,1fr); background:var(--surface,#fff); border-bottom:1px solid var(--border,#E5E2F5); padding:6px 0 3px; flex-shrink:0; }
       .ag-mn { text-align:center; font-size:10px; font-weight:800; color:var(--text-muted,#7C6FAE); text-transform:uppercase; }
-      #ag-month-grid { display:grid; grid-template-columns:repeat(7,1fr); padding-bottom:80px; }
+      #ag-month-wrap { flex:1; display:flex; flex-direction:column; min-height:0; }
+
+      /* Vista mes: posición absoluta para garantizar que ocupa el espacio restante */
+      #ag-mes-view {
+        position: absolute;
+        top: var(--ag-mes-top, 95px);
+        left: 0; right: 0; bottom: 0;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        background: var(--surface, #fff);
+      }
+
+      /* Grid: 7 col x 6 filas iguales, llena todo */
+      #ag-month-grid {
+        flex: 1;
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        grid-template-rows: repeat(6, 1fr);
+        min-height: 0;
+        overflow: hidden;
+      }
+
       .ag-mc {
         border-right:1px solid var(--border,#E5E2F5); border-bottom:1px solid var(--border,#E5E2F5);
-        min-height:68px; padding:5px 3px; cursor:pointer; transition: all 0.15s ease;
+        min-height: 0; overflow:hidden; padding:4px 3px; cursor:pointer; transition: background 0.15s ease;
+        display:flex; flex-direction:column;
       }
       .ag-mc:hover { background:var(--primary-light,#EDE9FE); }
       .ag-mc.other { opacity:.35; }
@@ -284,7 +314,7 @@
         color: #fff;
         box-shadow: 0 4px 12px rgba(124,58,237,0.4);
       }
-      .ag-mc-pill { font-size:9px; font-weight:700; padding:2px 4px; border-radius:4px; margin-bottom:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+      .ag-mc-pill { font-size:9px; font-weight:700; padding:2px 4px; border-radius:4px; margin-bottom:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; display:block; flex-shrink:0; }
 
       /* Empty */
       .ag-empty { text-align:center; padding:40px 20px; color:var(--text-muted,#7C6FAE); }
@@ -589,10 +619,10 @@
                           background:var(--bg,#F8F7FF);color:var(--text,#1E1040);
                           font-family:inherit;box-sizing:border-box;transition:border .15s">
             <div id="ag-f-paciente-dropdown"
-                 style="display:none;position:fixed;
+                 style="display:none;position:absolute;top:calc(100% + 4px);left:0;right:0;
                         background:var(--surface,#fff);border:1.5px solid var(--border,#E5E2F5);
-                        border-radius:10px;z-index:200;max-height:180px;overflow-y:auto;
-                        box-shadow:0 4px 16px rgba(0,0,0,.18)">
+                        border-radius:10px;z-index:70;max-height:180px;overflow-y:auto;
+                        box-shadow:0 4px 16px rgba(0,0,0,.12)">
             </div>
           </div>
           <input type="hidden" id="ag-f-paciente">
@@ -699,7 +729,11 @@
     });
 
     ['dia','semana','mes'].forEach(v => {
-      agQ(`ag-btn-${v}`).addEventListener('click', () => setView(v));
+      agQ(`ag-btn-${v}`).addEventListener('click', () => {
+        // Al entrar en vista día siempre mostrar HOY, nunca el inicio de semana
+        if (v === 'dia') _fechaActual = new Date(getTodayLocal());
+        setView(v);
+      });
     });
 
     agQ('ag-btn-crear').addEventListener('click', crearTurno);
@@ -721,7 +755,7 @@
       requestAnimationFrame(() => {
         if (_currentView === 'semana') {
           const gridEl = document.getElementById('ag-week-grid');
-          if (gridEl) posicionarColumnaHoy(gridEl, lunesDe(_fechaActual), fmtDate(new Date()));
+          if (gridEl) posicionarColumnaHoy(gridEl, lunesDe(_fechaActual), getTodayLocal());
           actualizarLineaHoraActualSemana();
         }
         if (_currentView === 'dia') {
@@ -754,9 +788,9 @@
 
     // ── Botón HOY ──────────────────────────────────────────
     agQ('ag-btn-hoy').addEventListener('click', () => {
-      _fechaActual = new Date();
-      _hoy         = new Date();
-      setView(_currentView);
+      _fechaActual = new Date(getTodayLocal());
+      _hoy         = new Date(getTodayLocal());
+      setView('dia');
     });
 
     // ── Autocomplete de paciente ────────────────────────────
@@ -764,24 +798,19 @@
     const _pacDropdown = agQ('ag-f-paciente-dropdown');
     const _pacHidden   = agQ('ag-f-paciente');
 
-    function _renderDropdown(mostrarTodos = false) {
+    function _renderDropdown() {
       const q = (_pacSearch.value || '').toLowerCase().trim();
+      _pacHidden.value = '';
+      if (!q) { _pacDropdown.style.display = 'none'; return; }
 
-      // Si no hay query Y no es foco inicial, ocultar
-      if (!q && !mostrarTodos) { _pacDropdown.style.display = 'none'; return; }
-
-      // Con query: filtrar — sin query (foco): mostrar todos
-      _pacMatches = q
-        ? _todosPacientes.filter(p => {
-            const full = `${p.nombre || ''} ${p.apellido || ''}`.toLowerCase();
-            const inv  = `${p.apellido || ''} ${p.nombre || ''}`.toLowerCase();
-            return full.includes(q) || inv.includes(q);
-          })
-        : [..._todosPacientes];
+      _pacMatches = _todosPacientes.filter(p => {
+        const full = `${p.nombre || ''} ${p.apellido || ''}`.toLowerCase();
+        const inv  = `${p.apellido || ''} ${p.nombre || ''}`.toLowerCase();
+        return full.includes(q) || inv.includes(q);
+      });
 
       if (!_pacMatches.length) {
-        _pacDropdown.innerHTML = `<div style="padding:10px 14px;font-size:13px;
-          color:var(--text-muted,#7C6FAE)">${q ? 'Sin resultados' : 'No hay pacientes cargados'}</div>`;
+        _pacDropdown.innerHTML = '<div style="padding:10px 14px;font-size:13px;color:var(--text-muted,#7C6FAE)">Sin resultados</div>';
         _pacDropdown.style.display = 'block';
         return;
       }
@@ -794,11 +823,6 @@
                   ${escHtml(nombre)}
                 </div>`;
       }).join('');
-      // Posicionar el dropdown fijo bajo el input (evita ser clippeado por overflow:auto del modal)
-      const rect = _pacSearch.getBoundingClientRect();
-      _pacDropdown.style.top   = (rect.bottom + 4) + 'px';
-      _pacDropdown.style.left  = rect.left + 'px';
-      _pacDropdown.style.width = rect.width + 'px';
       _pacDropdown.style.display = 'block';
 
       _pacDropdown.querySelectorAll('.ag-pac-item').forEach(item => {
@@ -813,9 +837,8 @@
       });
     }
 
-    _pacSearch.addEventListener('input',  () => _renderDropdown(false));
-    // Al hacer foco: mostrar TODOS los pacientes (como un select normal)
-    _pacSearch.addEventListener('focus',  () => _renderDropdown(true));
+    _pacSearch.addEventListener('input',  _renderDropdown);
+    _pacSearch.addEventListener('focus',  () => { if (_pacSearch.value.trim()) _renderDropdown(); });
     _pacSearch.addEventListener('blur',   () => setTimeout(() => { _pacDropdown.style.display = 'none'; }, 160));
 
     // ── Swipe horizontal para navegar (mobile) ──────────────
@@ -896,7 +919,7 @@
     // Limpiar overlay previo
     grid.querySelectorAll('.today-column').forEach(el => el.remove());
 
-    const esHoy = fmtDate(_fechaActual) === fmtDate(_hoy);
+    const esHoy = fmtDate(_fechaActual) === getTodayLocal();
     if (!esHoy) return;
 
     const col = document.createElement('div');
@@ -1028,7 +1051,7 @@
   function actualizarLineaHoraActualDia() {
     const grid = document.getElementById('ag-time-grid');
     if (!grid) return;
-    const esHoy = fmtDate(_fechaActual) === fmtDate(_hoy);
+    const esHoy = fmtDate(_fechaActual) === getTodayLocal();
     if (!esHoy) {
       // Limpiar overlay si existe
       const overlay = document.getElementById('ag-time-grid-time-overlay');
@@ -1049,7 +1072,7 @@
     const overlay = document.getElementById('ag-week-grid-time-overlay');
     if (overlay) overlay.querySelectorAll('.current-time-line').forEach(el => el.remove());
 
-    const todayKey = fmtDate(new Date());
+    const todayKey = getTodayLocal();
     const lunes = lunesDe(_fechaActual);
     let hoyIdx = -1;
     for (let i = 0; i < 7; i++) {
@@ -1109,7 +1132,12 @@
   }
 
 
-  function setView(v) {
+  function setView(v, opcionFecha) {
+    // En vista día: si se pasa fecha explícita (ej: desde mes) usarla,
+    // si no, siempre mostrar HOY — nunca el lunes de la semana
+    if (v === 'dia') {
+      _fechaActual = opcionFecha ? new Date(opcionFecha) : new Date(getTodayLocal());
+    }
     _currentView = v;
     ['dia','semana','mes'].forEach(x => {
       const el  = agQ(`ag-${x}-view`);
@@ -1142,7 +1170,11 @@
         iniciarLineaHoraActual();
       }));
     }
-    if (v === 'mes') renderMes();
+    if (v === 'mes') {
+      const mesEl = agQ('ag-mes-view');
+      if (mesEl) mesEl.style.display = 'flex'; // forzar flex, no block
+      renderMes();
+    }
   }
 
   function actualizarHeader() {
@@ -1153,7 +1185,7 @@
     if (!el) return;
 
     // Header highlight: solo en vista día cuando es HOY
-    const esHoyDia = _currentView === 'dia' && fmtDate(_fechaActual) === fmtDate(_hoy);
+    const esHoyDia = _currentView === 'dia' && fmtDate(_fechaActual) === getTodayLocal();
     title?.classList.toggle('ag-dia-hoy-header', esHoyDia);
 
     if (_currentView === 'dia') {
@@ -1217,7 +1249,7 @@
     const grid = agQ('ag-time-grid');
     if (!grid) return;
     const turnos  = turnosDeFecha(_fechaActual);
-    const esHoy   = fmtDate(_fechaActual) === fmtDate(_hoy);
+    const esHoy   = fmtDate(_fechaActual) === getTodayLocal();
     const horaAct = esHoy ? new Date().getHours() : -1;
     let html = '';
     HORAS.forEach(h => {
@@ -1260,7 +1292,7 @@
     if (!hdrEl || !gridEl) return;
     const lunes = lunesDe(_fechaActual);
 
-    const _todayKey = fmtDate(new Date());
+    const _todayKey = getTodayLocal();
     let hdr = '<div class="ag-wh-col"></div>';
     for (let i = 0; i < 7; i++) {
       const d    = new Date(lunes); d.setDate(lunes.getDate() + i);
@@ -1304,9 +1336,22 @@
   }
 
   // ── Month grid ───────────────────────────────────────────
+  function _ajustarTopMes() {
+    requestAnimationFrame(() => {
+      const toggle  = document.querySelector('.ag-view-toggle');
+      const mesView = agQ('ag-mes-view');
+      const wrap    = agQ('ag-wrap');
+      if (!toggle || !mesView || !wrap) return;
+      const wrapTop = wrap.getBoundingClientRect().top;
+      const togBot  = toggle.getBoundingClientRect().bottom;
+      mesView.style.top = Math.round(togBot - wrapTop) + 'px';
+    });
+  }
+
   function renderMes() {
     const grid = agQ('ag-month-grid');
     if (!grid) return;
+    _ajustarTopMes();
     grid.innerHTML = '';
     const y = _fechaActual.getFullYear(), m = _fechaActual.getMonth();
     const primerDia = (new Date(y, m, 1).getDay() + 6) % 7; // 0=Lun, 6=Dom
@@ -1319,7 +1364,7 @@
     }
     for (let d = 1; d <= diasEnMes; d++) {
       const fecha  = new Date(y, m, d);
-      const esHoy  = fmtDate(fecha) === fmtDate(_hoy);
+      const esHoy  = fmtDate(fecha) === getTodayLocal();
       const turnos = turnosDeFecha(fecha);
       const cell   = document.createElement('div');
       cell.className = 'ag-mc' + (esHoy ? ' today-cell' : '');
@@ -1340,7 +1385,7 @@
         mas.textContent = `+${turnos.length - 3} más`;
         cell.appendChild(mas);
       }
-      cell.addEventListener('click', () => { _fechaActual = fecha; setView('dia'); });
+      cell.addEventListener('click', () => { setView('dia', fecha); });
       grid.appendChild(cell);
     }
   }
@@ -1381,11 +1426,9 @@
 
     agQ('ag-f-fecha').value    = fecha || fmtDate(_fechaActual);
     agQ('ag-f-hora').value     = hora  || (String(new Date().getHours()).padStart(2,'0') + ':00');
-    const _ps = agQ('ag-f-paciente-search');
-    const _ph = agQ('ag-f-paciente');
+    agQ('ag-f-paciente-search').value = '';
+    agQ('ag-f-paciente').value        = '';
     const _dd = agQ('ag-f-paciente-dropdown');
-    if (_ps) _ps.value = '';
-    if (_ph) _ph.value = '';
     if (_dd) _dd.style.display = 'none';
     agQ('ag-f-titulo').value   = '';
     agQ('ag-f-notas').value    = '';
@@ -1603,8 +1646,8 @@
 
     /* onEnter — refresca datos en cada visita, NO re-renderiza el DOM */
     async onEnter() {
-      _hoy         = new Date();
-      _fechaActual = new Date();
+      _hoy         = new Date(getTodayLocal());
+      _fechaActual = new Date(getTodayLocal());
       _currentView = 'dia';
 
       // userId desde store (sin getSession adicional)
