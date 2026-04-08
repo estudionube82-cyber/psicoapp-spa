@@ -729,9 +729,15 @@ function _dnRenderTurnos(turnos, hoy) {
 }
 
 async function _dnRenderNombre(turnosHoy) {
+  // Forzar re-fetch del perfil para que foto y nombre estén siempre actualizados
+  PsicoRouter.store.invalidatePerfil();
   const perfil = await PsicoRouter.store.ensurePerfil().catch(() => ({}));
   const nombre = perfil.nombre_completo || perfil.nombre || 'Psicólogo/a';
-  const foto   = perfil.foto_url || perfil.foto || null;
+  // Agregar cache-buster si la URL no lo tiene ya
+  const fotoBase = perfil.foto_url || perfil.foto || null;
+  const foto     = fotoBase && !fotoBase.includes('?t=')
+    ? fotoBase + '?t=' + Date.now()
+    : fotoBase;
 
   /* Nombre en profile header */
   const nameEl = document.getElementById('dn-ph-name');
@@ -876,9 +882,12 @@ function _dnStoreHandler(e) {
   /* Actualización rápida de avatar cuando cambia el perfil —
      no esperar a _dnCargarDatos completo */
   if (type === 'perfil') {
-    const p       = PsicoRouter.store.perfil;
-    const foto    = p?.foto_url || p?.foto || null;
-    const nombre  = p?.nombre_completo || p?.nombre || '';
+    const p        = PsicoRouter.store.perfil;
+    const fotoBase = p?.foto_url || p?.foto || null;
+    const foto     = fotoBase && !fotoBase.includes('?t=')
+      ? fotoBase + '?t=' + Date.now()
+      : fotoBase;
+    const nombre   = p?.nombre_completo || p?.nombre || '';
     const avatarEl = document.getElementById('dn-ph-avatar');
     if (avatarEl && foto) {
       avatarEl.innerHTML = `<img src="${foto}" alt="${nombre}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`;

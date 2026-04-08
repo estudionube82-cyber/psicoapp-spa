@@ -442,13 +442,18 @@ const _PerfilView = (() => {
 
           if (!upErr) {
             const { data: urlData } = sb.storage.from('avatars').getPublicUrl(path);
-            fotoUrl = urlData?.publicUrl || null;
-            // Guardar URL en profiles
-            await sb.from('profiles').upsert(
-              { id: userId, foto_url: fotoUrl },
-              { onConflict: 'id' }
-            );
-            // Actualizar cache con la URL conocida antes de notificar al dashboard
+            const baseUrl = urlData?.publicUrl || null;
+            // Cache-buster: el mismo path siempre genera la misma URL pública,
+            // el browser la cachea. Forzamos re-fetch con timestamp.
+            fotoUrl = baseUrl ? baseUrl + '?t=' + Date.now() : null;
+            // Guardar URL base (sin ?t=) en profiles para que no acumule timestamps
+            if (baseUrl) {
+              await sb.from('profiles').upsert(
+                { id: userId, foto_url: baseUrl },
+                { onConflict: 'id' }
+              );
+            }
+            // Actualizar cache del store con la URL con cache-buster
             PsicoRouter.store.setPerfil({ foto_url: fotoUrl });
             window.dispatchEvent(new CustomEvent('storeUpdated', { detail: { type: 'perfil' } }));
           }
