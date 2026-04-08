@@ -729,11 +729,8 @@ function _dnRenderTurnos(turnos, hoy) {
 }
 
 async function _dnRenderNombre(turnosHoy) {
-  // Forzar re-fetch del perfil para que foto y nombre estén siempre actualizados
-  PsicoRouter.store.invalidatePerfil();
   const perfil = await PsicoRouter.store.ensurePerfil().catch(() => ({}));
   const nombre = perfil.nombre_completo || perfil.nombre || 'Psicólogo/a';
-  // Agregar cache-buster si la URL no lo tiene ya
   const fotoBase = perfil.foto_url || perfil.foto || null;
   const foto     = fotoBase && !fotoBase.includes('?t=')
     ? fotoBase + '?t=' + Date.now()
@@ -861,6 +858,9 @@ PsicoRouter.register('dashboard', {
   },
 
   async onEnter() {
+    // Siempre traer perfil fresco (foto puede haber cambiado)
+    // Borramos solo el cache sin disparar storeUpdated para no crear loops
+    PsicoRouter.store.perfil = null;
     await _dnCargarDatos();
     clearInterval(_dn.refreshTimer);
     _dn.refreshTimer = setInterval(_dnCargarDatos, 5 * 60 * 1000);

@@ -203,7 +203,7 @@ const _PerfilView = (() => {
   }
 
   /* ── Sincronizar sidebar con datos frescos ──────────────── */
-  function _syncSidebar(nombre, fotoUrl) {
+  function _syncSidebar(nombre, fotoUrl, { silent = false } = {}) {
     const nameEl   = document.getElementById('sb-user-name');
     const avatarEl = document.getElementById('sb-avatar-initials');
     if (nameEl)   nameEl.textContent = nombre || 'Mi perfil';
@@ -212,7 +212,9 @@ const _PerfilView = (() => {
         ? `<img src="${fotoUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`
         : `<span>${nombre ? nombre.slice(0, 2).toUpperCase() : '👤'}</span>`;
     }
-    window.dispatchEvent(new CustomEvent('storeUpdated', { detail: { type: 'perfil' } }));
+    if (!silent) {
+      window.dispatchEvent(new CustomEvent('storeUpdated', { detail: { type: 'perfil' } }));
+    }
   }
 
   /* ── Actualizar cabecera de la vista ────────────────────── */
@@ -464,7 +466,8 @@ const _PerfilView = (() => {
         /* Actualizar avatar en pantalla (usar base64 localmente aunque falle Storage) */
         const displayUrl = fotoUrl || base64;
         _rebuildAvatar(avatarWrap, displayUrl, '👤');
-        _syncSidebar(container.querySelector('#vp-nombre').value.trim(), displayUrl);
+        // silent:true porque ya disparamos storeUpdated con setPerfil arriba
+        _syncSidebar(container.querySelector('#vp-nombre').value.trim(), displayUrl, { silent: true });
 
         /* Toast */
         _showToast(container, '📷 Foto actualizada', 'ok', 2500);
