@@ -1479,6 +1479,17 @@
     errEl.textContent   = '';
 
     agQ('ag-overlay').classList.add('open');
+
+    // Auto-mostrar lista de pacientes al abrir el modal (modo turno)
+    if (_modoModal === 'turno') {
+      setTimeout(() => {
+        const ps = agQ('ag-f-paciente-search');
+        if (ps) {
+          ps.focus();
+          _renderDropdown(true);
+        }
+      }, 120);
+    }
   }
 
   function cerrarModal() {
