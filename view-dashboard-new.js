@@ -730,11 +730,13 @@ function _dnRenderTurnos(turnos, hoy) {
 
 async function _dnRenderNombre(turnosHoy) {
   const perfil = await PsicoRouter.store.ensurePerfil().catch(() => ({}));
+  console.log('[Dashboard] _dnRenderNombre — perfil completo:', JSON.stringify(perfil));
   const nombre = perfil.nombre_completo || perfil.nombre || 'Psicólogo/a';
   const fotoBase = perfil.foto_url || perfil.foto || null;
   const foto     = fotoBase && !fotoBase.includes('?t=')
     ? fotoBase + '?t=' + Date.now()
     : fotoBase;
+  console.log('[Dashboard] foto final a renderizar:', foto);
 
   /* Nombre en profile header */
   const nameEl = document.getElementById('dn-ph-name');
@@ -883,12 +885,14 @@ function _dnStoreHandler(e) {
      no esperar a _dnCargarDatos completo */
   if (type === 'perfil') {
     const p        = PsicoRouter.store.perfil;
+    console.log('[Dashboard] storeUpdated perfil recibido — store.perfil:', JSON.stringify(p));
     const fotoBase = p?.foto_url || p?.foto || null;
     const foto     = fotoBase && !fotoBase.includes('?t=')
       ? fotoBase + '?t=' + Date.now()
       : fotoBase;
     const nombre   = p?.nombre_completo || p?.nombre || '';
     const avatarEl = document.getElementById('dn-ph-avatar');
+    console.log('[Dashboard] avatarEl existe:', !!avatarEl, '| foto:', foto);
     if (avatarEl && foto) {
       avatarEl.innerHTML = `<img src="${foto}" alt="${nombre}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`;
     }

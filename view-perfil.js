@@ -438,29 +438,36 @@ const _PerfilView = (() => {
         try {
           const ext      = file.name.split('.').pop();
           const path     = `${userId}/avatar.${ext}`;
+          console.log('[Foto] Subiendo a Storage, path:', path);
+
           const { error: upErr } = await sb.storage
             .from('avatars')
             .upload(path, file, { upsert: true, contentType: file.type });
 
+          console.log('[Foto] Upload result — error:', upErr);
+
           if (!upErr) {
             const { data: urlData } = sb.storage.from('avatars').getPublicUrl(path);
             const baseUrl = urlData?.publicUrl || null;
-            // Cache-buster: el mismo path siempre genera la misma URL pública,
-            // el browser la cachea. Forzamos re-fetch con timestamp.
             fotoUrl = baseUrl ? baseUrl + '?t=' + Date.now() : null;
-            // Guardar URL base (sin ?t=) en profiles para que no acumule timestamps
+            console.log('[Foto] baseUrl:', baseUrl, '| fotoUrl con cache-buster:', fotoUrl);
+
             if (baseUrl) {
-              await sb.from('profiles').upsert(
+              const { error: upsertErr } = await sb.from('profiles').upsert(
                 { id: userId, foto_url: baseUrl },
                 { onConflict: 'id' }
               );
+              console.log('[Foto] Upsert profiles — error:', upsertErr);
             }
-            // Actualizar cache del store con la URL con cache-buster
+
             PsicoRouter.store.setPerfil({ foto_url: fotoUrl });
+            console.log('[Foto] store.perfil después de setPerfil:', JSON.stringify(PsicoRouter.store.perfil));
             window.dispatchEvent(new CustomEvent('storeUpdated', { detail: { type: 'perfil' } }));
+          } else {
+            console.error('[Foto] Error en upload de Storage:', upErr);
           }
         } catch (e) {
-          console.warn('[Perfil] No se pudo subir foto a Storage:', e.message);
+          console.error('[Foto] Excepción inesperada:', e.message);
         }
 
         /* Actualizar avatar en pantalla (usar base64 localmente aunque falle Storage) */
