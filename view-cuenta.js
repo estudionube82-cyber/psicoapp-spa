@@ -408,18 +408,18 @@ async function renderCuenta() {
     <div class="vc-tuto-item" id="vc-tuto-gcal">
       <div class="vc-tuto-header">
         <span class="vc-tuto-icon">📅</span>
-        <span class="vc-tuto-htitle">Cómo conectar Google Calendar</span>
+        <span class="vc-tuto-htitle">Google Calendar — próximamente</span>
         <span class="vc-tuto-arrow">›</span>
       </div>
       <div class="vc-tuto-body">
-        <p>Con la integración de Google Calendar, tus turnos confirmados se agregan automáticamente a tu calendario personal.</p>
+        <p>La integración con Google Calendar está en desarrollo. Cuando esté lista, tus turnos confirmados se agregarán automáticamente a tu calendario personal sin que tengas que hacer nada.</p>
         <ol>
-          <li>Presioná <strong>Conectar</strong> en la sección Integraciones de arriba.</li>
-          <li>Se abrirá una ventana de Google donde debés iniciar sesión y autorizar el acceso.</li>
-          <li>Una vez conectado, los nuevos turnos se sincronizarán solos.</li>
-          <li>Podés desconectar en cualquier momento desde esta misma pantalla.</li>
+          <li>Vas a presionar <strong>Conectar</strong> una sola vez.</li>
+          <li>Google te pedirá autorizar el acceso al calendario.</li>
+          <li>Desde ese momento, cada turno confirmado crea un evento automáticamente.</li>
+          <li>Podés desconectar en cualquier momento.</li>
         </ol>
-        <span class="vc-tuto-tag">⏱ 2 minutos</span>
+        <span class="vc-tuto-tag">🚧 En desarrollo</span>
       </div>
     </div>
 
@@ -621,9 +621,13 @@ async function renderCuenta() {
   });
 }
 
-/* ══ MODAL GOOGLE CALENDAR ══ */
+/* ══ MODAL GOOGLE CALENDAR ══
+   La integración real con Google Calendar API requiere un proyecto
+   en Google Cloud con Calendar API habilitada y un backend/Edge Function
+   para manejar el OAuth 2.0 y almacenar los refresh tokens de forma segura.
+   Por ahora mostramos los pasos de configuración pendientes.
+══════════════════════════════════════════════════════ */
 function _vcShowGCalModal() {
-  // Remover modal anterior si existe
   const old = document.getElementById('vc-gcal-modal');
   if (old) old.remove();
 
@@ -632,64 +636,45 @@ function _vcShowGCalModal() {
   modal.innerHTML = `
     <div class="vcm-sheet">
       <div class="vcm-title">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="#4285F4"><rect x="3" y="4" width="18" height="16" rx="3" fill="#4285F4" opacity=".15"/><path d="M3 9h18M8 3v3M16 3v3" stroke="#4285F4" stroke-width="1.5" stroke-linecap="round"/><text x="12" y="18" text-anchor="middle" font-size="6" font-weight="800" fill="#4285F4" font-family="Arial">CAL</text></svg>
-        Conectar Google Calendar
+        <svg width="24" height="24" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="3" fill="#4285F4" opacity=".15"/><path d="M3 9h18M8 3v3M16 3v3" stroke="#4285F4" stroke-width="1.5" stroke-linecap="round"/></svg>
+        Google Calendar
       </div>
-      <div class="vcm-sub">Tus turnos confirmados se sincronizarán automáticamente con tu Google Calendar personal.</div>
+      <div class="vcm-sub">
+        La sincronización automática con Google Calendar está en desarrollo.
+        Próximamente podrás conectar tu cuenta y tus turnos se agregarán solos.
+      </div>
+
       <div class="vcm-steps">
         <div class="vcm-step">
-          <div class="vcm-step-num">1</div>
-          <div class="vcm-step-text">Presioná <strong>Autorizar con Google</strong> abajo — se abrirá la pantalla de permisos de Google.</div>
+          <div class="vcm-step-num" style="background:rgba(251,191,36,.15);color:#D97706;">⏳</div>
+          <div class="vcm-step-text"><strong>Sincronización automática</strong> — cuando un turno se confirma, se crea el evento en Google Calendar.</div>
         </div>
         <div class="vcm-step">
-          <div class="vcm-step-num">2</div>
-          <div class="vcm-step-text">Seleccioná tu cuenta y hacé clic en <strong>Permitir</strong> para que PsicoApp pueda agregar eventos.</div>
+          <div class="vcm-step-num" style="background:rgba(251,191,36,.15);color:#D97706;">⏳</div>
+          <div class="vcm-step-text"><strong>Recordatorios nativos</strong> — Google Calendar enviará recordatorios automáticos al paciente.</div>
         </div>
         <div class="vcm-step">
-          <div class="vcm-step-num">3</div>
-          <div class="vcm-step-text">¡Listo! Los nuevos turnos confirmados se agregarán automáticamente a tu calendario.</div>
+          <div class="vcm-step-num" style="background:rgba(251,191,36,.15);color:#D97706;">⏳</div>
+          <div class="vcm-step-text"><strong>Una sola configuración</strong> — conectás una vez y funciona para siempre.</div>
         </div>
       </div>
+
+      <div style="background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.3);border-radius:10px;padding:12px 14px;margin-bottom:20px;">
+        <div style="font-size:12px;font-weight:700;color:#D97706;margin-bottom:4px;">🚧 En desarrollo</div>
+        <div style="font-size:12px;color:var(--text-muted);line-height:1.5;">
+          Esta función requiere configuración en Google Cloud. Estará disponible en una próxima actualización de PsicoApp.
+        </div>
+      </div>
+
       <div class="vcm-actions">
-        <button class="vcm-btn-cancel" id="vcm-cancel">Cancelar</button>
-        <button class="vcm-btn-primary" id="vcm-autorizar">
-          <svg width="16" height="16" viewBox="0 0 24 24" style="margin-right:6px;vertical-align:middle"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
-          Autorizar con Google
-        </button>
+        <button class="vcm-btn-cancel" id="vcm-cancel" style="flex:1">Entendido</button>
       </div>
     </div>
   `;
   document.body.appendChild(modal);
 
-  // Cerrar al hacer click fuera del sheet
-  modal.addEventListener('click', (e) => {
-    if (e.target === modal) modal.remove();
-  });
+  modal.addEventListener('click', (e) => { if (e.target === modal) modal.remove(); });
   document.getElementById('vcm-cancel').addEventListener('click', () => modal.remove());
-  document.getElementById('vcm-autorizar').addEventListener('click', async () => {
-    const btn = document.getElementById('vcm-autorizar');
-    btn.disabled = true;
-    btn.textContent = '⏳ Abriendo Google…';
-    try {
-      // OAuth de Google para Calendar API (scope calendar.events)
-      const { data, error } = await sb.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          scopes: 'https://www.googleapis.com/auth/calendar.events',
-          redirectTo: window.location.origin + '/?gcal=ok',
-          queryParams: { access_type: 'offline', prompt: 'consent' }
-        }
-      });
-      if (error) throw error;
-      // El redirect ocurre — el resto se maneja en onEnter
-    } catch (e) {
-      // Fallback: marcar como conectado localmente (demo mode)
-      _vcGCalSetConectado(true);
-      modal.remove();
-      vcToast('✅ Google Calendar conectado');
-      await renderCuenta();
-    }
-  });
 }
 
 /* ══ LISTENER: reacciona a cambios de perfil o plan ══
