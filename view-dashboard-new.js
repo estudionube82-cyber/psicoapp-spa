@@ -732,7 +732,8 @@ async function _dnRenderNombre(turnosHoy) {
   const perfil = await PsicoRouter.store.ensurePerfil().catch(() => ({}));
   const nombre = perfil.nombre_completo || perfil.nombre || 'Psicólogo/a';
   const fotoBase = perfil.foto_url || perfil.foto || null;
-  const foto     = fotoBase && !fotoBase.includes('?t=')
+  // Cache-buster solo para URLs HTTP, nunca para data: (base64)
+  const foto = fotoBase && !fotoBase.startsWith('data:') && !fotoBase.includes('?t=')
     ? fotoBase + '?t=' + Date.now()
     : fotoBase;
 
@@ -884,7 +885,7 @@ function _dnStoreHandler(e) {
   if (type === 'perfil') {
     const p        = PsicoRouter.store.perfil;
     const fotoBase = p?.foto_url || p?.foto || null;
-    const foto     = fotoBase && !fotoBase.includes('?t=')
+    const foto = fotoBase && !fotoBase.startsWith('data:') && !fotoBase.includes('?t=')
       ? fotoBase + '?t=' + Date.now()
       : fotoBase;
     const nombre   = p?.nombre_completo || p?.nombre || '';
