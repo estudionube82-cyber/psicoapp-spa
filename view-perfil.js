@@ -480,8 +480,6 @@ const _PerfilView = (() => {
         _showToast(container, '❌ Error inesperado: ' + e.message, 'error');
       }
     });
-      reader.readAsDataURL(file);
-    });
 
     /* Guardar cambios */
     container.querySelector('#vp-btn-guardar').addEventListener('click', () => {
