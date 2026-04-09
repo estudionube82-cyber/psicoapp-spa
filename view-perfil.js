@@ -421,7 +421,7 @@ const _PerfilView = (() => {
       container.querySelector('#vp-foto-input').click();
     });
 
-    /* Foto: selección → subir a Supabase Storage y guardar URL */
+    /* Foto: selección → comprimir y guardar base64 en profiles.foto_url */
     container.querySelector('#vp-foto-input').addEventListener('change', async function () {
       const file = this.files[0];
       if (!file) return;
@@ -429,56 +429,57 @@ const _PerfilView = (() => {
       const userId = await PsicoRouter.store.ensureUserId();
       if (!userId) return;
 
-      const reader = new FileReader();
-      reader.onload = async (ev) => {
-        const base64 = ev.target.result;
+      _showToast(container, '⏳ Procesando foto…', 'ok', 60000);
 
-        /* Subir a Supabase Storage (bucket: avatars) */
-        let fotoUrl = null;
-        try {
-          const ext      = file.name.split('.').pop();
-          const path     = `${userId}/avatar.${ext}`;
-          console.log('[Foto] Subiendo a Storage, path:', path);
+      /* Comprimir la imagen a máximo 400x400 antes de guardar */
+      function _comprimirImagen(file, maxSize, quality) {
+        return new Promise(resolve => {
+          const reader = new FileReader();
+          reader.onload = ev => {
+            const img = new Image();
+            img.onload = () => {
+              const canvas = document.createElement('canvas');
+              let w = img.width, h = img.height;
+              if (w > h) { if (w > maxSize) { h = Math.round(h * maxSize / w); w = maxSize; } }
+              else       { if (h > maxSize) { w = Math.round(w * maxSize / h); h = maxSize; } }
+              canvas.width = w; canvas.height = h;
+              canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+              resolve(canvas.toDataURL('image/jpeg', quality));
+            };
+            img.src = ev.target.result;
+          };
+          reader.readAsDataURL(file);
+        });
+      }
 
-          const { error: upErr } = await sb.storage
-            .from('avatars')
-            .upload(path, file, { upsert: true, contentType: file.type });
+      try {
+        const base64 = await _comprimirImagen(file, 400, 0.82);
 
-          console.log('[Foto] Upload result — error:', upErr);
+        /* Guardar base64 directamente en profiles.foto_url */
+        const { error } = await sb.from('profiles').upsert(
+          { id: userId, foto_url: base64 },
+          { onConflict: 'id' }
+        );
 
-          if (!upErr) {
-            const { data: urlData } = sb.storage.from('avatars').getPublicUrl(path);
-            const baseUrl = urlData?.publicUrl || null;
-            fotoUrl = baseUrl ? baseUrl + '?t=' + Date.now() : null;
-            console.log('[Foto] baseUrl:', baseUrl, '| fotoUrl con cache-buster:', fotoUrl);
-
-            if (baseUrl) {
-              const { error: upsertErr } = await sb.from('profiles').upsert(
-                { id: userId, foto_url: baseUrl },
-                { onConflict: 'id' }
-              );
-              console.log('[Foto] Upsert profiles — error:', upsertErr);
-            }
-
-            PsicoRouter.store.setPerfil({ foto_url: fotoUrl });
-            console.log('[Foto] store.perfil después de setPerfil:', JSON.stringify(PsicoRouter.store.perfil));
-            window.dispatchEvent(new CustomEvent('storeUpdated', { detail: { type: 'perfil' } }));
-          } else {
-            console.error('[Foto] Error en upload de Storage:', upErr);
-          }
-        } catch (e) {
-          console.error('[Foto] Excepción inesperada:', e.message);
+        if (error) {
+          _showToast(container, '❌ Error al guardar foto: ' + error.message, 'error');
+          return;
         }
 
-        /* Actualizar avatar en pantalla (usar base64 localmente aunque falle Storage) */
-        const displayUrl = fotoUrl || base64;
-        _rebuildAvatar(avatarWrap, displayUrl, '👤');
-        // silent:true porque ya disparamos storeUpdated con setPerfil arriba
-        _syncSidebar(container.querySelector('#vp-nombre').value.trim(), displayUrl, { silent: true });
+        /* Actualizar store y notificar al dashboard */
+        PsicoRouter.store.setPerfil({ foto_url: base64 });
+        window.dispatchEvent(new CustomEvent('storeUpdated', { detail: { type: 'perfil' } }));
 
-        /* Toast */
+        /* Actualizar avatar en pantalla */
+        _rebuildAvatar(avatarWrap, base64, '👤');
+        _syncSidebar(container.querySelector('#vp-nombre').value.trim(), base64, { silent: true });
+
         _showToast(container, '📷 Foto actualizada', 'ok', 2500);
-      };
+
+      } catch (e) {
+        _showToast(container, '❌ Error inesperado: ' + e.message, 'error');
+      }
+    });
       reader.readAsDataURL(file);
     });
 
