@@ -30,7 +30,16 @@
   const DIAS  = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
   const MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio',
                  'Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
-  const HORAS = [8,9,10,11,12,13,14,15,16,17,18,19,20];
+
+  // HORAS se reconstruye en onEnter con las preferencias del psicólogo
+  function _buildHoras() {
+    const inicio = typeof vcGetPref === 'function' ? (vcGetPref('agenda_inicio', 8) | 0) : 8;
+    const fin    = typeof vcGetPref === 'function' ? (vcGetPref('agenda_fin',    20) | 0) : 20;
+    const arr = [];
+    for (let h = Math.max(0, inicio); h <= Math.min(23, fin); h++) arr.push(h);
+    return arr.length ? arr : [8,9,10,11,12,13,14,15,16,17,18,19,20];
+  }
+  let HORAS = _buildHoras();
 
   // ── Helpers ──────────────────────────────────────────────
   function fmtDate(d) {
@@ -969,21 +978,22 @@
   /** Intervalo activo del setInterval; se limpia en onLeave */
   let _currentTimeInterval = null;
 
-  /** Constantes del rango horario de la agenda */
-  const HORA_INICIO = 8;   // 08:00
-  const HORA_FIN    = 20;  // 20:00 (última fila visible)
-  const TOTAL_MINUTOS = (HORA_FIN - HORA_INICIO) * 60; // 720 min
+  /** Rango horario de la agenda — derivado de HORAS (dinámico con preferencias) */
+  function _getHoraInicio()    { return HORAS[0]  ?? 8; }
+  function _getHoraFin()       { return HORAS[HORAS.length - 1] ?? 20; }
+  function _getTotalMinutos()  { return (_getHoraFin() - _getHoraInicio()) * 60; }
 
   /**
    * Calcula el porcentaje vertical (0–1) de la hora actual
-   * dentro del rango 08:00–20:00.
+   * dentro del rango horario configurado.
    * Devuelve null si está fuera del rango.
    */
   function _calcPorcentajeHoraActual() {
     const ahora = new Date();
-    const minutosDesdeInicio = (ahora.getHours() - HORA_INICIO) * 60 + ahora.getMinutes();
-    if (minutosDesdeInicio < 0 || minutosDesdeInicio > TOTAL_MINUTOS) return null;
-    return minutosDesdeInicio / TOTAL_MINUTOS;
+    const minutosDesdeInicio = (ahora.getHours() - _getHoraInicio()) * 60 + ahora.getMinutes();
+    const total = _getTotalMinutos();
+    if (minutosDesdeInicio < 0 || minutosDesdeInicio > total) return null;
+    return total > 0 ? minutosDesdeInicio / total : null;
   }
 
   /**
@@ -1036,11 +1046,13 @@
 
     const selector = container.id === 'ag-time-grid' ? '.ag-time-row' : '.ag-week-row';
     const filas    = container.querySelectorAll(selector);
-    if (filas.length < 13) return;
+    if (filas.length < 2) return;
 
     const now              = new Date();
-    const minutesFromStart = (now.getHours() - 8) * 60 + now.getMinutes();
-    if (minutesFromStart < 0 || minutesFromStart > 720) return;
+    const horaInicio       = _getHoraInicio();
+    const totalMinutos     = _getTotalMinutos();
+    const minutesFromStart = (now.getHours() - horaInicio) * 60 + now.getMinutes();
+    if (minutesFromStart < 0 || minutesFromStart > totalMinutos) return;
 
     // Altura real de UNA fila medida en el viewport (no depende de scroll ni offsetParent)
     const r0  = filas[0].getBoundingClientRect();
@@ -1048,16 +1060,15 @@
     const rowH = r1.top - r0.top;   // distancia entre tops consecutivos = altura real de fila
     if (rowH <= 0) return;
 
-    // Total de 12 horas × altura de fila = rango completo 08:00→20:00
-    const totalHeight = rowH * 12;
+    // Total de horas configuradas × altura de fila = rango completo
+    const totalHeight = rowH * HORAS.length;
 
-    // Posición de la fila 08:00 dentro del contenido scrollable:
-    // top visible de fila0 + scrollTop = top absoluto dentro del container
+    // Posición de la primera hora dentro del contenido scrollable
     const cRect    = container.getBoundingClientRect();
     const fila0Top = r0.top - cRect.top + container.scrollTop;  // abs dentro del container
 
     // Posición de la línea dentro del contenido
-    const topEnContenido = fila0Top + (minutesFromStart / 720) * totalHeight;
+    const topEnContenido = fila0Top + (totalMinutos > 0 ? minutesFromStart / totalMinutos : 0) * totalHeight;
 
     // Para el overlay (relativo al parent): container.offsetTop + topEnContenido - scrollTop
     const topVisible = container.offsetTop + topEnContenido - container.scrollTop;
@@ -1676,7 +1687,13 @@
     async onEnter() {
       _hoy         = new Date(getTodayLocal());
       _fechaActual = new Date(getTodayLocal());
-      _currentView = 'dia';
+
+      // Leer preferencias del psicólogo
+      HORAS = _buildHoras(); // reconstruir rango horario con preferencias actuales
+      const vistaDefault = typeof vcGetPref === 'function'
+        ? (vcGetPref('cal_vista', 'dia') || 'dia')
+        : 'dia';
+      _currentView = vistaDefault;
 
       // userId desde store (sin getSession adicional)
       _userId = await PsicoRouter.store.ensureUserId();
@@ -1688,9 +1705,9 @@
 
       await cargarTurnos();
 
-      // Restaurar vista semana centrada en hoy
+      // Mostrar vista según preferencia del psicólogo
       actualizarHeader();
-      setView('dia');
+      setView(vistaDefault);
       // setView ya dispara rAF internamente vía posicionarColumnaHoy
     },
 

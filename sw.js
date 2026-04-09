@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'psicoapp-v4';
+const CACHE_VERSION = 'psicoapp-v5';
 const STATIC_ASSETS = [
   '/config.js',
   '/psicoapp-limites.js',
