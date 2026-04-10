@@ -490,7 +490,7 @@ function _dnRenderHTML(container) {
   </div>
 
   <!-- GRÁFICO INGRESOS -->
-  <div class="dn-section" style="margin-top:20px" id="dn-chart-section" style="display:none">
+  <div class="dn-section" id="dn-chart-section" style="margin-top:20px;display:none">
     <div class="dn-chart-wrap">
       <div class="dn-chart-title">💰 Ingresos del mes por semana</div>
       <div class="dn-chart-bars" id="dn-chart-bars">
@@ -571,18 +571,25 @@ async function _dnCargarDatos() {
     ] = await Promise.all([
       sb.from('pagos').select('id,paciente_id,monto,fecha,metodo').eq('user_id', uid).gte('fecha', primerDiaMes).lte('fecha', ultimoDiaMes),
       sb.from('pagos').select('id,monto,metodo').eq('user_id', uid).gte('fecha', primerMesAnt).lte('fecha', ultimoMesAnt),
-      sb.from('turnos').select('id,fecha,hora,duracion,estado,tipo,notas,paciente_id,pacientes(nombre,apellido)').eq('user_id', uid).eq('fecha', fechaHoy).order('hora', { ascending: true }),
+      sb.from('turnos').select('id,fecha,hora,duracion,estado,tipo,notas,paciente_id').eq('user_id', uid).eq('fecha', fechaHoy).order('hora', { ascending: true }),
       sb.from('turnos').select('id,fecha,estado').eq('user_id', uid).gte('fecha', primerDiaMes).lte('fecha', ultimoDiaMes),
       sb.from('turnos').select('id,estado').eq('user_id', uid).gte('fecha', primerMesAnt).lte('fecha', ultimoMesAnt),
-      sb.from('pacientes').select('id').eq('user_id', uid),
-      sb.from('turnos').select('id,fecha,hora,duracion,estado,tipo,notas,paciente_id,pacientes(nombre,apellido)').eq('user_id', uid).in('fecha', [fecha1, fecha2, fecha3]).order('fecha').order('hora'),
+      sb.from('pacientes').select('id,nombre,apellido').eq('user_id', uid),
+      sb.from('turnos').select('id,fecha,hora,duracion,estado,tipo,notas,paciente_id').eq('user_id', uid).in('fecha', [fecha1, fecha2, fecha3]).order('fecha', { ascending: true }).order('hora', { ascending: true }),
     ]);
 
-    const pagos    = resPagos.data || [];
-    const pagosAnt = resPagosAnt.data || [];
-    const turnos   = resTurnosHoy.data || [];
-    const proximos = resProximos.data || [];
-    const pacUnicos = resPacientes.data?.length || 0;
+    const pagos     = resPagos.data || [];
+    const pagosAnt  = resPagosAnt.data || [];
+    const pacientes = resPacientes.data || [];
+    const turnos    = (resTurnosHoy.data || []).map(t => ({
+      ...t,
+      _nomPac: _dnNombrePac(t, pacientes),
+    }));
+    const proximos  = (resProximos.data || []).map(t => ({
+      ...t,
+      _nomPac: _dnNombrePac(t, pacientes),
+    }));
+    const pacUnicos = pacientes.length;
 
     const cobrado      = pagos.filter(p => p.metodo !== 'pendiente').reduce((s, p) => s + (Number(p.monto) || 0), 0);
     const cobradoAnt   = pagosAnt.filter(p => p.metodo !== 'pendiente').reduce((s, p) => s + (Number(p.monto) || 0), 0);
@@ -612,6 +619,12 @@ async function _dnCargarDatos() {
   } catch(e) {
     console.error('[DashboardNew]', e.message);
   }
+}
+
+function _dnNombrePac(turno, pacientes) {
+  if (turno.tipo === 'evento' || !turno.paciente_id) return turno.notas || 'Evento';
+  const p = pacientes.find(x => x.id === turno.paciente_id);
+  return p ? `${p.nombre || ''} ${p.apellido || ''}`.trim() : 'Paciente';
 }
 
 function _dnIngresosSemanales(pagos, year, month) {
@@ -780,9 +793,8 @@ function _dnRenderProximos(proximos) {
     const label = `${diasSemana[d.getDay()]} ${d.getDate()} de ${mesesCorto[d.getMonth()]}`;
     html += `<div class="dn-prox-dia"><div class="dn-prox-dia-label">${label}</div>`;
     turnos.forEach(t => {
-      const pac  = t.pacientes;
       const esEv = t.tipo === 'evento' || !t.paciente_id;
-      const nom  = esEv ? (t.notas || 'Evento') : (pac ? `${pac.nombre||''} ${pac.apellido||''}`.trim() : 'Paciente');
+      const nom  = t._nomPac || (esEv ? (t.notas || 'Evento') : 'Paciente');
       const hora = (t.hora || '').slice(0, 5);
       const meta = `${esEv ? '🟠 Evento' : '🟢 Sesión'} · ${t.duracion || 50} min`;
       html += `<div class="dn-prox-item" onclick="navigate('agenda')">
@@ -813,14 +825,8 @@ function _dnRenderTurnos(turnos, hoy) {
     const dt       = new Date(t.fecha + 'T' + t.hora);
     const horaFmt  = dt.toLocaleTimeString('es-AR', { hour:'2-digit', minute:'2-digit' });
     const duracion = t.duracion ? `${t.duracion} min` : '50 min';
-    const pac      = t.pacientes;
-    const tipo     = (t.tipo || '').toLowerCase();
-    const esEvento = tipo === 'evento' || !t.paciente_id;
-    const nombre   = esEvento
-      ? (t.notas || 'Evento')
-      : (pac && (pac.nombre || pac.apellido)
-          ? `${pac.nombre || ''} ${pac.apellido || ''}`.trim()
-          : 'Paciente');
+    const esEvento = (t.tipo || '').toLowerCase() === 'evento' || !t.paciente_id;
+    const nombre   = t._nomPac || (esEvento ? (t.notas || 'Evento') : 'Paciente');
     const meta     = esEvento ? `Evento · ${duracion}` : `Sesión · ${duracion}`;
     const esPasado = dt.getTime() < ahoraMs - 30 * 60 * 1000;
     const esAhora  = !esPasado && dt.getTime() <= ahoraMs + 60 * 60 * 1000;
