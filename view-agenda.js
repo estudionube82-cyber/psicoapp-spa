@@ -767,6 +767,8 @@
 
     // Google Calendar — botón conectar/desconectar
     agQ('ag-gcal-btn').addEventListener('click', _gcalToggle);
+    // Exponer sync masivo para llamarlo desde el botón de detalle también
+    window._gcalSyncMasivo = () => _gcalSyncMasivo();
     _gcalUpdateBtn();
 
     // FAB → abre mini-menú en lugar de abrir modal directamente
@@ -1803,6 +1805,9 @@
         await GCal.connect();
         _gcalUpdateBtn();
         toast('✅ Google Calendar conectado — listo para sincronizar');
+        if (confirm('¿Querés exportar los turnos pendientes/confirmados de los próximos 60 días a Google Calendar?')) {
+          _gcalSyncMasivo();
+        }
       } catch(e) {
         console.error('[GCal] Error al conectar:', e);
         toast('❌ Error al conectar: ' + e.message);
@@ -1865,6 +1870,50 @@
       await GCal.deleteEvent(turno.gcal_event_id);
       toast('🗑 Evento eliminado de Google Calendar');
     } catch(e) { console.warn('[GCal] No se pudo eliminar evento:', e.message); }
+  }
+
+  /** Sincroniza en masa los turnos futuros que no tienen gcal_event_id */
+  async function _gcalSyncMasivo() {
+    if (typeof GCal === 'undefined' || !GCal.isConnected()) { toast('⚠️ Conectá Google Calendar primero'); return; }
+
+    toast('⏳ Sincronizando turnos con Google Calendar…');
+
+    try {
+      const hoy   = fmtDate(new Date());
+      const hasta = fmtDate(new Date(Date.now() + 60 * 24 * 60 * 60 * 1000));
+
+      const { data: turnos, error } = await sb.from('turnos')
+        .select('*')
+        .eq('user_id', _userId)
+        .gte('fecha', hoy)
+        .lte('fecha', hasta)
+        .in('estado', ['pendiente', 'confirmado'])
+        .is('gcal_event_id', null);
+
+      if (error) throw error;
+      if (!turnos?.length) { toast('✅ No hay turnos pendientes de sincronizar'); return; }
+
+      let ok = 0, fail = 0;
+      for (const t of turnos) {
+        try {
+          const pac    = _todosPacientes.find(p => p.id === t.paciente_id);
+          const nombre = pac ? `${pac.nombre || ''} ${pac.apellido || ''}`.trim() : 'Paciente';
+          const gcalId = await GCal.createEvent(t, nombre);
+          await sb.from('turnos').update({ gcal_event_id: gcalId }).eq('id', t.id);
+          ok++;
+        } catch(e) {
+          console.warn('[GCal] No se pudo sincronizar turno', t.id, e.message);
+          fail++;
+        }
+      }
+
+      await cargarTurnos(_turnosDesde, _turnosHasta);
+      setView(_currentView);
+      toast(`✅ Sincronizados: ${ok} turnos${fail ? ` · ${fail} con error` : ''}`);
+    } catch(e) {
+      console.error('[GCal] Sync masivo error:', e);
+      toast('❌ Error en sync masivo: ' + e.message);
+    }
   }
 
   // ────────────────────────────────────────────────────────

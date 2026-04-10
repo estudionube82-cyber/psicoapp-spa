@@ -198,6 +198,7 @@ function _infRenderHTML(container) {
         <div class="inf-output" id="inf-output"></div>
         <div class="inf-output-actions">
           <button class="inf-action-btn" id="inf-btn-copiar">📋 Copiar</button>
+          <button class="inf-action-btn" id="inf-btn-pdf">📄 PDF</button>
           <button class="inf-action-btn inf-action-primary" id="inf-btn-guardar">💾 Guardar</button>
         </div>
       </div>
@@ -265,6 +266,8 @@ function _infRenderHTML(container) {
     .addEventListener('click', infCopiar);
   document.getElementById('inf-btn-guardar')
     .addEventListener('click', infGuardar);
+  document.getElementById('inf-btn-pdf')
+    .addEventListener('click', infExportarPDF);
 
   // Botones extra IA
   document.getElementById('inf-btn-evolucion')
@@ -749,6 +752,113 @@ window.infGuardarExtra = async function() {
     console.error('[Informes] Error al guardar extra:', e.message);
     _infToast('❌ Error al guardar: ' + e.message);
   }
+};
+
+
+/* ══════════════════════════════════════════
+   EXPORTAR INFORME COMO PDF
+   Usa la API nativa del navegador (window.print)
+   con una ventana de impresión estilizada.
+   ══════════════════════════════════════════ */
+window.infExportarPDF = function() {
+  const texto = document.getElementById('inf-output')?.innerText?.trim();
+  if (!texto) { _infToast('⚠️ No hay informe para exportar'); return; }
+
+  const pac  = _inf.pacActual;
+  const nombre = pac ? `${pac.nombre || ''} ${pac.apellido || ''}`.trim() : 'Paciente';
+  const fecha  = new Date().toLocaleDateString('es-AR', { day:'numeric', month:'long', year:'numeric' });
+  const tipo   = { clinico:'Informe Clínico', juzgado:'Informe Pericial', obrasocial:'Informe Obra Social' }[_inf.tipo] || 'Informe Clínico';
+
+  // Convertir el HTML del output a texto estructurado
+  const outputEl = document.getElementById('inf-output');
+  let contenidoHTML = '';
+  if (outputEl) {
+    outputEl.querySelectorAll('.inf-seccion, .inf-parrafo').forEach(el => {
+      if (el.classList.contains('inf-seccion')) {
+        contenidoHTML += `<h3>${el.textContent}</h3>`;
+      } else {
+        contenidoHTML += `<p>${el.innerHTML}</p>`;
+      }
+    });
+  }
+  if (!contenidoHTML) contenidoHTML = texto.split('\n').filter(l=>l.trim()).map(l=>`<p>${l}</p>`).join('');
+
+  const html = `<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>${tipo} — ${nombre}</title>
+<style>
+  @page { size: A4; margin: 2.5cm 2cm 2.5cm 2cm; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Times New Roman', Times, serif; font-size: 12pt; color: #1a1a1a; line-height: 1.7; }
+
+  .header { border-bottom: 2px solid #5B2FA8; padding-bottom: 16px; margin-bottom: 24px; }
+  .header-top { display: flex; justify-content: space-between; align-items: flex-start; }
+  .app-name { font-size: 11pt; font-weight: 700; color: #5B2FA8; letter-spacing: 1px; text-transform: uppercase; }
+  .doc-tipo { font-size: 18pt; font-weight: 700; color: #1a1a1a; margin: 8px 0 4px; }
+  .doc-meta { font-size: 10pt; color: #555; }
+  .doc-fecha { font-size: 10pt; color: #555; text-align: right; }
+
+  .paciente-box { background: #f5f3ff; border-left: 4px solid #5B2FA8; padding: 12px 16px; margin-bottom: 24px; border-radius: 0 8px 8px 0; }
+  .paciente-label { font-size: 9pt; font-weight: 700; color: #5B2FA8; text-transform: uppercase; letter-spacing: .8px; margin-bottom: 4px; }
+  .paciente-nombre { font-size: 14pt; font-weight: 700; color: #1a1a1a; }
+
+  .contenido h3 { font-size: 10pt; font-weight: 700; color: #5B2FA8; text-transform: uppercase; letter-spacing: 1px; margin: 20px 0 6px; border-bottom: 1px solid #e5e2f5; padding-bottom: 4px; }
+  .contenido p { font-size: 11.5pt; margin-bottom: 8px; text-align: justify; }
+  .contenido strong { font-weight: 700; }
+
+  .footer { margin-top: 48px; border-top: 1px solid #ccc; padding-top: 16px; display: flex; justify-content: space-between; }
+  .firma-box { text-align: center; }
+  .firma-linea { border-top: 1px solid #333; width: 200px; margin: 40px auto 6px; }
+  .firma-label { font-size: 9pt; color: #555; }
+  .watermark { font-size: 8pt; color: #aaa; }
+
+  @media print { body { print-color-adjust: exact; -webkit-print-color-adjust: exact; } }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-top">
+    <div>
+      <div class="app-name">PsicoApp · Documentación Clínica</div>
+      <div class="doc-tipo">${tipo}</div>
+      <div class="doc-meta">Documento generado con asistencia de IA · Marco psicoanalítico</div>
+    </div>
+    <div class="doc-fecha">Fecha: ${fecha}</div>
+  </div>
+</div>
+
+<div class="paciente-box">
+  <div class="paciente-label">Paciente</div>
+  <div class="paciente-nombre">${nombre}</div>
+</div>
+
+<div class="contenido">
+${contenidoHTML}
+</div>
+
+<div class="footer">
+  <div class="firma-box">
+    <div class="firma-linea"></div>
+    <div class="firma-label">Firma y sello del profesional</div>
+  </div>
+  <div class="watermark">Generado por PsicoApp · ${fecha}</div>
+</div>
+
+</body>
+</html>`;
+
+  const ventana = window.open('', '_blank', 'width=800,height=900');
+  if (!ventana) { _infToast('⚠️ Habilitá las ventanas emergentes para generar el PDF'); return; }
+  ventana.document.write(html);
+  ventana.document.close();
+  ventana.onload = () => {
+    setTimeout(() => {
+      ventana.print();
+    }, 500);
+  };
 };
 
 
