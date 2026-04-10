@@ -1608,7 +1608,12 @@
           const turnoId = rows?.[0]?.id;
           console.log('[GCal] turnoId encontrado:', turnoId);
           if (turnoId) {
-            _gcalSyncNew(turnoId, insertData, insertData.paciente_id);
+            // await para ver el error si falla
+            _gcalSyncNew(turnoId, insertData, insertData.paciente_id)
+              .catch(e => {
+                console.error('[GCal] _gcalSyncNew falló:', e);
+                toast('❌ GCal error: ' + e.message);
+              });
           } else {
             console.warn('[GCal] No se encontró el turno recién insertado');
           }
