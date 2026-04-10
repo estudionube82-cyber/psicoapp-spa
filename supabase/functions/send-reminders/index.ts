@@ -129,6 +129,26 @@ async function twilioSend(
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Rate limiting — en memoria por IP
+// Protege contra brute-force y llamadas abusivas a la función.
+// ─────────────────────────────────────────────────────────────────────────────
+const _ipCalls = new Map<string, { count: number; resetAt: number }>()
+const RATE_WINDOW_MS = 60_000   // ventana de 60 segundos
+const RATE_MAX_CALLS = 10       // máx 10 llamadas por IP por ventana
+
+function _checkRateLimit(ip: string): boolean {
+  const now   = Date.now()
+  const entry = _ipCalls.get(ip)
+  if (!entry || now > entry.resetAt) {
+    _ipCalls.set(ip, { count: 1, resetAt: now + RATE_WINDOW_MS })
+    return true
+  }
+  entry.count++
+  if (entry.count > RATE_MAX_CALLS) return false
+  return true
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Handler principal
 // ─────────────────────────────────────────────────────────────────────────────
 Deno.serve(async (req: Request) => {
@@ -140,6 +160,18 @@ Deno.serve(async (req: Request) => {
         'Access-Control-Allow-Origin':  '*',
         'Access-Control-Allow-Headers': 'authorization, content-type',
       },
+    })
+  }
+
+  // ── Rate limiting — rechazar IPs que superan el umbral ───────────────────
+  const clientIp = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
+                || req.headers.get('cf-connecting-ip')
+                || 'unknown'
+  if (!_checkRateLimit(clientIp)) {
+    console.warn(`[send-reminders] Rate limit excedido para IP: ${clientIp}`)
+    return new Response(JSON.stringify({ error: 'Too Many Requests' }), {
+      status: 429,
+      headers: { 'Retry-After': '60' },
     })
   }
 
