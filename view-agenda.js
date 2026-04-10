@@ -1589,12 +1589,35 @@
         insertData.notas = titulo + (insertData.notas ? ' — ' + insertData.notas : '');
       }
 
-      const { data: inserted, error } = await sb.from('turnos').insert(insertData).select('id').single();
+      // Insertar el turno
+      const { error } = await sb.from('turnos').insert(insertData);
       if (error) throw error;
 
-      // ── Google Calendar: sincronizar automáticamente si está conectado ──
-      if (inserted?.id && typeof GCal !== 'undefined' && GCal.isConnected()) {
-        _gcalSyncNew(inserted.id, insertData, insertData.paciente_id);
+      // ── Google Calendar: buscar el ID del turno recién creado y sincronizar ──
+      if (typeof GCal !== 'undefined' && GCal.isConnected()) {
+        console.log('[GCal] Conectado, buscando turno recién insertado...');
+        try {
+          const { data: rows, error: fetchErr } = await sb.from('turnos')
+            .select('id')
+            .eq('user_id', _userId)
+            .eq('fecha', insertData.fecha)
+            .eq('hora',  insertData.hora)
+            .order('created_at', { ascending: false })
+            .limit(1);
+          if (fetchErr) throw fetchErr;
+          const turnoId = rows?.[0]?.id;
+          console.log('[GCal] turnoId encontrado:', turnoId);
+          if (turnoId) {
+            _gcalSyncNew(turnoId, insertData, insertData.paciente_id);
+          } else {
+            console.warn('[GCal] No se encontró el turno recién insertado');
+          }
+        } catch(ge) {
+          console.error('[GCal] Error buscando turno:', ge);
+          toast('⚠️ GCal: no se pudo obtener ID del turno: ' + ge.message);
+        }
+      } else {
+        console.log('[GCal] No conectado — GCal disponible:', typeof GCal !== 'undefined', '— isConnected:', typeof GCal !== 'undefined' && GCal.isConnected());
       }
 
       // ── WhatsApp: envío de confirmación (no bloquea si falla) ──
@@ -1765,6 +1788,8 @@
     if (GCal.isConnected()) {
       if (!confirm('¿Desconectar Google Calendar? Los turnos existentes no se eliminarán de Google.')) return;
       GCal.disconnect();
+      // Limpiar también el calendar ID para que se recree en la próxima conexión
+      localStorage.removeItem('gcal_calendar_id');
       _gcalUpdateBtn();
       toast('🔌 Google Calendar desconectado');
     } else {
@@ -1772,8 +1797,9 @@
         toast('⏳ Conectando con Google…');
         await GCal.connect();
         _gcalUpdateBtn();
-        toast('✅ Google Calendar conectado');
+        toast('✅ Google Calendar conectado — listo para sincronizar');
       } catch(e) {
+        console.error('[GCal] Error al conectar:', e);
         toast('❌ Error al conectar: ' + e.message);
       }
     }
