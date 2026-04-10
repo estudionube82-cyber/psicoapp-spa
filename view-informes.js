@@ -643,17 +643,28 @@ window.infCopiar = function() {
 };
 
 window.infGuardar = async function() {
-  const txt = document.getElementById('inf-output')?.textContent;
-  if (!txt || !_inf.pacActual) return;
+  // innerText para obtener texto plano sin tags HTML
+  const txt = document.getElementById('inf-output')?.innerText?.trim();
+  if (!txt || !_inf.pacActual) {
+    _infToast('⚠️ No hay informe para guardar');
+    return;
+  }
   try {
     const uid = PsicoRouter.store.userId;
+    if (!uid) { _infToast('❌ Usuario no identificado'); return; }
     const { error } = await sb.from('informes_clinicos').insert({
-      user_id: uid, paciente_id: _inf.pacActual.id, tipo: _inf.tipo, texto: txt,
+      user_id:     uid,
+      paciente_id: _inf.pacActual.id,
+      tipo:        _inf.tipo,
+      texto:       txt,
     });
     if (error) throw error;
     _infToast('✅ Informe guardado');
     await _infCargarInformesGuardados();
-  } catch(e) { _infToast('❌ Error: ' + e.message); }
+  } catch(e) {
+    console.error('[Informes] Error al guardar:', e.message, e);
+    _infToast('❌ Error al guardar: ' + e.message);
+  }
 };
 
 
