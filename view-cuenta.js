@@ -239,13 +239,60 @@ function _vcHorasOptions(desde, hasta, seleccionado) {
   return html;
 }
 
-/** Estado de Google Calendar (solo localStorage) */
+/**
+ * Estado de Google Calendar.
+ * Lee en este orden: store en memoria → localStorage → false.
+ * El store se actualiza en _vcLoadPrefs() cuando Supabase tiene el valor.
+ */
 const VC_GCAL_KEY = 'psicoapp_gcal_conectado';
 function _vcGCalConectado() {
+  // 1. Store en memoria (sincronizado con Supabase por _vcLoadPrefs)
+  const fromStore = PsicoRouter.store?.perfil?.preferencias?.gcal_conectado;
+  if (fromStore !== undefined) return !!fromStore;
+  // 2. localStorage como fallback
   try { return localStorage.getItem(VC_GCAL_KEY) === '1'; } catch { return false; }
 }
-function _vcGCalSetConectado(val) {
-  try { val ? localStorage.setItem(VC_GCAL_KEY, '1') : localStorage.removeItem(VC_GCAL_KEY); } catch {}
+
+/**
+ * Persiste el estado de GCal en:
+ * 1. Store en memoria  (lectura síncrona inmediata)
+ * 2. localStorage      (offline cache)
+ * 3. Supabase profiles.preferencias (fuente de verdad)
+ */
+async function _vcGCalSetConectado(val) {
+  // 1. Store en memoria
+  if (PsicoRouter.store.perfil) {
+    PsicoRouter.store.perfil.preferencias = {
+      ...(PsicoRouter.store.perfil.preferencias || {}),
+      gcal_conectado: !!val
+    };
+  }
+  // 2. localStorage
+  try {
+    val ? localStorage.setItem(VC_GCAL_KEY, '1') : localStorage.removeItem(VC_GCAL_KEY);
+    // Sincronizar también con VC_PREFS_KEY para consistencia
+    const raw   = localStorage.getItem(VC_PREFS_KEY);
+    const prefs = raw ? JSON.parse(raw) : {};
+    prefs.gcal_conectado = !!val;
+    localStorage.setItem(VC_PREFS_KEY, JSON.stringify(prefs));
+  } catch {}
+  // 3. Supabase
+  try {
+    const { data: { user } } = await sb.auth.getUser();
+    if (user) {
+      // Leer preferencias actuales de Supabase antes de mergear
+      const { data: profile } = await sb.from('profiles')
+        .select('preferencias')
+        .eq('id', user.id)
+        .maybeSingle();
+      const currentPrefs = profile?.preferencias || {};
+      const newPrefs     = { ...currentPrefs, gcal_conectado: !!val };
+      const { error } = await sb.from('profiles')
+        .upsert({ id: user.id, preferencias: newPrefs }, { onConflict: 'id' });
+      if (error) console.warn('[GCal] No se pudo persistir estado en Supabase:', error.message);
+      else if (PsicoRouter.store.perfil) PsicoRouter.store.perfil.preferencias = newPrefs;
+    }
+  } catch (e) { console.warn('[GCal] Error al persistir estado:', e.message); }
 }
 
 /* ══ TOAST ══ */
@@ -631,7 +678,7 @@ async function renderCuenta() {
   on('#vc-btn-gcal-conn', () => _vcShowGCalModal());
   on('#vc-btn-gcal-desc', async () => {
     if (!confirm('¿Desconectar Google Calendar?')) return;
-    _vcGCalSetConectado(false);
+    await _vcGCalSetConectado(false);
     vcToast('Google Calendar desconectado');
     await renderCuenta();
   });
@@ -730,12 +777,12 @@ function initCuenta() {
 }
 
 /* ══ POST-REDIRECT GOOGLE CALENDAR ══ */
-function _chequearGCalExitoso() {
+async function _chequearGCalExitoso() {
   const params = new URLSearchParams(window.location.search);
   if (params.get('gcal') !== 'ok') return;
   const urlLimpia = window.location.pathname + window.location.hash;
   history.replaceState({}, '', urlLimpia);
-  _vcGCalSetConectado(true);
+  await _vcGCalSetConectado(true);
   vcToast('✅ Google Calendar conectado correctamente');
   renderCuenta();
 }
