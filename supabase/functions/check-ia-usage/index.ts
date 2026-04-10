@@ -1,11 +1,6 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // Supabase Edge Function: check-ia-usage
-// Verifica si el usuario autenticado puede generar un informe IA este mes.
-//
-// Request: POST /functions/v1/check-ia-usage
-//   Headers: Authorization: Bearer <access_token>
-//
-// Response: { allowed: boolean, used: number, limit: number, plan: string }
+// Verifica si el usuario puede generar un informe IA este mes.
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { createClient } from 'jsr:@supabase/supabase-js@2'
@@ -14,6 +9,19 @@ const SUPA_URL         = Deno.env.get('SUPABASE_URL')!
 const SUPA_SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 
 const IA_LIMITS: Record<string, number> = { free: 5, pro: 25, max: 80 }
+
+// ── Decodifica el JWT y extrae el user_id sin llamadas a auth API ─────────────
+function getUserIdFromJWT(token: string): string | null {
+  try {
+    const parts   = token.split('.')
+    if (parts.length !== 3) return null
+    const payload = JSON.parse(atob(parts[1]))
+    if (payload.exp && payload.exp < Math.floor(Date.now() / 1000)) return null
+    return payload.sub || null
+  } catch {
+    return null
+  }
+}
 
 function ok(body: object) {
   return new Response(JSON.stringify(body), {
@@ -39,18 +47,13 @@ Deno.serve(async (req: Request) => {
     })
   }
 
-  // ── Autenticación — verificar JWT del usuario ─────────────────────────────
-  const authHeader = req.headers.get('authorization') || ''
-  const token      = authHeader.replace('Bearer ', '').trim()
+  const token  = (req.headers.get('authorization') || '').replace('Bearer ', '').trim()
   if (!token) return err('No autorizado', 401)
 
-  // Crear cliente con el token del usuario para verificar identidad
-  // Usar service role para verificar el JWT — más confiable
-  const sbAdmin = createClient(SUPA_URL, SUPA_SERVICE_KEY)
-  const { data: { user }, error: authErr } = await sbAdmin.auth.getUser(token)
-  if (authErr || !user) return err('Token inválido o expirado', 401)
+  const userId = getUserIdFromJWT(token)
+  if (!userId) return err('Token inválido o expirado', 401)
 
-  const userId = user.id
+  const sbAdmin = createClient(SUPA_URL, SUPA_SERVICE_KEY)
 
   const { data: planRow } = await sbAdmin
     .from('users_plan')
@@ -60,16 +63,12 @@ Deno.serve(async (req: Request) => {
 
   const now       = new Date()
   const isExpired = planRow?.expires_at ? new Date(planRow.expires_at) < now : false
-  const plan      = (!planRow || isExpired) ? 'free' : (planRow.plan ?? 'free')
+  const plan      = (!planRow || isExpired) ? 'free'   : (planRow.plan   ?? 'free')
   const status    = (!planRow || isExpired) ? 'active' : (planRow.status ?? 'active')
   const limit     = IA_LIMITS[plan] ?? 5
 
-  // Plan suspendido → no puede usar
-  if (status !== 'active') {
-    return ok({ allowed: false, used: 0, limit, plan, reason: 'plan_inactivo' })
-  }
+  if (status !== 'active') return ok({ allowed: false, used: 0, limit, plan, reason: 'plan_inactivo' })
 
-  // ── Contar usos IA este mes ───────────────────────────────────────────────
   const inicioMes = new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
   const { count: used } = await sbAdmin
     .from('ia_usos')
@@ -78,7 +77,5 @@ Deno.serve(async (req: Request) => {
     .gte('created_at', inicioMes)
 
   const usosActuales = used ?? 0
-  const allowed      = usosActuales < limit
-
-  return ok({ allowed, used: usosActuales, limit, plan })
+  return ok({ allowed: usosActuales < limit, used: usosActuales, limit, plan })
 })

@@ -1,39 +1,30 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // Supabase Edge Function: generar-informe
-// Genera un informe clínico con Anthropic Claude y registra el uso en ia_usos.
-//
-// Request: POST /functions/v1/generar-informe
-//   Headers: Authorization: Bearer <access_token>
-//            Content-Type: application/json
-//   Body:    { prompt: string }
-//
-// Response: { texto: string }  |  { error: string }
+// Genera un informe clínico con OpenAI y registra el uso en ia_usos.
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { createClient } from 'jsr:@supabase/supabase-js@2'
 
-// ── Variables de entorno ──────────────────────────────────────────────────────
 const SUPA_URL         = Deno.env.get('SUPABASE_URL')!
 const SUPA_SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 const OPENAI_KEY       = Deno.env.get('OPENAI_API_KEY')!
 
-// ── Límites de plan ───────────────────────────────────────────────────────────
 const IA_LIMITS: Record<string, number> = { free: 5, pro: 25, max: 80 }
 
-// ── Rate limiting en memoria ──────────────────────────────────────────────────
-const _ipCalls = new Map<string, { count: number; resetAt: number }>()
-function _checkRateLimit(ip: string): boolean {
-  const now   = Date.now()
-  const entry = _ipCalls.get(ip)
-  if (!entry || now > entry.resetAt) {
-    _ipCalls.set(ip, { count: 1, resetAt: now + 60_000 })
-    return true
+// ── Decodifica el JWT y extrae el user_id (sub) sin hacer llamadas a auth API ─
+function getUserIdFromJWT(token: string): string | null {
+  try {
+    const parts   = token.split('.')
+    if (parts.length !== 3) return null
+    const payload = JSON.parse(atob(parts[1]))
+    // Verificar que el token no esté vencido
+    if (payload.exp && payload.exp < Math.floor(Date.now() / 1000)) return null
+    return payload.sub || null
+  } catch {
+    return null
   }
-  entry.count++
-  return entry.count <= 10
 }
 
-// ── Helpers de respuesta ──────────────────────────────────────────────────────
 function ok(body: object) {
   return new Response(JSON.stringify(body), {
     status: 200,
@@ -47,9 +38,6 @@ function err(msg: string, status = 400) {
   })
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Handler
-// ─────────────────────────────────────────────────────────────────────────────
 Deno.serve(async (req: Request) => {
 
   if (req.method === 'OPTIONS') {
@@ -61,28 +49,12 @@ Deno.serve(async (req: Request) => {
     })
   }
 
-  // ── Rate limiting ─────────────────────────────────────────────────────────
-  const clientIp = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
-                || req.headers.get('cf-connecting-ip')
-                || 'unknown'
-  if (!_checkRateLimit(clientIp)) {
-    return new Response(JSON.stringify({ error: 'Too Many Requests' }), {
-      status: 429,
-      headers: { 'Retry-After': '60', 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
-    })
-  }
-
-  // ── Autenticación — verificar JWT del usuario ─────────────────────────────
-  const authHeader = req.headers.get('authorization') || ''
-  const token      = authHeader.replace('Bearer ', '').trim()
+  // ── Extraer y decodificar el JWT ──────────────────────────────────────────
+  const token  = (req.headers.get('authorization') || '').replace('Bearer ', '').trim()
   if (!token) return err('No autorizado', 401)
 
-  // Usar service role para verificar el JWT — más confiable
-  const sbAdmin = createClient(SUPA_URL, SUPA_SERVICE_KEY)
-  const { data: { user }, error: authErr } = await sbAdmin.auth.getUser(token)
-  if (authErr || !user) return err('Token inválido o expirado', 401)
-
-  const userId = user.id
+  const userId = getUserIdFromJWT(token)
+  if (!userId) return err('Token inválido o expirado', 401)
 
   // ── Leer body ─────────────────────────────────────────────────────────────
   let prompt = ''
@@ -96,6 +68,8 @@ Deno.serve(async (req: Request) => {
   if (prompt.length > 8000) return err('El prompt es demasiado largo', 400)
 
   // ── Verificar plan y límite ───────────────────────────────────────────────
+  const sbAdmin = createClient(SUPA_URL, SUPA_SERVICE_KEY)
+
   const { data: planRow } = await sbAdmin
     .from('users_plan')
     .select('plan, status, expires_at')
@@ -104,7 +78,7 @@ Deno.serve(async (req: Request) => {
 
   const now       = new Date()
   const isExpired = planRow?.expires_at ? new Date(planRow.expires_at) < now : false
-  const plan      = (!planRow || isExpired) ? 'free' : (planRow.plan ?? 'free')
+  const plan      = (!planRow || isExpired) ? 'free'   : (planRow.plan   ?? 'free')
   const status    = (!planRow || isExpired) ? 'active' : (planRow.status ?? 'active')
   const limit     = IA_LIMITS[plan] ?? 5
 
@@ -121,7 +95,7 @@ Deno.serve(async (req: Request) => {
     return err(`Límite de ${limit} informes IA alcanzado para el plan ${plan}`, 403)
   }
 
-  // ── Llamar a Claude ───────────────────────────────────────────────────────
+  // ── Llamar a OpenAI ───────────────────────────────────────────────────────
   if (!OPENAI_KEY) return err('API key de IA no configurada', 500)
 
   let textoGenerado = ''
@@ -133,17 +107,14 @@ Deno.serve(async (req: Request) => {
         'Content-Type':  'application/json',
       },
       body: JSON.stringify({
-        model:      'gpt-4o-mini',   // rápido y económico
+        model:      'gpt-4o-mini',
         max_tokens: 1500,
         messages: [
           {
             role:    'system',
             content: 'Sos un asistente especializado en psicología clínica. Redactás informes profesionales en español argentino. Usás lenguaje técnico, claro y empático. Nunca inventás datos que no te dan.',
           },
-          {
-            role:    'user',
-            content: prompt,
-          },
+          { role: 'user', content: prompt },
         ],
       }),
     })
@@ -154,28 +125,21 @@ Deno.serve(async (req: Request) => {
       return err('Error al llamar a la API de IA: ' + openaiResp.status, 502)
     }
 
-    const openaiData = await openaiResp.json()
+    const openaiData  = await openaiResp.json()
     textoGenerado = openaiData.choices?.[0]?.message?.content || ''
-
     if (!textoGenerado) return err('La IA no devolvió texto', 502)
 
   } catch (e: any) {
-    console.error('[generar-informe] Excepción llamando a OpenAI:', e.message)
+    console.error('[generar-informe] Excepción OpenAI:', e.message)
     return err('Error de conexión con la API de IA', 502)
   }
 
-  // ── Registrar uso en ia_usos ──────────────────────────────────────────────
+  // ── Registrar uso ─────────────────────────────────────────────────────────
   try {
-    const { error: insertErr } = await sbAdmin
-      .from('ia_usos')
-      .insert({ user_id: userId, tipo: 'informe', created_at: now.toISOString() })
-
-    if (insertErr) console.warn('[generar-informe] No se pudo registrar uso:', insertErr.message)
+    await sbAdmin.from('ia_usos').insert({ user_id: userId, tipo: 'informe', created_at: now.toISOString() })
   } catch (e: any) {
-    console.warn('[generar-informe] insertLog excepción:', e.message)
-    // No bloquear la respuesta si falla el registro
+    console.warn('[generar-informe] No se pudo registrar uso:', e.message)
   }
 
-  // ── Devolver texto generado ───────────────────────────────────────────────
   return ok({ texto: textoGenerado })
 })
