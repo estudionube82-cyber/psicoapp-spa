@@ -746,6 +746,10 @@
         <div class="ag-det-actions">
           <button class="ag-det-btn confirm" id="ag-det-confirmar">✓ Confirmar</button>
           <button class="ag-det-btn done"    id="ag-det-realizada">✅ Realizada</button>
+          <button class="ag-det-btn" id="ag-det-gcal"
+            style="background:#E8F5E9;color:#2E7D32;border:1.5px solid #A5D6A7;display:none">
+            📅 Enviar a Google Cal
+          </button>
           <button class="ag-det-btn delete"  id="ag-det-eliminar">🗑 Eliminar</button>
           <button class="ag-det-btn cancel"  id="ag-det-cerrar">Cerrar</button>
         </div>
@@ -810,6 +814,7 @@
     agQ('ag-det-realizada').addEventListener('click', () => cambiarEstado('realizado'));
     agQ('ag-det-eliminar').addEventListener('click', eliminarTurno);
     agQ('ag-det-cerrar').addEventListener('click', cerrarDetalle);
+    agQ('ag-det-gcal').addEventListener('click', _gcalSyncManual);
     agQ('ag-overlay-det').addEventListener('click', e => { if (e.target.id === 'ag-overlay-det') cerrarDetalle(); });
 
     // Reposicionar columna hoy al redimensionar ventana
@@ -1584,12 +1589,24 @@
         insertData.notas = titulo + (insertData.notas ? ' — ' + insertData.notas : '');
       }
 
-      const { data: inserted, error } = await sb.from('turnos').insert(insertData).select('id').single();
+      const { error } = await sb.from('turnos').insert(insertData);
       if (error) throw error;
 
-      // ── Google Calendar: sincronizar en segundo plano (no bloquea) ──
-      if (inserted?.id) {
-        _gcalSyncNew(inserted.id, insertData, insertData.paciente_id).catch(() => {});
+      // ── Google Calendar: buscar el turno recién insertado y sincronizar ──
+      if (typeof GCal !== 'undefined' && GCal.isConnected()) {
+        // Buscar el turno recién creado por fecha+hora+user para obtener su ID
+        sb.from('turnos')
+          .select('id')
+          .eq('user_id', _userId)
+          .eq('fecha', insertData.fecha)
+          .eq('hora',  insertData.hora)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .then(({ data }) => {
+            if (data?.[0]?.id) {
+              _gcalSyncNew(data[0].id, insertData, insertData.paciente_id);
+            }
+          });
       }
 
       // ── WhatsApp: envío de confirmación (no bloquea si falla) ──
@@ -1684,6 +1701,14 @@
     agQ('ag-det-confirmar').style.display = t.estado === 'pendiente'  ? '' : 'none';
     agQ('ag-det-realizada').style.display = t.estado !== 'realizado'  ? '' : 'none';
 
+    // Mostrar botón GCal solo si está conectado y el turno no tiene evento ya
+    const gcalBtn = agQ('ag-det-gcal');
+    if (gcalBtn) {
+      const gcalOn = typeof GCal !== 'undefined' && GCal.isConnected();
+      gcalBtn.style.display = gcalOn ? '' : 'none';
+      gcalBtn.textContent = t.gcal_event_id ? '🔄 Re-sync Google Cal' : '📅 Enviar a Google Cal';
+    }
+
     agQ('ag-overlay-det').classList.add('open');
   }
 
@@ -1774,9 +1799,44 @@
       const nombre = pac ? `${pac.nombre || ''} ${pac.apellido || ''}`.trim() : 'Paciente';
       const gcalId = await GCal.createEvent(turnoData, nombre);
       // Guardar gcal_event_id en la fila del turno
-      await sb.from('turnos').update({ gcal_event_id: gcalId }).eq('id', turnoId);
+      const { error } = await sb.from('turnos').update({ gcal_event_id: gcalId }).eq('id', turnoId);
+      if (error) console.warn('[GCal] No se pudo guardar gcal_event_id:', error.message);
+      else toast('📅 Turno enviado a Google Calendar');
     } catch(e) {
       console.warn('[GCal] No se pudo crear evento:', e.message);
+      toast('⚠️ Google Cal: ' + e.message);
+    }
+  }
+
+  /** Sincroniza manualmente el turno seleccionado (desde botón en detalle) */
+  async function _gcalSyncManual() {
+    if (!_turnoSel) return;
+    if (typeof GCal === 'undefined') { toast('⚠️ Google Calendar no disponible'); return; }
+    const btn = agQ('ag-det-gcal');
+    if (btn) { btn.disabled = true; btn.textContent = '⏳ Enviando…'; }
+    try {
+      const pac    = _todosPacientes.find(p => p.id === _turnoSel.paciente_id);
+      const nombre = pac ? `${pac.nombre || ''} ${pac.apellido || ''}`.trim() : 'Paciente';
+
+      let gcalId = _turnoSel.gcal_event_id;
+      if (gcalId) {
+        // Ya existe → actualizar
+        await GCal.updateEvent(gcalId, _turnoSel, nombre);
+        toast('🔄 Evento actualizado en Google Calendar');
+      } else {
+        // No existe → crear
+        gcalId = await GCal.createEvent(_turnoSel, nombre);
+        const { error } = await sb.from('turnos').update({ gcal_event_id: gcalId }).eq('id', _turnoSel.id);
+        if (error) throw new Error('Guardado en BD: ' + error.message);
+        _turnoSel.gcal_event_id = gcalId;
+        toast('📅 Turno enviado a Google Calendar');
+      }
+      if (btn) btn.textContent = '🔄 Re-sync Google Cal';
+    } catch(e) {
+      toast('❌ Error GCal: ' + e.message);
+      console.error('[GCal] sync manual:', e);
+    } finally {
+      if (btn) btn.disabled = false;
     }
   }
 
@@ -1784,8 +1844,10 @@
   async function _gcalSyncDelete(turno) {
     if (typeof GCal === 'undefined' || !GCal.isConnected()) return;
     if (!turno?.gcal_event_id) return;
-    try { await GCal.deleteEvent(turno.gcal_event_id); }
-    catch(e) { console.warn('[GCal] No se pudo eliminar evento:', e.message); }
+    try {
+      await GCal.deleteEvent(turno.gcal_event_id);
+      toast('🗑 Evento eliminado de Google Calendar');
+    } catch(e) { console.warn('[GCal] No se pudo eliminar evento:', e.message); }
   }
 
   // ────────────────────────────────────────────────────────
