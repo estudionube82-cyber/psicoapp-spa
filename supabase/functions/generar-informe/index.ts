@@ -16,7 +16,7 @@ import { createClient } from 'jsr:@supabase/supabase-js@2'
 const SUPA_URL         = Deno.env.get('SUPABASE_URL')!
 const SUPA_SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 const SUPA_ANON_KEY    = Deno.env.get('SUPABASE_ANON_KEY')!
-const ANTHROPIC_KEY    = Deno.env.get('ANTHROPIC_API_KEY')!
+const OPENAI_KEY       = Deno.env.get('OPENAI_API_KEY')!
 
 // ── Límites de plan ───────────────────────────────────────────────────────────
 const IA_LIMITS: Record<string, number> = { free: 5, pro: 25, max: 80 }
@@ -126,38 +126,45 @@ Deno.serve(async (req: Request) => {
   }
 
   // ── Llamar a Claude ───────────────────────────────────────────────────────
-  if (!ANTHROPIC_KEY) return err('API key de IA no configurada', 500)
+  if (!OPENAI_KEY) return err('API key de IA no configurada', 500)
 
   let textoGenerado = ''
   try {
-    const claudeResp = await fetch('https://api.anthropic.com/v1/messages', {
+    const openaiResp = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
-        'x-api-key':         ANTHROPIC_KEY,
-        'anthropic-version': '2023-06-01',
-        'content-type':      'application/json',
+        'Authorization': 'Bearer ' + OPENAI_KEY,
+        'Content-Type':  'application/json',
       },
       body: JSON.stringify({
-        model:      'claude-3-5-haiku-20241022',  // rápido y económico
+        model:      'gpt-4o-mini',   // rápido y económico
         max_tokens: 1500,
-        messages:   [{ role: 'user', content: prompt }],
-        system:     'Sos un asistente especializado en psicología clínica. Redactás informes profesionales en español argentino. Usás lenguaje técnico, claro y empático. Nunca inventás datos que no te dan.',
+        messages: [
+          {
+            role:    'system',
+            content: 'Sos un asistente especializado en psicología clínica. Redactás informes profesionales en español argentino. Usás lenguaje técnico, claro y empático. Nunca inventás datos que no te dan.',
+          },
+          {
+            role:    'user',
+            content: prompt,
+          },
+        ],
       }),
     })
 
-    if (!claudeResp.ok) {
-      const errBody = await claudeResp.text()
-      console.error('[generar-informe] Claude error:', claudeResp.status, errBody)
-      return err('Error al llamar a la API de IA: ' + claudeResp.status, 502)
+    if (!openaiResp.ok) {
+      const errBody = await openaiResp.text()
+      console.error('[generar-informe] OpenAI error:', openaiResp.status, errBody)
+      return err('Error al llamar a la API de IA: ' + openaiResp.status, 502)
     }
 
-    const claudeData = await claudeResp.json()
-    textoGenerado = claudeData.content?.[0]?.text || ''
+    const openaiData = await openaiResp.json()
+    textoGenerado = openaiData.choices?.[0]?.message?.content || ''
 
     if (!textoGenerado) return err('La IA no devolvió texto', 502)
 
   } catch (e: any) {
-    console.error('[generar-informe] Excepción llamando a Claude:', e.message)
+    console.error('[generar-informe] Excepción llamando a OpenAI:', e.message)
     return err('Error de conexión con la API de IA', 502)
   }
 
