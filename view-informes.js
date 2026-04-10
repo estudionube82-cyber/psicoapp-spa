@@ -227,6 +227,7 @@ function _infRenderHTML(container) {
         <div class="inf-extra-result" id="inf-extra-result"></div>
         <div class="inf-output-actions" style="padding:8px 16px 16px">
           <button class="inf-action-btn" id="inf-btn-copiar-extra">📋 Copiar</button>
+          <button class="inf-action-btn inf-action-primary" id="inf-btn-guardar-extra">💾 Guardar</button>
         </div>
       </div>
     </div>
@@ -273,9 +274,11 @@ function _infRenderHTML(container) {
   document.getElementById('inf-btn-plan')
     .addEventListener('click', infSugerirPlan);
 
-  // Botón copiar extra
+  // Botones extra
   document.getElementById('inf-btn-copiar-extra')
     .addEventListener('click', infCopiarExtra);
+  document.getElementById('inf-btn-guardar-extra')
+    .addEventListener('click', infGuardarExtra);
 }
 
 
@@ -696,6 +699,7 @@ async function _infLlamarExtra(prompt, loadingText) {
     const data = await resp.json();
     loading.style.display = 'none';
     result.innerHTML = _infRenderTexto(data.texto || data.error || 'Sin resultado.');
+    _inf._extraTipo = loadingText; // guardar qué tipo de análisis es
     wrap.scrollIntoView({ behavior: 'smooth' });
   } catch(e) {
     loading.style.display = 'none';
@@ -719,9 +723,32 @@ window.infSugerirPlan = () => _infLlamarExtra(
 );
 
 window.infCopiarExtra = function() {
-  const txt = document.getElementById('inf-extra-result')?.textContent;
+  const txt = document.getElementById('inf-extra-result')?.innerText;
   if (!txt) return;
   navigator.clipboard.writeText(txt).then(() => _infToast('✅ Copiado'));
+};
+
+window.infGuardarExtra = async function() {
+  const txt = document.getElementById('inf-extra-result')?.innerText?.trim();
+  if (!txt || !_inf.pacActual) { _infToast('⚠️ No hay análisis para guardar'); return; }
+  try {
+    const uid = PsicoRouter.store.userId;
+    if (!uid) { _infToast('❌ Usuario no identificado'); return; }
+    // El tipo refleja qué función extra generó el texto
+    const tipoExtra = _inf._extraTipo || 'analisis_extra';
+    const { error } = await sb.from('informes_clinicos').insert({
+      user_id:     uid,
+      paciente_id: _inf.pacActual.id,
+      tipo:        tipoExtra,
+      texto:       txt,
+    });
+    if (error) throw error;
+    _infToast('✅ Análisis guardado');
+    await _infCargarInformesGuardados();
+  } catch(e) {
+    console.error('[Informes] Error al guardar extra:', e.message);
+    _infToast('❌ Error al guardar: ' + e.message);
+  }
 };
 
 
