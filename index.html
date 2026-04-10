@@ -185,6 +185,20 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); min-
 .bn-more-item .bm-icon { font-size: 24px; line-height: 1; }
 .bn-more-item .bm-label { font-size: 10px; font-weight: 700; color: var(--text-muted); }
 
+/* ── SOPORTE ── */
+.sb-soporte {
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 14px; border-radius: 12px;
+  color: rgba(255,255,255,0.55);
+  font-size: 13px; font-weight: 500;
+  cursor: pointer; border: none; background: transparent;
+  width: 100%; text-align: left;
+  transition: background .15s, color .15s;
+  margin-top: 4px;
+}
+.sb-soporte:hover { background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.85); }
+.sb-soporte .sb-icon { font-size: 16px; width: 24px; text-align: center; opacity: .8; }
+
 /* ══════════════════════════════════════════
    TRANSICIÓN ENTRE VISTAS
    ══════════════════════════════════════════ */
@@ -255,6 +269,9 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); min-
     </nav>
 
     <div class="sb-footer">
+      <button class="sb-soporte" onclick="abrirSoporte()">
+        <span class="sb-icon">🆘</span> Soporte
+      </button>
       <button class="sb-user" onclick="navigate('perfil')">
         <div class="sb-avatar" id="sb-avatar-initials">?</div>
         <div>
@@ -301,6 +318,9 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); min-
       </button>
       <button class="bn-more-item" onclick="bnMoreNav('perfil')">
         <span class="bm-icon">👤</span><span class="bm-label">Perfil</span>
+      </button>
+      <button class="bn-more-item" onclick="bnMoreClose(); abrirSoporte()">
+        <span class="bm-icon">🆘</span><span class="bm-label">Soporte</span>
       </button>
       <button class="bn-more-item" onclick="bnMoreNav('cuenta')">
         <span class="bm-icon">⭐</span><span class="bm-label">Suscripción</span>
@@ -490,6 +510,44 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('bn-more-overlay').addEventListener('click', bnMoreClose);
 
 });
+
+/* ── SOPORTE POR EMAIL ── */
+async function abrirSoporte() {
+  const emailDestino = 'gestionespsicoapp@gmail.com';
+  const asunto = 'Soporte PsicoApp';
+
+  let emailUsuario = 'no logueado';
+  try {
+    // Supabase v2: única forma correcta de obtener la sesión
+    const { data } = await sb.auth.getSession();
+    if (data?.session?.user?.email) {
+      emailUsuario = data.session.user.email;
+    } else {
+      // Fallback: store en memoria del router
+      const perfilEmail = PsicoRouter?.store?.perfil?.email;
+      if (perfilEmail) emailUsuario = perfilEmail;
+    }
+  } catch(_) { /* silencioso */ }
+
+  const fecha = new Date().toLocaleDateString('es-AR', {
+    day: '2-digit', month: '2-digit', year: 'numeric'
+  });
+  const urlActual = window.location.href;
+
+  const cuerpo =
+    `Hola, necesito ayuda con PsicoApp.\n` +
+    `Usuario: ${emailUsuario}\n` +
+    `Problema: (describir aquí)\n` +
+    `Fecha: ${fecha}\n` +
+    `URL actual: ${urlActual}`;
+
+  const mailto =
+    `mailto:${emailDestino}` +
+    `?subject=${encodeURIComponent(asunto)}` +
+    `&body=${encodeURIComponent(cuerpo)}`;
+
+  window.location.href = mailto;
+}
 
 /* ── navigate() y router — gestionados por app-router.js ──
    app-router.js define navigate() globalmente y maneja:
