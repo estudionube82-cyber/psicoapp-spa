@@ -1,42 +1,49 @@
 // ═══════════════════════════════════════════════════════════════
 //  google-calendar.js — PsicoApp
-//  Servicio de integración con Google Calendar (Token model)
-//  Usa Google Identity Services — sin OAuth redirect, sin backend
+//  Integración con Google Calendar (Token model)
+//  - Crea un calendario dedicado "PsicoApp · Turnos" en "Otros calendarios"
+//  - Sesiones/pacientes → verde | Eventos → naranja
 // ═══════════════════════════════════════════════════════════════
 
 const GCal = (() => {
 
   // ── Config ────────────────────────────────────────────────────
-  const CLIENT_ID = '258644442158-gid3k8d4ga7a9lem9e4tjl4aif33gsu1.apps.googleusercontent.com';
-  const SCOPES    = 'https://www.googleapis.com/auth/calendar.events';
-  const GCAL_API  = 'https://www.googleapis.com/calendar/v3';
-  const STORAGE_KEY = 'gcal_connected';
+  const CLIENT_ID   = '258644442158-gid3k8d4ga7a9lem9e4tjl4aif33gsu1.apps.googleusercontent.com';
+  const SCOPES      = 'https://www.googleapis.com/auth/calendar';
+  const GCAL_API    = 'https://www.googleapis.com/calendar/v3';
+
+  const KEY_CONNECTED = 'gcal_connected';
+  const KEY_CAL_ID    = 'gcal_calendar_id';   // ID del calendario "PsicoApp · Turnos"
+
+  // Colores Google Calendar (colorId)
+  // 10 = Basil (verde oscuro) → sesiones/pacientes
+  // 6  = Tangerine (naranja)  → eventos
+  const COLOR_SESION  = '10';   // verde
+  const COLOR_EVENTO  = '6';    // naranja
 
   // ── Estado ────────────────────────────────────────────────────
   let _tokenClient = null;
   let _accessToken = null;
-  let _tokenExpiry = 0;   // timestamp ms
+  let _tokenExpiry = 0;
 
-  // ── Inicializar Google Identity Services ──────────────────────
+  // ── Cargar Google Identity Services ──────────────────────────
   function _ensureGIS() {
     return new Promise((resolve, reject) => {
       if (window.google?.accounts?.oauth2) { resolve(); return; }
       const s = document.createElement('script');
-      s.src = 'https://accounts.google.com/gsi/client';
+      s.src     = 'https://accounts.google.com/gsi/client';
       s.onload  = resolve;
       s.onerror = () => reject(new Error('No se pudo cargar Google Identity Services'));
       document.head.appendChild(s);
     });
   }
 
-  // ── Obtener token (pide consentimiento si no hay uno válido) ──
+  // ── Obtener access token ──────────────────────────────────────
   function _getToken() {
     return new Promise(async (resolve, reject) => {
-      // Si el token vigente tiene más de 30 seg de vida, reutilizarlo
       if (_accessToken && Date.now() < _tokenExpiry - 30_000) {
         resolve(_accessToken); return;
       }
-
       try { await _ensureGIS(); } catch(e) { reject(e); return; }
 
       if (!_tokenClient) {
@@ -47,19 +54,17 @@ const GCal = (() => {
             if (resp.error) { reject(new Error(resp.error)); return; }
             _accessToken = resp.access_token;
             _tokenExpiry = Date.now() + (resp.expires_in * 1000);
-            localStorage.setItem(STORAGE_KEY, '1');
+            localStorage.setItem(KEY_CONNECTED, '1');
             resolve(_accessToken);
           },
         });
       }
-
-      // Si hay token guardado (sesión previa), pedir silenciosamente
-      const wasPrev = localStorage.getItem(STORAGE_KEY) === '1';
+      const wasPrev = localStorage.getItem(KEY_CONNECTED) === '1';
       _tokenClient.requestAccessToken({ prompt: wasPrev ? '' : 'consent' });
     });
   }
 
-  // ── Llamada a la API de Google Calendar ───────────────────────
+  // ── Llamada genérica a la API ─────────────────────────────────
   async function _api(method, path, body) {
     const token = await _getToken();
     const opts  = {
@@ -79,6 +84,40 @@ const GCal = (() => {
     return resp.json();
   }
 
+  // ── Obtener o crear el calendario "PsicoApp · Turnos" ─────────
+  async function _getOrCreateCalendar() {
+    // Si ya lo tenemos en localStorage, usarlo directamente
+    const saved = localStorage.getItem(KEY_CAL_ID);
+    if (saved) return saved;
+
+    // Listar calendarios del usuario y buscar el nuestro
+    const list = await _api('GET', '/users/me/calendarList');
+    const existing = (list.items || []).find(c =>
+      c.summary === 'PsicoApp · Turnos'
+    );
+    if (existing) {
+      localStorage.setItem(KEY_CAL_ID, existing.id);
+      return existing.id;
+    }
+
+    // No existe → crearlo con color verde (colorId 8 = Graphite para el calendario,
+    // los eventos tendrán sus propios colores)
+    const created = await _api('POST', '/calendars', {
+      summary:     'PsicoApp · Turnos',
+      description: 'Turnos y sesiones gestionados desde PsicoApp',
+      timeZone:    'America/Argentina/Buenos_Aires',
+    });
+
+    // Setear color del calendario en la lista del usuario (verde = "sage" = #33B679)
+    await _api('PATCH', `/users/me/calendarList/${encodeURIComponent(created.id)}`, {
+      colorId:    '2',   // Sage (verde claro) para el calendario en sí
+      selected:   true,
+    }).catch(() => {});  // no crítico si falla
+
+    localStorage.setItem(KEY_CAL_ID, created.id);
+    return created.id;
+  }
+
   // ── Construir objeto evento de Google Calendar ────────────────
   function _buildGCalEvent(turno, nombrePaciente) {
     const [y, m, d] = turno.fecha.split('-').map(Number);
@@ -88,24 +127,28 @@ const GCal = (() => {
     const inicio = new Date(y, m - 1, d, hh, mm);
     const fin    = new Date(inicio.getTime() + durMin * 60_000);
 
+    const esEvento  = turno.tipo === 'evento';
     const tipoLabel = {
       sesion:'Sesión', online:'Online', evaluacion:'Evaluación',
       judicial:'Judicial', evento:'Evento', otro:'Otro',
     }[turno.tipo] || 'Sesión';
 
-    const title = turno.tipo === 'evento'
+    const title = esEvento
       ? (turno.notas || 'Evento')
       : `${tipoLabel} — ${nombrePaciente || 'Paciente'}`;
 
     const desc = [
-      turno.notas    ? `Notas: ${turno.notas}` : null,
+      esEvento ? null : `Paciente: ${nombrePaciente || '—'}`,
+      turno.notas && !esEvento ? `Notas: ${turno.notas}` : null,
       `Duración: ${durMin} min`,
+      `Tipo: ${tipoLabel}`,
       'Creado desde PsicoApp',
     ].filter(Boolean).join('\n');
 
     return {
       summary:     title,
       description: desc,
+      colorId:     esEvento ? COLOR_EVENTO : COLOR_SESION,
       start: { dateTime: inicio.toISOString(), timeZone: 'America/Argentina/Buenos_Aires' },
       end:   { dateTime: fin.toISOString(),    timeZone: 'America/Argentina/Buenos_Aires' },
       reminders: {
@@ -119,60 +162,47 @@ const GCal = (() => {
   //  API PÚBLICA
   // ══════════════════════════════════════════════════════════════
 
-  /** Verifica si el usuario ya conectó Google Calendar */
   function isConnected() {
-    return localStorage.getItem(STORAGE_KEY) === '1';
+    return localStorage.getItem(KEY_CONNECTED) === '1';
   }
 
-  /** Desconectar — revoca token y limpia estado */
   function disconnect() {
     if (_accessToken && window.google?.accounts?.oauth2) {
       google.accounts.oauth2.revoke(_accessToken);
     }
-    _accessToken  = null;
-    _tokenExpiry  = 0;
-    _tokenClient  = null;
-    localStorage.removeItem(STORAGE_KEY);
+    _accessToken = null;
+    _tokenExpiry = 0;
+    _tokenClient = null;
+    localStorage.removeItem(KEY_CONNECTED);
+    // NO borramos KEY_CAL_ID para que si reconecta use el mismo calendario
   }
 
-  /**
-   * Conectar: pide consentimiento y retorna true si OK
-   * Llamar desde un click del usuario (requisito de navegador)
-   */
   async function connect() {
     await _getToken();
+    // Crear/obtener el calendario dedicado al conectar
+    await _getOrCreateCalendar();
     return true;
   }
 
-  /**
-   * Crear evento en Google Calendar
-   * @param {object} turno — fila de la tabla turnos
-   * @param {string} nombrePaciente
-   * @returns {string} gcal_event_id del evento creado
-   */
   async function createEvent(turno, nombrePaciente) {
-    const evt  = _buildGCalEvent(turno, nombrePaciente);
-    const data = await _api('POST', '/calendars/primary/events', evt);
-    return data.id;   // gcal_event_id
+    const calId = await _getOrCreateCalendar();
+    const evt   = _buildGCalEvent(turno, nombrePaciente);
+    const data  = await _api('POST', `/calendars/${encodeURIComponent(calId)}/events`, evt);
+    return data.id;
   }
 
-  /**
-   * Actualizar evento existente
-   */
   async function updateEvent(gcalEventId, turno, nombrePaciente) {
-    const evt = _buildGCalEvent(turno, nombrePaciente);
-    await _api('PUT', `/calendars/primary/events/${encodeURIComponent(gcalEventId)}`, evt);
+    const calId = await _getOrCreateCalendar();
+    const evt   = _buildGCalEvent(turno, nombrePaciente);
+    await _api('PUT', `/calendars/${encodeURIComponent(calId)}/events/${encodeURIComponent(gcalEventId)}`, evt);
   }
 
-  /**
-   * Eliminar evento de Google Calendar (silencioso si no existe)
-   */
   async function deleteEvent(gcalEventId) {
     if (!gcalEventId) return;
+    const calId = localStorage.getItem(KEY_CAL_ID) || 'primary';
     try {
-      await _api('DELETE', `/calendars/primary/events/${encodeURIComponent(gcalEventId)}`);
+      await _api('DELETE', `/calendars/${encodeURIComponent(calId)}/events/${encodeURIComponent(gcalEventId)}`);
     } catch(e) {
-      // Si ya fue eliminado en Google, ignorar el error 404/410
       if (!e.message.includes('404') && !e.message.includes('410') && !e.message.includes('Gone')) throw e;
     }
   }
