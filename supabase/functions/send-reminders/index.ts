@@ -20,11 +20,11 @@ import { createClient } from 'jsr:@supabase/supabase-js@2'
 // ── Credenciales ──────────────────────────────────────────────────────────────
 const SUPA_URL         = Deno.env.get('SUPABASE_URL')!
 const SUPA_SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-const TWILIO_SID       = Deno.env.get('TWILIO_ACCOUNT_SID') || 'AC2027bafa685cef8b91eb35ef75017413'
+const TWILIO_SID       = Deno.env.get('TWILIO_ACCOUNT_SID')!
 const TWILIO_TOKEN     = Deno.env.get('TWILIO_AUTH_TOKEN')!
-const MESSAGING_SID    = Deno.env.get('TWILIO_MESSAGING_SID') || 'MG2e098224503602a42a7b0d487e7ca08d'
-const CONTENT_SID_REC  = Deno.env.get('TWILIO_CONTENT_SID')  || 'HXe7c3c39b922597ec66eda73b20e8fcdf'
-const TWILIO_WA_FROM   = Deno.env.get('TWILIO_WA_FROM')       || 'whatsapp:+5492346521129'
+const MESSAGING_SID    = Deno.env.get('TWILIO_MESSAGING_SID')!
+const CONTENT_SID_REC  = Deno.env.get('TWILIO_CONTENT_SID')!
+const TWILIO_WA_FROM   = Deno.env.get('TWILIO_WA_FROM')!
 
 // ─────────────────────────────────────────────────────────────────────────────
 // fechaArgentina(offset?)

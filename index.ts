@@ -11,11 +11,11 @@ const SUPA_SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 // Token secreto para el cron externo. Configurar en Supabase → Edge Functions → Secrets.
 // El scheduler (cron-job.org / Vercel) debe enviarlo en el header X-Cron-Secret.
 const CRON_SECRET      = Deno.env.get('CRON_SECRET') || ''
-const TWILIO_SID       = Deno.env.get('TWILIO_ACCOUNT_SID')  || 'AC2027bafa685cef8b91eb35ef75017413'
+const TWILIO_SID       = Deno.env.get('TWILIO_ACCOUNT_SID')!
 const TWILIO_TOKEN     = Deno.env.get('TWILIO_AUTH_TOKEN')!
-const MESSAGING_SID    = Deno.env.get('TWILIO_MESSAGING_SID') || 'MG2e098224503602a42a7b0d487e7ca08d'
-const CONTENT_SID      = Deno.env.get('TWILIO_CONTENT_SID')   || 'HXe7c3c39b922597ec66eda73b20e8fcdf'
-const WA_FROM          = Deno.env.get('TWILIO_WA_FROM')        || 'whatsapp:+5492346521129'
+const MESSAGING_SID    = Deno.env.get('TWILIO_MESSAGING_SID')!
+const CONTENT_SID      = Deno.env.get('TWILIO_CONTENT_SID')!
+const WA_FROM          = Deno.env.get('TWILIO_WA_FROM')!
 
 // ─────────────────────────────────────────────────────────────────────────────
 // fechaArgentina(offset)
@@ -156,10 +156,7 @@ Deno.serve(async (req: Request) => {
 
   // ── Seguridad: validar token del scheduler ────────────────────────────────
   // Acepta: header X-Cron-Secret  O  Authorization: Bearer <token>
-  // DEBUG temporal — sacar antes de producción
   const DEBUG_MODE = Deno.env.get('DEBUG_WHATSAPP') === 'true'
-  console.log("DEBUG CRON_SECRET:", CRON_SECRET ? '(definido)' : '(vacío)')
-  console.log("DEBUG HEADERS:", Object.fromEntries(req.headers.entries()))
   if (!DEBUG_MODE && CRON_SECRET) {
     const cronHeader  = req.headers.get('x-cron-secret')        || ''
     const bearerToken = (req.headers.get('authorization') || '').replace('Bearer ', '')
