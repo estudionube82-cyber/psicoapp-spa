@@ -1,5 +1,4 @@
 {
-  "buildCommand": "node build.js",
   "routes": [
     { "src": "/(.+\\.js)",   "dest": "/$1" },
     { "src": "/(.+\\.css)",  "dest": "/$1" },
