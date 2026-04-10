@@ -25,6 +25,9 @@
   let _turnoSel    = null;
   let _modoModal   = 'turno';   // 'turno' | 'evento'
   let _currentView = 'dia';
+  // Rango de turnos cargados en memoria (para re-fetch al navegar fuera)
+  let _turnosDesde = '';   // 'YYYY-MM-DD'
+  let _turnosHasta = '';   // 'YYYY-MM-DD'
 
   // ── Constantes ───────────────────────────────────────────
   const DIAS  = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
@@ -127,18 +130,51 @@
        Se conserva la firma para no romper los listeners de storeUpdated. */
   }
 
-  async function cargarTurnos() {
+  /**
+   * Carga turnos de Supabase dentro de un rango de fechas.
+   * @param {string} [desde]  'YYYY-MM-DD' — por defecto: -90 días desde hoy
+   * @param {string} [hasta]  'YYYY-MM-DD' — por defecto: +180 días desde hoy
+   */
+  async function cargarTurnos(desde, hasta) {
+    // Calcular ventana por defecto si no se pasa rango
+    if (!desde || !hasta) {
+      const base  = new Date(getTodayLocal());
+      const d0    = new Date(base); d0.setDate(d0.getDate() - 90);
+      const d1    = new Date(base); d1.setDate(d1.getDate() + 180);
+      desde = desde || fmtDate(d0);
+      hasta = hasta || fmtDate(d1);
+    }
     try {
       const { data, error } = await sb.from('turnos')
         .select('*')
         .eq('user_id', _userId)
+        .gte('fecha', desde)
+        .lte('fecha', hasta)
         .order('fecha', { ascending: true })
         .order('hora',  { ascending: true });
       if (error) throw error;
       _todosTurnos = data || [];
+      _turnosDesde = desde;
+      _turnosHasta = hasta;
+      console.log(`[Agenda] Turnos cargados: ${_todosTurnos.length} entre ${desde} y ${hasta}`);
     } catch(e) {
       console.error('[Agenda] cargarTurnos:', e.message);
       _todosTurnos = [];
+    }
+  }
+
+  /**
+   * Verifica si la fecha dada está fuera del rango cargado.
+   * Si es así, re-fetch con una nueva ventana centrada en esa fecha.
+   * @param {Date} fecha
+   */
+  async function _ensureTurnosParaFecha(fecha) {
+    const f = fmtDate(fecha);
+    if (!_turnosDesde || !_turnosHasta || f < _turnosDesde || f > _turnosHasta) {
+      // Re-fetch centrado en la fecha solicitada (±3 meses aprox)
+      const d0 = new Date(fecha); d0.setDate(d0.getDate() - 90);
+      const d1 = new Date(fecha); d1.setDate(d1.getDate() + 180);
+      await cargarTurnos(fmtDate(d0), fmtDate(d1));
     }
   }
 
@@ -1242,16 +1278,18 @@
     }
   }
 
-  function navBack() {
+  async function navBack() {
     if (_currentView === 'dia')    _fechaActual.setDate(_fechaActual.getDate() - 1);
     if (_currentView === 'semana') _fechaActual.setDate(_fechaActual.getDate() - 7);
     if (_currentView === 'mes')    _fechaActual.setMonth(_fechaActual.getMonth() - 1);
+    await _ensureTurnosParaFecha(_fechaActual);
     setView(_currentView);
   }
-  function navFwd() {
+  async function navFwd() {
     if (_currentView === 'dia')    _fechaActual.setDate(_fechaActual.getDate() + 1);
     if (_currentView === 'semana') _fechaActual.setDate(_fechaActual.getDate() + 7);
     if (_currentView === 'mes')    _fechaActual.setMonth(_fechaActual.getMonth() + 1);
+    await _ensureTurnosParaFecha(_fechaActual);
     setView(_currentView);
   }
 
@@ -1548,7 +1586,7 @@
       cerrarModal();
       localStorage.setItem('ag_ultimo_modo', _modoModal === 'evento' ? 'evento' : 'sesion');
       toast(_modoModal === 'evento' ? '✅ Evento guardado' : '✅ Turno agendado');
-      await cargarTurnos();
+      await cargarTurnos(_turnosDesde, _turnosHasta);  // preservar rango actual
       buildDayStrip();
       setView(_currentView);
 
@@ -1651,7 +1689,7 @@
       const { error } = await sb.from('turnos').update({ estado }).eq('id', _turnoSel.id);
       if (error) throw error;
       cerrarDetalle();
-      await cargarTurnos();
+      await cargarTurnos(_turnosDesde, _turnosHasta);  // preservar rango actual
       setView(_currentView);
       toast(estado === 'realizado' ? '✅ Sesión marcada como realizada' : '✓ Estado actualizado');
     } catch(e) {
@@ -1666,7 +1704,7 @@
       const { error } = await sb.from('turnos').delete().eq('id', _turnoSel.id).eq('user_id', _userId);
       if (error) throw error;
       cerrarDetalle();
-      await cargarTurnos();
+      await cargarTurnos(_turnosDesde, _turnosHasta);  // preservar rango actual
       buildDayStrip();
       setView(_currentView);
       toast('🗑 Turno eliminado');
