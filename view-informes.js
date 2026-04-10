@@ -64,7 +64,11 @@
 
 /* Output */
 #view-informes .inf-output-wrap { display:none; }
-#view-informes .inf-output { white-space:pre-wrap; font-size:13px; line-height:1.7; color:var(--text); padding:16px; font-family:var(--font); }
+#view-informes .inf-output { font-size:13.5px; line-height:1.8; color:var(--text); padding:16px; font-family:var(--font); }
+#view-informes .inf-output .inf-seccion { font-size:11px; font-weight:800; color:var(--text-muted); text-transform:uppercase; letter-spacing:1px; margin:20px 0 6px; }
+#view-informes .inf-output .inf-seccion:first-child { margin-top:0; }
+#view-informes .inf-output .inf-parrafo { margin-bottom:10px; }
+#view-informes .inf-output strong { font-weight:700; color:var(--text); }
 #view-informes .inf-alerta-riesgo { display:none; margin:0 16px 8px; padding:12px 14px; background:rgba(229,62,62,.08); border:1.5px solid rgba(229,62,62,.25); border-radius:12px; font-size:13px; color:var(--danger); }
 #view-informes .inf-output-actions { display:flex; gap:8px; padding:0 16px 16px; }
 #view-informes .inf-action-btn { flex:1; padding:12px; border-radius:12px; border:1.5px solid var(--border); background:var(--bg); color:var(--text); font-family:var(--font); font-size:13px; font-weight:700; cursor:pointer; transition:background .12s; }
@@ -399,13 +403,51 @@ async function _infCargarInformesGuardados() {
 }
 
 window.infVerGuardado = function(inf) {
-  document.getElementById('inf-output').textContent = inf.texto;
+  document.getElementById('inf-output').innerHTML = _infRenderTexto(inf.texto);
   document.getElementById('inf-output-wrap').style.display = 'block';
   document.getElementById('inf-loading').style.display = 'none';
   document.getElementById('inf-alerta-riesgo').style.display = 'none';
   document.getElementById('inf-output-wrap').scrollIntoView({ behavior: 'smooth' });
 };
 
+
+/* ══════════════════════════════════════════
+   RENDERIZADO DE TEXTO → HTML LIMPIO
+   Convierte el texto plano de la IA en HTML
+   sin mostrar asteriscos ni almohadillas.
+   ══════════════════════════════════════════ */
+function _infRenderTexto(texto) {
+  if (!texto) return ''
+
+  const lines = texto.split('\n')
+  let html = ''
+
+  for (let line of lines) {
+    // Quitar markdown residual: ###, ##, #, **, *
+    line = line
+      .replace(/^#{1,4}\s*/,  '')   // títulos markdown → texto plano
+      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')  // **negrita** → <strong>
+      .replace(/\*(.*?)\*/g,   '$1')  // *cursiva* → texto plano
+      .trim()
+
+    if (!line) {
+      // Línea vacía → separador entre párrafos
+      continue
+    }
+
+    // Detectar si es un título de sección (todo mayúsculas o termina en ":")
+    const esTitulo = /^[A-ZÁÉÍÓÚÑ\s\d]{4,}[:\.]?$/.test(line)
+                  || /^[A-ZÁÉÍÓÚÑ][A-Za-záéíóúñ\s\d]{2,}:$/.test(line)
+
+    if (esTitulo) {
+      html += `<div class="inf-seccion">${line}</div>`
+    } else {
+      html += `<div class="inf-parrafo">${line}</div>`
+    }
+  }
+
+  return html
+}
 
 /* ══════════════════════════════════════════
    TIPO DE INFORME
@@ -574,7 +616,7 @@ window.infGenerar = async function() {
 
     clearInterval(intervalo);
     loading.style.display = 'none';
-    output.textContent = texto;
+    output.innerHTML = _infRenderTexto(texto);
     wrap.style.display = 'block';
     alerta.style.display = texto.includes('⚠️ INDICADOR DE RIESGO') ? 'block' : 'none';
     wrap.scrollIntoView({ behavior: 'smooth' });
@@ -594,7 +636,8 @@ window.infGenerar = async function() {
    ACCIONES DEL OUTPUT
    ══════════════════════════════════════════ */
 window.infCopiar = function() {
-  const txt = document.getElementById('inf-output')?.textContent;
+  // Usar innerText para obtener texto legible sin tags HTML
+  const txt = document.getElementById('inf-output')?.innerText;
   if (!txt) return;
   navigator.clipboard.writeText(txt).then(() => _infToast('✅ Copiado al portapapeles'));
 };
@@ -641,7 +684,7 @@ async function _infLlamarExtra(prompt, loadingText) {
     });
     const data = await resp.json();
     loading.style.display = 'none';
-    result.textContent = data.texto || data.error || 'Sin resultado.';
+    result.innerHTML = _infRenderTexto(data.texto || data.error || 'Sin resultado.');
     wrap.scrollIntoView({ behavior: 'smooth' });
   } catch(e) {
     loading.style.display = 'none';
