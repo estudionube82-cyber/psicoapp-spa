@@ -100,6 +100,45 @@
 #view-historia .hc-empty h3 { color:var(--text); font-size:17px; margin-bottom:6px; }
 #view-historia .hc-spacer { height:80px; }
 
+/* ── Pestaña Informes IA dentro de historia ── */
+#view-historia .hc-ia-tipos { display:flex; gap:8px; padding:14px 16px 8px; overflow-x:auto; }
+#view-historia .hc-ia-tipo-btn { flex-shrink:0; padding:7px 14px; border-radius:20px; border:1.5px solid var(--border); background:var(--bg); color:var(--text-muted); font-size:13px; font-weight:700; cursor:pointer; font-family:var(--font); transition:all .15s; }
+#view-historia .hc-ia-tipo-btn.hc-ia-tipo-sel { background:var(--primary); color:white; border-color:var(--primary); }
+#view-historia .hc-ia-limite { margin:0 16px 10px; }
+#view-historia .hc-ia-limite-text { font-size:11px; color:var(--text-muted); }
+#view-historia .hc-ia-limite-track { height:4px; border-radius:99px; background:var(--border); overflow:hidden; margin-top:3px; }
+#view-historia .hc-ia-limite-fill { height:100%; border-radius:99px; background:var(--primary); transition:width .4s; }
+#view-historia .hc-ia-btn-gen { width:calc(100% - 32px); margin:0 16px 14px; background:linear-gradient(135deg,#5B2FA8,#7C3AED); color:white; border:none; border-radius:14px; padding:14px; font-size:14px; font-weight:800; font-family:var(--font); cursor:pointer; }
+#view-historia .hc-ia-btn-gen:disabled { opacity:.5; cursor:not-allowed; }
+#view-historia .hc-ia-gen-loading { display:none; flex-direction:column; align-items:center; gap:10px; padding:24px; }
+#view-historia .hc-ia-gen-spinner { width:28px; height:28px; border:3px solid var(--border); border-top-color:var(--primary); border-radius:50%; animation:hcSpin .8s linear infinite; }
+#view-historia .hc-ia-gen-loading-text { font-size:13px; color:var(--text-muted); font-weight:600; }
+#view-historia .hc-ia-output-wrap { display:none; }
+#view-historia .hc-ia-tab-output { font-size:13px; line-height:1.8; color:var(--text); padding:14px 16px; }
+#view-historia .hc-ia-tab-output .hc-ia-seccion { font-size:11px; font-weight:800; color:var(--text-muted); text-transform:uppercase; letter-spacing:1px; margin:18px 0 5px; }
+#view-historia .hc-ia-tab-output .hc-ia-seccion:first-child { margin-top:0; }
+#view-historia .hc-ia-tab-output .hc-ia-parrafo { margin-bottom:8px; }
+#view-historia .hc-ia-tab-output strong { font-weight:700; }
+#view-historia .hc-ia-actions { display:flex; gap:8px; padding:0 16px 14px; }
+#view-historia .hc-ia-action-btn { flex:1; padding:11px; border-radius:12px; border:1.5px solid var(--border); background:var(--bg); color:var(--text); font-family:var(--font); font-size:13px; font-weight:700; cursor:pointer; }
+#view-historia .hc-ia-action-primary { background:var(--primary-light); color:var(--primary); border-color:transparent; }
+#view-historia .hc-ia-section-title { font-size:12px; font-weight:800; color:var(--text-muted); text-transform:uppercase; letter-spacing:.8px; padding:14px 16px 6px; border-top:1px solid var(--border); margin-top:4px; }
+#view-historia .hc-ia-extra-btns { display:flex; flex-direction:column; gap:8px; padding:0 16px 12px; }
+#view-historia .hc-ia-extra-btn { padding:11px 14px; border-radius:12px; border:1.5px solid var(--border); background:var(--bg); color:var(--text); font-family:var(--font); font-size:13px; font-weight:700; cursor:pointer; text-align:left; transition:background .12s; }
+#view-historia .hc-ia-extra-btn:hover { background:var(--surface2); }
+#view-historia .hc-ia-extra-btn:disabled { opacity:.4; cursor:not-allowed; }
+#view-historia .hc-ia-extra-output { display:none; border-top:1px solid var(--border); }
+#view-historia .hc-ia-extra-result { font-size:13px; line-height:1.8; color:var(--text); padding:14px 16px; }
+#view-historia .hc-ia-extra-result .hc-ia-seccion { font-size:11px; font-weight:800; color:var(--text-muted); text-transform:uppercase; letter-spacing:1px; margin:16px 0 4px; }
+#view-historia .hc-ia-extra-result .hc-ia-seccion:first-child { margin-top:0; }
+#view-historia .hc-ia-extra-result .hc-ia-parrafo { margin-bottom:8px; }
+#view-historia .hc-ia-hist-item { padding:11px 16px; border-bottom:1px solid var(--border); cursor:pointer; transition:background .12s; }
+#view-historia .hc-ia-hist-item:hover { background:var(--surface2); }
+#view-historia .hc-ia-hist-top { display:flex; justify-content:space-between; margin-bottom:3px; }
+#view-historia .hc-ia-hist-tipo { font-size:12px; font-weight:800; color:var(--primary); }
+#view-historia .hc-ia-hist-fecha { font-size:11px; color:var(--text-muted); }
+#view-historia .hc-ia-hist-preview { font-size:12px; color:var(--text-muted); line-height:1.5; }
+
 /* Modal */
 #hc-overlay-sesion, #hc-overlay-info { position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:200; display:none; align-items:flex-end; justify-content:center; overflow-y:auto; }
 #hc-overlay-sesion.hc-open, #hc-overlay-info.hc-open { display:flex; }
@@ -168,6 +207,9 @@ let _hcDiags          = [];
 let _hcDiagsCustom    = [];
 let _hcTabActual      = 'sesiones';
 let _hcUserId         = null;
+let _hcIaTipo         = 'clinico';
+let _hcIaExtraTipo    = '';
+let _hcIaToken        = null;
 
 const HC_COLORES    = ['#5B2FA8','#1976D2','#2D6A4F','#D97706','#7B5EA7','#0369A1','#E65100'];
 const HC_MOOD_MAP   = { 1:'😞', 2:'😕', 3:'😐', 4:'🙂', 5:'😄' };
@@ -226,6 +268,7 @@ function _hcRenderHTML(container) {
       <div class="hc-tabs">
         <button class="hc-tab hc-tab-active" id="hc-tab-ses">📋 Sesiones</button>
         <button class="hc-tab"               id="hc-tab-info">🩺 Info clínica</button>
+        <button class="hc-tab"               id="hc-tab-ia">🤖 Informes IA</button>
       </div>
       <div class="hc-tab-content hc-tab-show" id="hc-tc-sesiones">
         <div class="hc-ses-header">
@@ -242,6 +285,61 @@ function _hcRenderHTML(container) {
         </div>
         <div class="hc-spacer"></div>
       </div>
+
+      <!-- ── PESTAÑA INFORMES IA ── -->
+      <div class="hc-tab-content" id="hc-tc-ia">
+        <!-- Tipo de informe -->
+        <div class="hc-ia-tipos">
+          <button class="hc-ia-tipo-btn hc-ia-tipo-sel" id="hc-ia-tipo-clinico">🏥 Clínico</button>
+          <button class="hc-ia-tipo-btn"                id="hc-ia-tipo-juzgado">⚖️ Juzgado</button>
+          <button class="hc-ia-tipo-btn"                id="hc-ia-tipo-obrasocial">📋 Obra Social</button>
+        </div>
+        <!-- Barra de uso -->
+        <div class="hc-ia-limite">
+          <div class="hc-ia-limite-text" id="hc-ia-limite-text">Cargando…</div>
+          <div class="hc-ia-limite-track"><div class="hc-ia-limite-fill" id="hc-ia-limite-fill" style="width:0%"></div></div>
+        </div>
+        <!-- Botón generar -->
+        <button class="hc-ia-btn-gen" id="hc-ia-btn-gen">🤖 Generar informe</button>
+        <!-- Loading -->
+        <div class="hc-ia-gen-loading" id="hc-ia-gen-loading">
+          <div class="hc-ia-gen-spinner"></div>
+          <div class="hc-ia-gen-loading-text" id="hc-ia-gen-loading-text">Generando informe…</div>
+        </div>
+        <!-- Output -->
+        <div class="hc-ia-output-wrap" id="hc-ia-output-wrap">
+          <div class="hc-ia-tab-output" id="hc-ia-tab-output"></div>
+          <div class="hc-ia-actions">
+            <button class="hc-ia-action-btn"                  id="hc-ia-btn-copiar">📋 Copiar</button>
+            <button class="hc-ia-action-btn hc-ia-action-primary" id="hc-ia-btn-guardar">💾 Guardar</button>
+          </div>
+        </div>
+        <!-- Funciones extra -->
+        <div class="hc-ia-section-title">🧠 Más funciones IA</div>
+        <div class="hc-ia-extra-btns">
+          <button class="hc-ia-extra-btn" id="hc-ia-btn-evolucion">📈 Ver evolución del paciente</button>
+          <button class="hc-ia-extra-btn" id="hc-ia-btn-diag">🔍 Sugerir diagnóstico CIE-11</button>
+          <button class="hc-ia-extra-btn" id="hc-ia-btn-plan">📋 Sugerir plan terapéutico</button>
+        </div>
+        <div class="hc-ia-extra-output" id="hc-ia-extra-output">
+          <div class="hc-ia-gen-loading" id="hc-ia-extra-loading">
+            <div class="hc-ia-gen-spinner"></div>
+            <div class="hc-ia-gen-loading-text" id="hc-ia-extra-loading-text">Analizando…</div>
+          </div>
+          <div class="hc-ia-extra-result" id="hc-ia-extra-result"></div>
+          <div class="hc-ia-actions" style="padding:8px 16px 12px">
+            <button class="hc-ia-action-btn"                  id="hc-ia-btn-copiar-extra">📋 Copiar</button>
+            <button class="hc-ia-action-btn hc-ia-action-primary" id="hc-ia-btn-guardar-extra">💾 Guardar</button>
+          </div>
+        </div>
+        <!-- Historial de informes -->
+        <div class="hc-ia-section-title">📁 Informes guardados</div>
+        <div id="hc-ia-historial">
+          <div style="font-size:12px;color:var(--text-muted);text-align:center;padding:12px">Sin informes guardados</div>
+        </div>
+        <div class="hc-spacer"></div>
+      </div>
+
       <div class="hc-spacer"></div>
     </div>
 
@@ -386,8 +484,22 @@ function _hcBindEvents() {
   q('hc-btn-volver-detalle')?.addEventListener('click', hcVolverDetalle);
 
   // Tabs
-  q('hc-tab-ses')?.addEventListener('click',  () => hcSwitchTab('sesiones'));
+  q('hc-tab-ses') ?.addEventListener('click', () => hcSwitchTab('sesiones'));
   q('hc-tab-info')?.addEventListener('click', () => hcSwitchTab('info'));
+  q('hc-tab-ia')  ?.addEventListener('click', () => hcSwitchTab('ia'));
+
+  // Botones Informes IA en detalle
+  q('hc-ia-tipo-clinico')   ?.addEventListener('click', () => hcIaSelTipo('clinico'));
+  q('hc-ia-tipo-juzgado')   ?.addEventListener('click', () => hcIaSelTipo('juzgado'));
+  q('hc-ia-tipo-obrasocial')?.addEventListener('click', () => hcIaSelTipo('obrasocial'));
+  q('hc-ia-btn-gen')        ?.addEventListener('click', hcIaGenerar);
+  q('hc-ia-btn-copiar')     ?.addEventListener('click', hcIaCopiar);
+  q('hc-ia-btn-guardar')    ?.addEventListener('click', hcIaGuardar);
+  q('hc-ia-btn-evolucion')  ?.addEventListener('click', hcIaEvolucion);
+  q('hc-ia-btn-diag')       ?.addEventListener('click', hcIaDiag);
+  q('hc-ia-btn-plan')       ?.addEventListener('click', hcIaPlan);
+  q('hc-ia-btn-copiar-extra')?.addEventListener('click', hcIaCopiarExtra);
+  q('hc-ia-btn-guardar-extra')?.addEventListener('click', hcIaGuardarExtra);
 
   // Búsqueda
   q('hc-search')?.addEventListener('input', hcFiltrar);
@@ -527,9 +639,13 @@ window.hcAbrirDetalle = async function(id) {
   document.getElementById('hc-det-nombre').textContent  = nombre;
   document.getElementById('hc-det-sub').textContent     = _hcPaciente.telefono || 'Sin teléfono';
 
+  // Resetear panel IA
+  document.getElementById('hc-ia-output-wrap').style.display = 'none';
+  document.getElementById('hc-ia-extra-output').style.display = 'none';
+
   hcShowPanel('detalle');
   hcSwitchTab('sesiones');
-  await Promise.all([_hcCargarSesiones(), _hcCargarInfo()]);
+  await Promise.all([_hcCargarSesiones(), _hcCargarInfo(), _hcIaCargarHistorial()]);
 };
 
 
@@ -540,8 +656,11 @@ function hcSwitchTab(tab) {
   _hcTabActual = tab;
   document.getElementById('hc-tab-ses') ?.classList.toggle('hc-tab-active', tab === 'sesiones');
   document.getElementById('hc-tab-info')?.classList.toggle('hc-tab-active', tab === 'info');
+  document.getElementById('hc-tab-ia')  ?.classList.toggle('hc-tab-active', tab === 'ia');
   document.getElementById('hc-tc-sesiones')?.classList.toggle('hc-tab-show', tab === 'sesiones');
   document.getElementById('hc-tc-info')    ?.classList.toggle('hc-tab-show', tab === 'info');
+  document.getElementById('hc-tc-ia')      ?.classList.toggle('hc-tab-show', tab === 'ia');
+  if (tab === 'ia') _hcIaActualizarBadge();
 }
 
 
@@ -1000,6 +1119,275 @@ function hcToast(msg) {
 
 
 /* ══════════════════════════════════════════
+   PESTAÑA INFORMES IA (dentro de historia)
+   ══════════════════════════════════════════ */
+
+/** Convierte texto plano de la IA en HTML limpio sin markdown */
+function _hcIaRenderTexto(texto) {
+  if (!texto) return '';
+  let html = '';
+  for (let line of texto.split('\n')) {
+    line = line
+      .replace(/^#{1,4}\s*/, '')
+      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+      .replace(/\*(.*?)\*/g, '$1')
+      .trim();
+    if (!line) continue;
+    const esTitulo = /^[A-ZÁÉÍÓÚÑ\s\d]{4,}[:\.]?$/.test(line)
+                  || /^[A-ZÁÉÍÓÚÑ][A-Za-záéíóúñ\s\d]{2,}:$/.test(line);
+    html += esTitulo
+      ? `<div class="hc-ia-seccion">${line}</div>`
+      : `<div class="hc-ia-parrafo">${line}</div>`;
+  }
+  return html;
+}
+
+/** Construye el contexto clínico del paciente actual */
+function _hcIaArmarContexto() {
+  const pac  = _hcPaciente;
+  const info = _hcInfoClinica || {};
+  const ses  = (_hcSesiones || []).filter(s => s.estado === 'realizada');
+  const hoy  = new Date().toLocaleDateString('es-AR', { day:'numeric', month:'long', year:'numeric' });
+
+  const totalSes   = ses.length;
+  const primeraFec = ses.length ? _hcFmtFecha(ses[ses.length - 1].fecha) : 'sin registros';
+  const ultimaFec  = ses.length ? _hcFmtFecha(ses[0].fecha) : 'sin registros';
+  const moods      = ses.filter(s => s.estado_animo).map(s => s.estado_animo);
+  const moodProm   = moods.length ? (moods.reduce((a, b) => a + b, 0) / moods.length).toFixed(1) : null;
+  const moodDesc   = { 1:'muy bajo', 2:'bajo', 3:'regular', 4:'bueno', 5:'muy bueno' };
+  const moodStr    = moodProm ? moodDesc[Math.round(parseFloat(moodProm))] : null;
+  const ultimas    = ses.slice(0, 5).map((s, i) =>
+    `Sesión ${totalSes - i}: ${s.notas || s.motivo || 'Sin notas'}`
+  ).join('\n');
+
+  return `
+DATOS DEL PACIENTE:
+Nombre: ${pac.nombre || ''} ${pac.apellido || ''} | Teléfono: ${pac.telefono || 'N/A'}
+Motivo de consulta: ${info.motivo_consulta || 'No registrado'}
+Diagnóstico: ${info.diagnostico || 'No registrado'} | Tratamiento: ${info.tratamiento_actual || 'No especificado'}
+
+ESTADÍSTICAS DEL TRATAMIENTO:
+Total sesiones realizadas: ${totalSes} | Primera sesión: ${primeraFec} | Última sesión: ${ultimaFec}
+${moodStr ? `Estado de ánimo promedio: ${moodStr} (${moodProm}/5)` : ''}
+
+NOTAS DE LAS ÚLTIMAS SESIONES:
+${ultimas || 'Sin notas registradas'}
+
+Fecha del informe: ${hoy}
+  `.trim();
+}
+
+/** Selecciona el tipo de informe */
+window.hcIaSelTipo = function(tipo) {
+  _hcIaTipo = tipo;
+  ['clinico', 'juzgado', 'obrasocial'].forEach(t =>
+    document.getElementById('hc-ia-tipo-' + t)?.classList.toggle('hc-ia-tipo-sel', t === tipo)
+  );
+};
+
+/** Actualiza badge de usos */
+async function _hcIaActualizarBadge() {
+  try {
+    const checkResp = await fetch(PSICOAPP_CONFIG.SUPA_URL + '/functions/v1/check-ia-usage', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + _hcIaToken },
+    });
+    const d = await checkResp.json();
+    const usos = d.used ?? 0;
+    const max  = d.limit ?? 5;
+    const plan = d.plan  ?? 'free';
+    const pct  = Math.min(100, Math.round(usos / max * 100));
+    const lt   = document.getElementById('hc-ia-limite-text');
+    const lf   = document.getElementById('hc-ia-limite-fill');
+    if (lt) lt.textContent = `${plan} · ${usos} de ${max} informes usados este mes`;
+    if (lf) lf.style.width = pct + '%';
+    const agotado = !d.allowed;
+    ['hc-ia-btn-gen','hc-ia-btn-evolucion','hc-ia-btn-diag','hc-ia-btn-plan'].forEach(id => {
+      const b = document.getElementById(id);
+      if (b) b.disabled = agotado;
+    });
+  } catch {}
+}
+
+/** Genera un informe completo para el paciente */
+window.hcIaGenerar = async function() {
+  if (!_hcPaciente) { hcToast('⚠️ Sin paciente seleccionado'); return; }
+  if (!_hcIaToken)  { hcToast('❌ No autenticado'); return; }
+
+  const tipos = {
+    clinico:    'Redactá un INFORME CLÍNICO PSICOLÓGICO profesional y detallado en español argentino formal.',
+    juzgado:    'Redactá un INFORME PERICIAL PSICOLÓGICO para presentar ante un juzgado, con estructura: datos del peritado, antecedentes, metodología, resultados, conclusiones y firma.',
+    obrasocial: 'Redactá un INFORME PSICOLÓGICO PARA OBRA SOCIAL con diagnóstico CIE-11, justificación del tratamiento y plan terapéutico.',
+  };
+  const prompt = `${tipos[_hcIaTipo] || tipos.clinico}
+
+DATOS DISPONIBLES:
+${_hcIaArmarContexto()}
+
+INSTRUCCIONES:
+- Lenguaje técnico psicoanalítico riguroso (Freud/Amorrortu, Lacan)
+- Estructura clara con secciones en MAYÚSCULAS
+- No inventés datos no provistos
+- Si hay indicadores de riesgo, comenzá con "⚠️ INDICADOR DE RIESGO:"
+- Extensión: 300-600 palabras`;
+
+  const loading = document.getElementById('hc-ia-gen-loading');
+  const wrap    = document.getElementById('hc-ia-output-wrap');
+  const output  = document.getElementById('hc-ia-tab-output');
+  const btn     = document.getElementById('hc-ia-btn-gen');
+
+  wrap.style.display = 'none';
+  loading.style.display = 'flex';
+  if (btn) btn.disabled = true;
+
+  const textos = ['Analizando historial…','Construyendo contexto…','Redactando informe…','Revisando coherencia…'];
+  let ti = 0;
+  const iv = setInterval(() => {
+    const el = document.getElementById('hc-ia-gen-loading-text');
+    if (el) el.textContent = textos[ti++ % textos.length];
+  }, 2000);
+
+  try {
+    const resp = await fetch(PSICOAPP_CONFIG.SUPA_URL + '/functions/v1/generar-informe', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + _hcIaToken },
+      body: JSON.stringify({ prompt }),
+    });
+    const data = await resp.json();
+    clearInterval(iv);
+    loading.style.display = 'none';
+    output.innerHTML = _hcIaRenderTexto(data.texto || data.error || 'Error al generar el informe.');
+    wrap.style.display = 'block';
+    wrap.scrollIntoView({ behavior: 'smooth' });
+    await _hcIaActualizarBadge();
+  } catch(e) {
+    clearInterval(iv);
+    loading.style.display = 'none';
+    hcToast('❌ Error: ' + e.message);
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+};
+
+window.hcIaCopiar = function() {
+  const txt = document.getElementById('hc-ia-tab-output')?.innerText;
+  if (!txt) return;
+  navigator.clipboard.writeText(txt).then(() => hcToast('✅ Copiado'));
+};
+
+window.hcIaGuardar = async function() {
+  const txt = document.getElementById('hc-ia-tab-output')?.innerText?.trim();
+  if (!txt || !_hcPaciente) { hcToast('⚠️ No hay informe para guardar'); return; }
+  try {
+    const { error } = await sb.from('informes_clinicos').insert({
+      user_id: _hcUserId, paciente_id: _hcPaciente.id, tipo: _hcIaTipo, texto: txt,
+    });
+    if (error) throw error;
+    hcToast('✅ Informe guardado');
+    await _hcIaCargarHistorial();
+  } catch(e) { hcToast('❌ Error al guardar: ' + e.message); }
+};
+
+/** Llama a la IA para funciones extra */
+async function _hcIaLlamarExtra(prompt, loadingText) {
+  const wrap    = document.getElementById('hc-ia-extra-output');
+  const loading = document.getElementById('hc-ia-extra-loading');
+  const result  = document.getElementById('hc-ia-extra-result');
+  const lt      = document.getElementById('hc-ia-extra-loading-text');
+
+  wrap.style.display = 'block';
+  loading.style.display = 'flex';
+  result.innerHTML = '';
+  if (lt) lt.textContent = loadingText;
+  _hcIaExtraTipo = loadingText;
+
+  try {
+    if (!_hcIaToken) throw new Error('No autenticado');
+    const resp = await fetch(PSICOAPP_CONFIG.SUPA_URL + '/functions/v1/generar-informe', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + _hcIaToken },
+      body: JSON.stringify({ prompt: prompt + '\n\n' + _hcIaArmarContexto() }),
+    });
+    const data = await resp.json();
+    loading.style.display = 'none';
+    result.innerHTML = _hcIaRenderTexto(data.texto || data.error || 'Sin resultado.');
+    wrap.scrollIntoView({ behavior: 'smooth' });
+    await _hcIaActualizarBadge();
+  } catch(e) {
+    loading.style.display = 'none';
+    result.textContent = '❌ Error: ' + e.message;
+  }
+}
+
+window.hcIaEvolucion = () => _hcIaLlamarExtra(
+  'Analizá la evolución clínica del paciente a lo largo del tratamiento, identificando cambios, patrones y progreso terapéutico. Respondé en español argentino con marco psicoanalítico.',
+  'Analizando evolución…'
+);
+window.hcIaDiag = () => _hcIaLlamarExtra(
+  'Basándote en los datos clínicos disponibles, sugerí posibles diagnósticos según el sistema CIE-11. Aclará que son orientativos y sujetos a evaluación profesional.',
+  'Analizando diagnóstico CIE-11…'
+);
+window.hcIaPlan = () => _hcIaLlamarExtra(
+  'Sugerí un plan terapéutico psicoanalítico estructurado para este paciente, incluyendo objetivos, técnicas recomendadas y frecuencia de sesiones sugerida.',
+  'Diseñando plan terapéutico…'
+);
+
+window.hcIaCopiarExtra = function() {
+  const txt = document.getElementById('hc-ia-extra-result')?.innerText;
+  if (!txt) return;
+  navigator.clipboard.writeText(txt).then(() => hcToast('✅ Copiado'));
+};
+
+window.hcIaGuardarExtra = async function() {
+  const txt = document.getElementById('hc-ia-extra-result')?.innerText?.trim();
+  if (!txt || !_hcPaciente) { hcToast('⚠️ No hay análisis para guardar'); return; }
+  try {
+    const { error } = await sb.from('informes_clinicos').insert({
+      user_id: _hcUserId, paciente_id: _hcPaciente.id,
+      tipo: _hcIaExtraTipo || 'analisis_extra', texto: txt,
+    });
+    if (error) throw error;
+    hcToast('✅ Análisis guardado');
+    await _hcIaCargarHistorial();
+  } catch(e) { hcToast('❌ Error al guardar: ' + e.message); }
+};
+
+/** Carga el historial de informes guardados para el paciente */
+async function _hcIaCargarHistorial() {
+  const cont = document.getElementById('hc-ia-historial');
+  if (!cont || !_hcPaciente) return;
+  try {
+    const { data } = await sb.from('informes_clinicos')
+      .select('*').eq('paciente_id', _hcPaciente.id).eq('user_id', _hcUserId)
+      .order('created_at', { ascending: false });
+    if (!data?.length) {
+      cont.innerHTML = '<div style="font-size:12px;color:var(--text-muted);text-align:center;padding:12px">Sin informes guardados aún</div>';
+      return;
+    }
+    cont.innerHTML = data.map(inf => `
+      <div class="hc-ia-hist-item" data-inf-id="${escAttr(String(inf.id))}">
+        <div class="hc-ia-hist-top">
+          <span class="hc-ia-hist-tipo">${escHtml(inf.tipo)}</span>
+          <span class="hc-ia-hist-fecha">${new Date(inf.created_at).toLocaleDateString('es-AR')}</span>
+        </div>
+        <div class="hc-ia-hist-preview">${escHtml(inf.texto.slice(0, 110))}…</div>
+      </div>`).join('');
+    // Click → mostrar en output principal
+    cont.querySelectorAll('.hc-ia-hist-item').forEach(el => {
+      const inf = data.find(x => String(x.id) === el.dataset.infId);
+      if (inf) el.addEventListener('click', () => {
+        document.getElementById('hc-ia-tab-output').innerHTML = _hcIaRenderTexto(inf.texto);
+        document.getElementById('hc-ia-output-wrap').style.display = 'block';
+        document.getElementById('hc-ia-output-wrap').scrollIntoView({ behavior: 'smooth' });
+      });
+    });
+  } catch {
+    cont.innerHTML = '<div style="font-size:12px;color:var(--text-muted);text-align:center;padding:12px">Error al cargar historial</div>';
+  }
+}
+
+
+/* ══════════════════════════════════════════
    REGISTRO EN EL ROUTER
    ══════════════════════════════════════════ */
 PsicoRouter.register('historia', {
@@ -1011,6 +1399,11 @@ PsicoRouter.register('historia', {
 
   async onEnter() {
     _hcUserId = await PsicoRouter.store.ensureUserId();
+    // Token para Edge Functions IA
+    try {
+      const { data: { session } } = await sb.auth.getSession();
+      _hcIaToken = session?.access_token || null;
+    } catch { _hcIaToken = null; }
     await _hcCargarPacientes();
 
     // Si viene desde view-pacientes con paciente seleccionado, ir directo al detalle
