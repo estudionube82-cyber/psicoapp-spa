@@ -12,7 +12,6 @@ import { createClient } from 'jsr:@supabase/supabase-js@2'
 
 const SUPA_URL         = Deno.env.get('SUPABASE_URL')!
 const SUPA_SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-const SUPA_ANON_KEY    = Deno.env.get('SUPABASE_ANON_KEY')!
 
 const IA_LIMITS: Record<string, number> = { free: 5, pro: 25, max: 80 }
 
@@ -46,16 +45,12 @@ Deno.serve(async (req: Request) => {
   if (!token) return err('No autorizado', 401)
 
   // Crear cliente con el token del usuario para verificar identidad
-  const sbUser = createClient(SUPA_URL, SUPA_ANON_KEY, {
-    global: { headers: { Authorization: `Bearer ${token}` } },
-  })
-  const { data: { user }, error: authErr } = await sbUser.auth.getUser(token)
+  // Usar service role para verificar el JWT — más confiable
+  const sbAdmin = createClient(SUPA_URL, SUPA_SERVICE_KEY)
+  const { data: { user }, error: authErr } = await sbAdmin.auth.getUser(token)
   if (authErr || !user) return err('Token inválido o expirado', 401)
 
   const userId = user.id
-
-  // ── Leer plan del usuario ─────────────────────────────────────────────────
-  const sbAdmin = createClient(SUPA_URL, SUPA_SERVICE_KEY)
 
   const { data: planRow } = await sbAdmin
     .from('users_plan')

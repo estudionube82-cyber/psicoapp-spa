@@ -15,7 +15,6 @@ import { createClient } from 'jsr:@supabase/supabase-js@2'
 // ── Variables de entorno ──────────────────────────────────────────────────────
 const SUPA_URL         = Deno.env.get('SUPABASE_URL')!
 const SUPA_SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-const SUPA_ANON_KEY    = Deno.env.get('SUPABASE_ANON_KEY')!
 const OPENAI_KEY       = Deno.env.get('OPENAI_API_KEY')!
 
 // ── Límites de plan ───────────────────────────────────────────────────────────
@@ -78,10 +77,9 @@ Deno.serve(async (req: Request) => {
   const token      = authHeader.replace('Bearer ', '').trim()
   if (!token) return err('No autorizado', 401)
 
-  const sbUser = createClient(SUPA_URL, SUPA_ANON_KEY, {
-    global: { headers: { Authorization: `Bearer ${token}` } },
-  })
-  const { data: { user }, error: authErr } = await sbUser.auth.getUser(token)
+  // Usar service role para verificar el JWT — más confiable
+  const sbAdmin = createClient(SUPA_URL, SUPA_SERVICE_KEY)
+  const { data: { user }, error: authErr } = await sbAdmin.auth.getUser(token)
   if (authErr || !user) return err('Token inválido o expirado', 401)
 
   const userId = user.id
@@ -96,8 +94,6 @@ Deno.serve(async (req: Request) => {
   }
   if (!prompt) return err('El campo prompt es obligatorio', 400)
   if (prompt.length > 8000) return err('El prompt es demasiado largo', 400)
-
-  const sbAdmin = createClient(SUPA_URL, SUPA_SERVICE_KEY)
 
   // ── Verificar plan y límite ───────────────────────────────────────────────
   const { data: planRow } = await sbAdmin
