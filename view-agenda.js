@@ -1589,24 +1589,12 @@
         insertData.notas = titulo + (insertData.notas ? ' — ' + insertData.notas : '');
       }
 
-      const { error } = await sb.from('turnos').insert(insertData);
+      const { data: inserted, error } = await sb.from('turnos').insert(insertData).select('id').single();
       if (error) throw error;
 
-      // ── Google Calendar: buscar el turno recién insertado y sincronizar ──
-      if (typeof GCal !== 'undefined' && GCal.isConnected()) {
-        // Buscar el turno recién creado por fecha+hora+user para obtener su ID
-        sb.from('turnos')
-          .select('id')
-          .eq('user_id', _userId)
-          .eq('fecha', insertData.fecha)
-          .eq('hora',  insertData.hora)
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .then(({ data }) => {
-            if (data?.[0]?.id) {
-              _gcalSyncNew(data[0].id, insertData, insertData.paciente_id);
-            }
-          });
+      // ── Google Calendar: sincronizar automáticamente si está conectado ──
+      if (inserted?.id && typeof GCal !== 'undefined' && GCal.isConnected()) {
+        _gcalSyncNew(inserted.id, insertData, insertData.paciente_id);
       }
 
       // ── WhatsApp: envío de confirmación (no bloquea si falla) ──
@@ -1798,13 +1786,11 @@
       const pac    = _todosPacientes.find(p => p.id === pacienteId);
       const nombre = pac ? `${pac.nombre || ''} ${pac.apellido || ''}`.trim() : 'Paciente';
       const gcalId = await GCal.createEvent(turnoData, nombre);
-      // Guardar gcal_event_id en la fila del turno
-      const { error } = await sb.from('turnos').update({ gcal_event_id: gcalId }).eq('id', turnoId);
-      if (error) console.warn('[GCal] No se pudo guardar gcal_event_id:', error.message);
-      else toast('📅 Turno enviado a Google Calendar');
+      await sb.from('turnos').update({ gcal_event_id: gcalId }).eq('id', turnoId);
+      toast('📅 Sincronizado con Google Calendar');
     } catch(e) {
-      console.warn('[GCal] No se pudo crear evento:', e.message);
-      toast('⚠️ Google Cal: ' + e.message);
+      console.error('[GCal] Error al crear evento:', e);
+      toast('⚠️ No se pudo sincronizar con Google Cal: ' + e.message);
     }
   }
 
