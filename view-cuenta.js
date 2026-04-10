@@ -169,32 +169,60 @@
 /* ══ PREFERENCIAS — clave localStorage ══ */
 const VC_PREFS_KEY = 'psicoapp_prefs_v1';
 
-/** Lee preferencias: localStorage + merge con perfil si tiene campo preferencias */
+/**
+ * Lee preferencias con Supabase como fuente de verdad.
+ * Si el store ya tiene `perfil.preferencias` (cargado por ensurePerfil),
+ * los usa y los sincroniza a localStorage.
+ * Si no, cae a localStorage (modo offline / primer render).
+ */
 function _vcLoadPrefs() {
   const defaults = { cal_vista: 'semana', agenda_inicio: 8, agenda_fin: 20 };
   try {
+    const supaPrefs = PsicoRouter.store.perfil?.preferencias;
+    if (supaPrefs && typeof supaPrefs === 'object' && Object.keys(supaPrefs).length > 0) {
+      // Supabase es autoritativo — mergeamos con defaults y sincronizamos a localStorage
+      const merged = { ...defaults, ...supaPrefs };
+      try { localStorage.setItem(VC_PREFS_KEY, JSON.stringify(merged)); } catch {}
+      return merged;
+    }
+    // Sin datos en Supabase aún → usamos localStorage como fallback
     const raw = localStorage.getItem(VC_PREFS_KEY);
-    const local = raw ? JSON.parse(raw) : {};
-    const perfilPrefs = (PsicoRouter.store.perfil && PsicoRouter.store.perfil.preferencias) || {};
-    return Object.assign({}, defaults, perfilPrefs, local);
+    return raw ? { ...defaults, ...JSON.parse(raw) } : { ...defaults };
   } catch { return { ...defaults }; }
 }
 
-/** Guarda preferencias en localStorage y trata de persistir en Supabase */
+/**
+ * Guarda preferencias:
+ * 1. Actualiza el store en memoria (lectura síncrona inmediata)
+ * 2. Sincroniza a localStorage (offline cache)
+ * 3. Persiste en Supabase profiles.preferencias (JSONB)
+ */
 async function _vcSavePrefs(prefs) {
+  // 1. Store en memoria — primero para que vcGetPref() lo lea de inmediato
+  if (PsicoRouter.store.perfil) PsicoRouter.store.perfil.preferencias = prefs;
+  // 2. localStorage — cache offline
   try { localStorage.setItem(VC_PREFS_KEY, JSON.stringify(prefs)); } catch {}
+  // 3. Supabase — fuente de verdad remota
   try {
     const { data: { user } } = await sb.auth.getUser();
     if (user) {
-      await sb.from('profiles').upsert({ id: user.id, preferencias: prefs }, { onConflict: 'id' });
-      if (PsicoRouter.store.perfil) PsicoRouter.store.perfil.preferencias = prefs;
+      const { error } = await sb.from('profiles')
+        .upsert({ id: user.id, preferencias: prefs }, { onConflict: 'id' });
+      if (error) console.warn('[Prefs] Supabase error al guardar preferencias:', error.message);
     }
   } catch (e) { console.warn('[Prefs] Supabase no pudo guardar (ignorado):', e.message); }
 }
 
-/** Devuelve el valor actual de una preferencia (para que la agenda lo use) */
+/**
+ * API pública sincrónica — lee desde localStorage (siempre sincronizado con Supabase).
+ * Usado por view-agenda.js para obtener HORAS y vista por defecto.
+ */
 window.vcGetPref = function(key, fallback) {
   try {
+    // Intentar desde el store en memoria primero (más actualizado)
+    const supaPrefs = PsicoRouter.store?.perfil?.preferencias;
+    if (supaPrefs && typeof supaPrefs === 'object' && key in supaPrefs) return supaPrefs[key];
+    // Fallback a localStorage
     const raw = localStorage.getItem(VC_PREFS_KEY);
     if (raw) { const p = JSON.parse(raw); if (key in p) return p[key]; }
   } catch {}
