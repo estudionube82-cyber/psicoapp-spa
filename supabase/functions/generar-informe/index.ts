@@ -81,7 +81,7 @@ Deno.serve(async (req: Request) => {
   const sbUser = createClient(SUPA_URL, SUPA_ANON_KEY, {
     global: { headers: { Authorization: `Bearer ${token}` } },
   })
-  const { data: { user }, error: authErr } = await sbUser.auth.getUser()
+  const { data: { user }, error: authErr } = await sbUser.auth.getUser(token)
   if (authErr || !user) return err('Token inválido o expirado', 401)
 
   const userId = user.id
