@@ -233,6 +233,45 @@
 }
 #view-dashboard .dn-nota-add-btn:hover { opacity: .88; }
 
+/* ── GRÁFICO INGRESOS ── */
+#view-dashboard .dn-chart-wrap {
+  background: var(--surface); border-radius: 16px;
+  padding: 14px 16px; box-shadow: var(--shadow-sm);
+}
+#view-dashboard .dn-chart-title {
+  font-size: 11px; font-weight: 800; color: var(--text-muted);
+  text-transform: uppercase; letter-spacing: .8px; margin-bottom: 12px;
+}
+#view-dashboard .dn-chart-bars {
+  display: flex; align-items: flex-end; gap: 6px; height: 60px;
+}
+#view-dashboard .dn-bar-col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+#view-dashboard .dn-bar {
+  width: 100%; border-radius: 6px 6px 0 0;
+  background: linear-gradient(180deg, #7C3AED, #A78BFA);
+  transition: height .4s ease; min-height: 3px;
+}
+#view-dashboard .dn-bar-label { font-size: 9px; font-weight: 700; color: var(--text-muted); }
+#view-dashboard .dn-bar-val   { font-size: 8px; color: var(--text-muted); }
+
+/* ── PRÓXIMOS TURNOS ── */
+#view-dashboard .dn-prox-dia { margin-top: 12px; }
+#view-dashboard .dn-prox-dia-label {
+  font-size: 11px; font-weight: 800; color: var(--text-muted);
+  text-transform: uppercase; letter-spacing: .6px;
+  margin-bottom: 6px; padding: 0 2px;
+}
+#view-dashboard .dn-prox-item {
+  background: var(--surface); border-radius: 12px;
+  padding: 10px 12px; display: flex; align-items: center; gap: 10px;
+  border: 1px solid var(--border); margin-bottom: 6px; cursor: pointer;
+  transition: transform .1s;
+}
+#view-dashboard .dn-prox-item:hover { transform: translateX(2px); }
+#view-dashboard .dn-prox-hora { font-size: 13px; font-weight: 800; color: var(--primary); min-width: 42px; }
+#view-dashboard .dn-prox-name { font-size: 13px; font-weight: 700; color: var(--text); }
+#view-dashboard .dn-prox-meta { font-size: 11px; color: var(--text-muted); margin-top: 1px; }
+
 /* ── SKELETON ── */
 #view-dashboard .dn-skel {
   background: linear-gradient(90deg, var(--border) 25%, var(--surface2, var(--border)) 50%, var(--border) 75%);
@@ -450,15 +489,34 @@ function _dnRenderHTML(container) {
     </div>
   </div>
 
+  <!-- GRÁFICO INGRESOS -->
+  <div class="dn-section" style="margin-top:20px" id="dn-chart-section" style="display:none">
+    <div class="dn-chart-wrap">
+      <div class="dn-chart-title">💰 Ingresos del mes por semana</div>
+      <div class="dn-chart-bars" id="dn-chart-bars">
+        <div class="dn-empty" style="font-size:11px">Cargando…</div>
+      </div>
+    </div>
+  </div>
+
   <!-- TURNOS HOY -->
-  <div class="dn-section" style="margin-top:24px">
+  <div class="dn-section" style="margin-top:20px">
     <div class="dn-section-header">
-      <span class="dn-section-title">Turnos de hoy</span>
+      <span class="dn-section-title">📅 Hoy</span>
       <span class="dn-section-link" onclick="navigate('agenda')">Ver agenda →</span>
     </div>
     <div class="dn-turnos" id="dn-turnos-list">
       <div class="dn-empty">⏳ Cargando…</div>
     </div>
+  </div>
+
+  <!-- PRÓXIMOS 3 DÍAS -->
+  <div class="dn-section" style="margin-top:16px" id="dn-proximos-section">
+    <div class="dn-section-header">
+      <span class="dn-section-title">🗓 Próximos días</span>
+      <span class="dn-section-link" onclick="navigate('agenda')">Ver todo →</span>
+    </div>
+    <div id="dn-proximos-list"></div>
   </div>
 
   <!-- NOTAS DEL DÍA -->
@@ -484,69 +542,71 @@ function _dnRenderHTML(container) {
 
 
 /* ══════════════════════════════════════════
-   CARGA DE DATOS — misma lógica que dashboard original
+   CARGA DE DATOS
    ══════════════════════════════════════════ */
 async function _dnCargarDatos() {
   try {
     const uid = await PsicoRouter.store.ensureUserId();
     if (!uid) return;
 
-    const hoy          = new Date();
-    const fechaHoy     = hoy.toLocaleDateString('en-CA', { timeZone: 'America/Argentina/Buenos_Aires' });
-    const _y = hoy.getFullYear(), _m = hoy.getMonth();
-    const primerDiaMes = new Date(_y, _m, 1).toLocaleDateString('en-CA', { timeZone: 'America/Argentina/Buenos_Aires' });
-    const ultimoDiaMes = new Date(_y, _m + 1, 0).toLocaleDateString('en-CA', { timeZone: 'America/Argentina/Buenos_Aires' });
+    const hoy   = new Date();
+    const _y    = hoy.getFullYear(), _m = hoy.getMonth();
+    const toLocal = d => d.toLocaleDateString('en-CA', { timeZone: 'America/Argentina/Buenos_Aires' });
 
-    const [resPagos, resTurnosHoy, resTurnosMes, resPacientes] = await Promise.all([
-      sb.from('pagos')
-        .select('id,paciente_id,monto,fecha,metodo')
-        .eq('user_id', uid)
-        .gte('fecha', primerDiaMes)
-        .lte('fecha', ultimoDiaMes),
+    const fechaHoy     = toLocal(hoy);
+    const primerDiaMes = toLocal(new Date(_y, _m, 1));
+    const ultimoDiaMes = toLocal(new Date(_y, _m + 1, 0));
+    const primerMesAnt = toLocal(new Date(_y, _m - 1, 1));
+    const ultimoMesAnt = toLocal(new Date(_y, _m, 0));
 
-      sb.from('turnos')
-        .select('id,fecha,hora,duracion,estado,tipo,notas,paciente_id,pacientes(nombre,apellido)')
-        .eq('user_id', uid)
-        .eq('fecha', fechaHoy)
-        .order('hora', { ascending: true }),
+    // Próximos 3 días (además de hoy)
+    const fecha1 = toLocal(new Date(_y, _m, hoy.getDate() + 1));
+    const fecha2 = toLocal(new Date(_y, _m, hoy.getDate() + 2));
+    const fecha3 = toLocal(new Date(_y, _m, hoy.getDate() + 3));
 
-      sb.from('turnos')
-        .select('id,estado')
-        .eq('user_id', uid)
-        .gte('fecha', primerDiaMes)
-        .lte('fecha', ultimoDiaMes),
-
-      sb.from('pacientes')
-        .select('id')
-        .eq('user_id', uid),
+    const [
+      resPagos, resPagosAnt,
+      resTurnosHoy, resTurnosMes, resTurnosMesAnt,
+      resPacientes, resProximos,
+    ] = await Promise.all([
+      sb.from('pagos').select('id,paciente_id,monto,fecha,metodo').eq('user_id', uid).gte('fecha', primerDiaMes).lte('fecha', ultimoDiaMes),
+      sb.from('pagos').select('id,monto,metodo').eq('user_id', uid).gte('fecha', primerMesAnt).lte('fecha', ultimoMesAnt),
+      sb.from('turnos').select('id,fecha,hora,duracion,estado,tipo,notas,paciente_id,pacientes(nombre,apellido)').eq('user_id', uid).eq('fecha', fechaHoy).order('hora', { ascending: true }),
+      sb.from('turnos').select('id,fecha,estado').eq('user_id', uid).gte('fecha', primerDiaMes).lte('fecha', ultimoDiaMes),
+      sb.from('turnos').select('id,estado').eq('user_id', uid).gte('fecha', primerMesAnt).lte('fecha', ultimoMesAnt),
+      sb.from('pacientes').select('id').eq('user_id', uid),
+      sb.from('turnos').select('id,fecha,hora,duracion,estado,tipo,notas,paciente_id,pacientes(nombre,apellido)').eq('user_id', uid).in('fecha', [fecha1, fecha2, fecha3]).order('fecha').order('hora'),
     ]);
 
-    const pagos        = resPagos.data || [];
-    const turnos       = resTurnosHoy.data || [];
-    const pacUnicos    = resPacientes.data?.length || 0;
+    const pagos    = resPagos.data || [];
+    const pagosAnt = resPagosAnt.data || [];
+    const turnos   = resTurnosHoy.data || [];
+    const proximos = resProximos.data || [];
+    const pacUnicos = resPacientes.data?.length || 0;
 
-    const totalCobrado    = pagos.filter(p => p.metodo !== 'pendiente').reduce((s, p) => s + (Number(p.monto) || 0), 0);
-    const cantCobros      = pagos.filter(p => p.metodo !== 'pendiente').length;
-    const totalPendiente  = pagos.filter(p => p.metodo === 'pendiente').reduce((s, p) => s + (Number(p.monto) || 0), 0);
-    const pagosPendientes = pagos.filter(p => p.metodo === 'pendiente').length;
-    const turnosHoyCant   = turnos.length;
-    const completadosHoy  = turnos.filter(t => {
-      const est = (t.estado || '').toLowerCase();
-      return est === 'realizado' || est === 'completado';
-    }).length;
+    const cobrado      = pagos.filter(p => p.metodo !== 'pendiente').reduce((s, p) => s + (Number(p.monto) || 0), 0);
+    const cobradoAnt   = pagosAnt.filter(p => p.metodo !== 'pendiente').reduce((s, p) => s + (Number(p.monto) || 0), 0);
+    const pendienteMonto = pagos.filter(p => p.metodo === 'pendiente').reduce((s, p) => s + (Number(p.monto) || 0), 0);
+    const pendienteCant  = pagos.filter(p => p.metodo === 'pendiente').length;
 
-    const turnosMesValidos = (resTurnosMes.data || []).filter(t => (t.estado || '').toLowerCase() !== 'cancelado');
-    const sesionSinCobro   = turnosMesValidos.filter(t => {
-      const est = (t.estado || '').toLowerCase();
-      return est === 'realizado' || est === 'completado';
-    }).length;
+    const turnosMes    = (resTurnosMes.data || []).filter(t => (t.estado||'').toLowerCase() !== 'cancelado');
+    const turnosMesAnt = (resTurnosMesAnt.data || []).filter(t => (t.estado||'').toLowerCase() !== 'cancelado');
+    const sesionesRealizadas    = turnosMes.filter(t => ['realizado','completado'].includes((t.estado||'').toLowerCase())).length;
+    const sesionesRealizadasAnt = turnosMesAnt.filter(t => ['realizado','completado'].includes((t.estado||'').toLowerCase())).length;
 
-    _dnRenderMiniResumen(totalCobrado, cantCobros, pacUnicos, turnosMesValidos.length);
-    _dnRenderProgreso(turnosHoyCant, completadosHoy);
-    _dnRenderKPIs(totalCobrado, totalPendiente, pacUnicos, turnosHoyCant, turnosMesValidos.length, pagosPendientes);
-    _dnRenderAlertas(sesionSinCobro, pacUnicos, pagos, pagosPendientes, turnosHoyCant);
+    const completadosHoy = turnos.filter(t => ['realizado','completado'].includes((t.estado||'').toLowerCase())).length;
+
+    // Ingresos por semana (para gráfico)
+    const semanas = _dnIngresosSemanales(pagos, _y, _m);
+
+    _dnRenderMiniResumen(cobrado, turnosMes.length, sesionesRealizadas);
+    _dnRenderProgreso(turnos.length, completadosHoy);
+    _dnRenderKPIs(cobrado, cobradoAnt, pendienteCant, pendienteMonto, pacUnicos, turnos.length, sesionesRealizadas, sesionesRealizadasAnt);
+    _dnRenderGrafico(semanas);
+    _dnRenderAlertas(pendienteCant, pagos, turnos.length, sesionesRealizadas);
     _dnRenderTurnos(turnos, hoy);
-    await _dnRenderNombre(turnosHoyCant);
+    _dnRenderProximos(proximos);
+    await _dnRenderNombre(turnos.length);
     await _dnRenderNotas();
 
   } catch(e) {
@@ -554,18 +614,32 @@ async function _dnCargarDatos() {
   }
 }
 
+function _dnIngresosSemanales(pagos, year, month) {
+  // Dividir el mes en 4-5 semanas y sumar ingresos por semana
+  const cobrados = pagos.filter(p => p.metodo !== 'pendiente');
+  const semanas  = [0, 0, 0, 0, 0];
+  cobrados.forEach(p => {
+    const d = new Date(p.fecha + 'T12:00:00');
+    if (d.getFullYear() !== year || d.getMonth() !== month) return;
+    const sem = Math.min(4, Math.floor((d.getDate() - 1) / 7));
+    semanas[sem] += Number(p.monto) || 0;
+  });
+  return semanas;
+}
+
 
 /* ══════════════════════════════════════════
    RENDERS
    ══════════════════════════════════════════ */
-function _dnRenderMiniResumen(total, cant, pacUnicos, sesionesDelMes) {
+function _dnRenderMiniResumen(cobrado, turnosMes, sesionesRealizadas) {
   const el = document.getElementById('dn-mini-summary');
   if (!el) return;
-  const s = sesionesDelMes !== undefined ? sesionesDelMes : cant;
   el.innerHTML =
-    '🗓 <strong>' + s + ' sesión' + (s !== 1 ? 'es' : '') + ' este mes</strong>' +
-    '<span style="opacity:.4;margin:0 4px">·</span>' +
-    _dnFmt(total) + ' generados';
+    '🗓 <strong>' + turnosMes + ' sesión' + (turnosMes !== 1 ? 'es' : '') + ' este mes</strong>' +
+    '<span style="opacity:.4;margin:0 6px">·</span>' +
+    '✅ ' + sesionesRealizadas + ' realizadas' +
+    '<span style="opacity:.4;margin:0 6px">·</span>' +
+    '💰 ' + _dnFmt(cobrado) + ' cobrados';
 }
 
 function _dnRenderProgreso(turnosHoy, completadosHoy) {
@@ -587,77 +661,138 @@ function _dnRenderProgreso(turnosHoy, completadosHoy) {
     '<div style="font-size:11px;color:var(--text-muted);margin-top:7px;font-weight:600">Buen ritmo de trabajo hoy</div>';
 }
 
-function _dnRenderKPIs(cobrado, pendiente, pacUnicos, turnosHoy, sesionesDelMes, pendiente_cant) {
+function _dnTrend(actual, anterior) {
+  if (!anterior) return '';
+  const pct  = Math.round(((actual - anterior) / anterior) * 100);
+  const up   = pct >= 0;
+  const col  = up ? '#10B981' : '#EF4444';
+  const icon = up ? '↑' : '↓';
+  return `<span style="font-size:10px;font-weight:700;color:${col};margin-left:4px">${icon}${Math.abs(pct)}% vs mes ant.</span>`;
+}
+
+function _dnRenderKPIs(cobrado, cobradoAnt, pendienteCant, pendienteMonto, pacUnicos, turnosHoy, sesiones, sesionesAnt) {
   const el = document.getElementById('dn-kpi-grid');
   if (!el) return;
   el.innerHTML =
+    '<div class="dn-kpi" style="border-left-color:#10B981" onclick="navigate(\'pagos\')">' +
+      '<div class="dn-kpi-icon-wrap" style="background:rgba(16,185,129,0.12)">💰</div>' +
+      '<div class="dn-kpi-value">' + _dnFmt(cobrado) + '</div>' +
+      '<div class="dn-kpi-label">Cobrado este mes</div>' +
+      '<div class="dn-kpi-tag">' + _dnTrend(cobrado, cobradoAnt) + '</div>' +
+    '</div>' +
     '<div class="dn-kpi" style="border-left-color:#7C3AED" onclick="navigate(\'agenda\')">' +
       '<div class="dn-kpi-icon-wrap violet">🗓️</div>' +
-      '<div class="dn-kpi-value">' + sesionesDelMes + '</div>' +
-      '<div class="dn-kpi-label">Sesiones del mes</div>' +
-      '<div class="dn-kpi-tag">Realizadas</div>' +
+      '<div class="dn-kpi-value">' + sesiones + '</div>' +
+      '<div class="dn-kpi-label">Sesiones realizadas</div>' +
+      '<div class="dn-kpi-tag">' + _dnTrend(sesiones, sesionesAnt) + '</div>' +
     '</div>' +
     '<div class="dn-kpi" style="border-left-color:#F59E0B" onclick="window._dnIrPendientes()">' +
       '<div class="dn-kpi-icon-wrap amber">⏳</div>' +
-      '<div class="dn-kpi-value">' + pendiente_cant + '</div>' +
-      '<div class="dn-kpi-label">Pendientes</div>' +
-      '<div class="dn-kpi-tag muted">Sin cobrar</div>' +
-    '</div>' +
-    '<div class="dn-kpi" style="border-left-color:#14B8A6" onclick="navigate(\'pacientes\')">' +
-      '<div class="dn-kpi-icon-wrap teal">👥</div>' +
-      '<div class="dn-kpi-value">' + pacUnicos + '</div>' +
-      '<div class="dn-kpi-label">Pacientes activos</div>' +
-      '<div class="dn-kpi-tag muted">Total</div>' +
+      '<div class="dn-kpi-value">' + pendienteCant + '</div>' +
+      '<div class="dn-kpi-label">Pagos pendientes</div>' +
+      '<div class="dn-kpi-tag muted">' + _dnFmt(pendienteMonto) + ' sin cobrar</div>' +
     '</div>' +
     '<div class="dn-kpi" style="border-left-color:#EC4899" onclick="navigate(\'agenda\')">' +
       '<div class="dn-kpi-icon-wrap rose">📅</div>' +
       '<div class="dn-kpi-value">' + turnosHoy + '</div>' +
-      '<div class="dn-kpi-label">Turnos de hoy</div>' +
-      '<div class="dn-kpi-tag muted">Hoy</div>' +
+      '<div class="dn-kpi-label">Turnos hoy</div>' +
+      '<div class="dn-kpi-tag muted">' + pacUnicos + ' pacientes totales</div>' +
     '</div>';
 }
 
-function _dnRenderAlertas(sesionSinCobro, pacUnicos, pagos, pagosPendientes, turnosHoyCant) {
+function _dnRenderAlertas(pendienteCant, pagos, turnosHoyCant, sesionesRealizadas) {
   const el = document.getElementById('dn-alerts');
   if (!el) return;
   const items = [];
 
-  if (pagosPendientes > 0) {
+  if (pendienteCant > 0) {
+    const monto = pagos.filter(p => p.metodo === 'pendiente').reduce((s, p) => s + (Number(p.monto) || 0), 0);
     items.push(`
       <div class="dn-alert warn" onclick="window._dnIrPendientes()">
-        <div class="dn-alert-icon">⏳</div>
+        <div class="dn-alert-icon">💸</div>
         <div class="dn-alert-body">
-          <div class="dn-alert-title">${pagosPendientes} pago${pagosPendientes > 1 ? 's' : ''} pendiente${pagosPendientes > 1 ? 's' : ''} de cobro</div>
-          <div class="dn-alert-sub">Registrá el cobro en Pagos →</div>
+          <div class="dn-alert-title">${pendienteCant} pago${pendienteCant > 1 ? 's' : ''} pendiente${pendienteCant > 1 ? 's' : ''} · ${_dnFmt(monto)}</div>
+          <div class="dn-alert-sub">Tocá para registrar los cobros →</div>
         </div>
         <div class="dn-alert-arrow">›</div>
       </div>`);
   }
 
-  if (sesionSinCobro > 0) {
-    items.push(`
-      <div class="dn-alert warn" onclick="window._dnIrPendientes()">
-        <div class="dn-alert-icon">⚠️</div>
-        <div class="dn-alert-body">
-          <div class="dn-alert-title">${sesionSinCobro} sesión${sesionSinCobro > 1 ? 'es realizadas' : ' realizada'} sin cobro</div>
-          <div class="dn-alert-sub">Registrá el pago en Pagos →</div>
-        </div>
-        <div class="dn-alert-arrow">›</div>
-      </div>`);
-  }
-
-  if (pagosPendientes === 0 && turnosHoyCant > 0) {
+  if (pendienteCant === 0 && sesionesRealizadas > 0) {
     items.push(`
       <div class="dn-alert ok">
-        <div class="dn-alert-icon">✔️</div>
+        <div class="dn-alert-icon">✅</div>
         <div class="dn-alert-body">
-          <div class="dn-alert-title">Todo al día</div>
-          <div class="dn-alert-sub">Tu gestión está al día</div>
+          <div class="dn-alert-title">Gestión al día</div>
+          <div class="dn-alert-sub">${sesionesRealizadas} sesiones realizadas · sin deudas pendientes</div>
         </div>
       </div>`);
   }
 
   el.innerHTML = items.join('');
+}
+
+function _dnRenderGrafico(semanas) {
+  const sec = document.getElementById('dn-chart-section');
+  const el  = document.getElementById('dn-chart-bars');
+  if (!el) return;
+
+  const max = Math.max(...semanas, 1);
+  if (max === 0) { if (sec) sec.style.display = 'none'; return; }
+  if (sec) sec.style.display = '';
+
+  const labels = ['Sem 1', 'Sem 2', 'Sem 3', 'Sem 4', 'Sem 5'];
+  el.innerHTML = semanas.map((v, i) => {
+    const h   = Math.round((v / max) * 56) + 4;
+    const lbl = v > 0 ? _dnFmt(v).replace('$', '') : '';
+    return `<div class="dn-bar-col">
+      <div class="dn-bar-val">${lbl ? '$' + (v >= 1000 ? Math.round(v/1000)+'k' : lbl) : ''}</div>
+      <div class="dn-bar" style="height:${h}px;${v === 0 ? 'opacity:.2;background:var(--border)' : ''}"></div>
+      <div class="dn-bar-label">${labels[i]}</div>
+    </div>`;
+  }).join('');
+}
+
+function _dnRenderProximos(proximos) {
+  const sec = document.getElementById('dn-proximos-section');
+  const el  = document.getElementById('dn-proximos-list');
+  if (!el) return;
+
+  if (!proximos.length) {
+    sec.style.display = 'none';
+    return;
+  }
+  sec.style.display = '';
+
+  // Agrupar por fecha
+  const porFecha = {};
+  proximos.forEach(t => {
+    if (!porFecha[t.fecha]) porFecha[t.fecha] = [];
+    porFecha[t.fecha].push(t);
+  });
+
+  const diasSemana = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+  const mesesCorto = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+
+  let html = '';
+  Object.entries(porFecha).forEach(([fecha, turnos]) => {
+    const d     = new Date(fecha + 'T12:00:00');
+    const label = `${diasSemana[d.getDay()]} ${d.getDate()} de ${mesesCorto[d.getMonth()]}`;
+    html += `<div class="dn-prox-dia"><div class="dn-prox-dia-label">${label}</div>`;
+    turnos.forEach(t => {
+      const pac  = t.pacientes;
+      const esEv = t.tipo === 'evento' || !t.paciente_id;
+      const nom  = esEv ? (t.notas || 'Evento') : (pac ? `${pac.nombre||''} ${pac.apellido||''}`.trim() : 'Paciente');
+      const hora = (t.hora || '').slice(0, 5);
+      const meta = `${esEv ? '🟠 Evento' : '🟢 Sesión'} · ${t.duracion || 50} min`;
+      html += `<div class="dn-prox-item" onclick="navigate('agenda')">
+        <div class="dn-prox-hora">${hora}</div>
+        <div><div class="dn-prox-name">${_dnEsc(nom)}</div><div class="dn-prox-meta">${meta}</div></div>
+      </div>`;
+    });
+    html += '</div>';
+  });
+  el.innerHTML = html;
 }
 
 function _dnRenderTurnos(turnos, hoy) {
