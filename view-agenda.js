@@ -196,6 +196,9 @@
       #ag-title { flex: 1; }
       #ag-title .ag-t-main { font-size: 16px; font-weight: 800; }
       #ag-title .ag-t-sub  { font-size: 11px; color: var(--text-muted, #7C6FAE); }
+      #ag-gcal-btn { display:flex; align-items:center; gap:5px; padding:6px 10px; border-radius:9px; border:1.5px solid var(--border,#E5E2F5); background:var(--bg,#F8F7FF); font-size:12px; font-weight:700; font-family:inherit; cursor:pointer; color:var(--text-muted,#7C6FAE); transition:all .15s; white-space:nowrap; }
+      #ag-gcal-btn.connected { border-color:#34A853; color:#34A853; background:rgba(52,168,83,0.07); }
+      #ag-gcal-btn img { width:14px; height:14px; }
       .ag-nav-btn {
         width: 32px; height: 32px; border-radius: 9px;
         background: var(--bg, #F8F7FF); border: 1px solid var(--border, #E5E2F5);
@@ -582,6 +585,10 @@
         </div>
         <button class="ag-vbtn-hoy" id="ag-btn-hoy">Hoy</button>
         <button class="ag-nav-btn" id="ag-nav-fwd">›</button>
+        <button id="ag-gcal-btn" title="Sincronizar con Google Calendar">
+          <img src="https://www.gstatic.com/images/branding/product/1x/calendar_2020q4_16dp.png" alt="GCal">
+          <span id="ag-gcal-label">Conectar</span>
+        </button>
       </div>
 
       <!-- VIEW TOGGLE -->
@@ -753,6 +760,10 @@
   function _bindEvents() {
     agQ('ag-nav-back').addEventListener('click', navBack);
     agQ('ag-nav-fwd').addEventListener('click', navFwd);
+
+    // Google Calendar — botón conectar/desconectar
+    agQ('ag-gcal-btn').addEventListener('click', _gcalToggle);
+    _gcalUpdateBtn();
 
     // FAB → abre mini-menú en lugar de abrir modal directamente
     function _fabToggle(e) {
@@ -1573,8 +1584,13 @@
         insertData.notas = titulo + (insertData.notas ? ' — ' + insertData.notas : '');
       }
 
-      const { error } = await sb.from('turnos').insert(insertData);
+      const { data: inserted, error } = await sb.from('turnos').insert(insertData).select('id').single();
       if (error) throw error;
+
+      // ── Google Calendar: sincronizar en segundo plano (no bloquea) ──
+      if (inserted?.id) {
+        _gcalSyncNew(inserted.id, insertData, insertData.paciente_id).catch(() => {});
+      }
 
       // ── WhatsApp: envío de confirmación (no bloquea si falla) ──
       if (_modoModal === 'turno' && insertData.paciente_id) {
@@ -1701,8 +1717,11 @@
     if (!_turnoSel) return;
     if (!confirm('¿Eliminar este turno?')) return;
     try {
+      const turnoAEliminar = { ..._turnoSel };
       const { error } = await sb.from('turnos').delete().eq('id', _turnoSel.id).eq('user_id', _userId);
       if (error) throw error;
+      // ── Google Calendar: eliminar evento en paralelo (no bloquea) ──
+      _gcalSyncDelete(turnoAEliminar).catch(() => {});
       cerrarDetalle();
       await cargarTurnos(_turnosDesde, _turnosHasta);  // preservar rango actual
       buildDayStrip();
@@ -1711,6 +1730,62 @@
     } catch(e) {
       toast('⚠️ Error al eliminar: ' + e.message);
     }
+  }
+
+  // ────────────────────────────────────────────────────────
+  //  GOOGLE CALENDAR
+  // ────────────────────────────────────────────────────────
+  function _gcalUpdateBtn() {
+    const btn   = agQ('ag-gcal-btn');
+    const label = agQ('ag-gcal-label');
+    if (!btn) return;
+    const connected = typeof GCal !== 'undefined' && GCal.isConnected();
+    btn.classList.toggle('connected', connected);
+    label.textContent = connected ? '✓ Google Cal' : 'Conectar';
+    btn.title = connected
+      ? 'Google Calendar conectado. Click para desconectar.'
+      : 'Conectar Google Calendar';
+  }
+
+  async function _gcalToggle() {
+    if (typeof GCal === 'undefined') { toast('⚠️ Google Calendar no disponible'); return; }
+    if (GCal.isConnected()) {
+      if (!confirm('¿Desconectar Google Calendar? Los turnos existentes no se eliminarán de Google.')) return;
+      GCal.disconnect();
+      _gcalUpdateBtn();
+      toast('🔌 Google Calendar desconectado');
+    } else {
+      try {
+        toast('⏳ Conectando con Google…');
+        await GCal.connect();
+        _gcalUpdateBtn();
+        toast('✅ Google Calendar conectado');
+      } catch(e) {
+        toast('❌ Error al conectar: ' + e.message);
+      }
+    }
+  }
+
+  /** Sincroniza un turno recién creado con Google Calendar */
+  async function _gcalSyncNew(turnoId, turnoData, pacienteId) {
+    if (typeof GCal === 'undefined' || !GCal.isConnected()) return;
+    try {
+      const pac    = _todosPacientes.find(p => p.id === pacienteId);
+      const nombre = pac ? `${pac.nombre || ''} ${pac.apellido || ''}`.trim() : 'Paciente';
+      const gcalId = await GCal.createEvent(turnoData, nombre);
+      // Guardar gcal_event_id en la fila del turno
+      await sb.from('turnos').update({ gcal_event_id: gcalId }).eq('id', turnoId);
+    } catch(e) {
+      console.warn('[GCal] No se pudo crear evento:', e.message);
+    }
+  }
+
+  /** Elimina el evento de Google Calendar cuando se elimina un turno */
+  async function _gcalSyncDelete(turno) {
+    if (typeof GCal === 'undefined' || !GCal.isConnected()) return;
+    if (!turno?.gcal_event_id) return;
+    try { await GCal.deleteEvent(turno.gcal_event_id); }
+    catch(e) { console.warn('[GCal] No se pudo eliminar evento:', e.message); }
   }
 
   // ────────────────────────────────────────────────────────
