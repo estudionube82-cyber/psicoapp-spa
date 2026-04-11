@@ -618,20 +618,36 @@ async function _dnCargarDatos() {
     }
     console.log('[Dashboard] UID ok:', uid);
 
-    const hoy   = new Date();
-    const _y    = hoy.getFullYear(), _m = hoy.getMonth();
-    const toLocal = d => d.toLocaleDateString('en-CA', { timeZone: 'America/Argentina/Buenos_Aires' });
+    const hoy = new Date();
+    // Ajustar a zona Argentina (UTC-3) sin Intl/timeZone (compatible con cualquier mobile)
+    const AR_OFFSET_MS = 3 * 60 * 60 * 1000; // UTC-3
+    const _hoyAR = new Date(hoy.getTime() - AR_OFFSET_MS);
+    const _y = _hoyAR.getUTCFullYear();
+    const _m = _hoyAR.getUTCMonth();   // 0-11
+    const _d = _hoyAR.getUTCDate();
 
-    const fechaHoy     = toLocal(hoy);
-    const primerDiaMes = toLocal(new Date(_y, _m, 1));
-    const ultimoDiaMes = toLocal(new Date(_y, _m + 1, 0));
-    const primerMesAnt = toLocal(new Date(_y, _m - 1, 1));
-    const ultimoMesAnt = toLocal(new Date(_y, _m, 0));
+    // Serializa Date a YYYY-MM-DD usando UTC (así evita saltos de TZ en mobile)
+    const toYMD = dt => {
+      const y = dt.getUTCFullYear();
+      const m = String(dt.getUTCMonth() + 1).padStart(2, '0');
+      const d = String(dt.getUTCDate()).padStart(2, '0');
+      return `${y}-${m}-${d}`;
+    };
+    // Dado un offset en días desde hoy (en AR), devuelve YYYY-MM-DD
+    const diaAR = offset => toYMD(new Date(_hoyAR.getTime() + offset * 86400000));
 
-    // Próximos 3 días (además de hoy)
-    const fecha1 = toLocal(new Date(_y, _m, hoy.getDate() + 1));
-    const fecha2 = toLocal(new Date(_y, _m, hoy.getDate() + 2));
-    const fecha3 = toLocal(new Date(_y, _m, hoy.getDate() + 3));
+    const fechaHoy     = diaAR(0);
+    // Primer / último día del mes actual en AR
+    const primerDiaMes = toYMD(new Date(Date.UTC(_y, _m, 1)));
+    const ultimoDiaMes = toYMD(new Date(Date.UTC(_y, _m + 1, 0)));
+    // Primer / último día del mes anterior
+    const primerMesAnt = toYMD(new Date(Date.UTC(_y, _m - 1, 1)));
+    const ultimoMesAnt = toYMD(new Date(Date.UTC(_y, _m, 0)));
+
+    // Próximos 3 días
+    const fecha1 = diaAR(1);
+    const fecha2 = diaAR(2);
+    const fecha3 = diaAR(3);
 
     const [
       resPagos, resPagosAnt,
@@ -900,13 +916,19 @@ function _dnRenderTurnos(turnos, hoy) {
   }
 
   const ahoraMs   = hoy.getTime();
-  const aFmt      = hoy.toLocaleTimeString('es-AR', { hour:'2-digit', minute:'2-digit' });
+  // Formato HH:MM seguro para mobile (no usa toLocaleTimeString con locale)
+  const _fmt2 = n => String(n).padStart(2, '0');
+  const _horaFmtSafe = dt => _fmt2(dt.getHours()) + ':' + _fmt2(dt.getMinutes());
+  const aFmt = _horaFmtSafe(hoy);
   let nowInserted = false;
   let html        = '';
 
   turnos.forEach(t => {
-    const dt       = new Date(t.fecha + 'T' + t.hora);
-    const horaFmt  = dt.toLocaleTimeString('es-AR', { hour:'2-digit', minute:'2-digit' });
+    // Parseo seguro de fecha+hora: extraer partes manualmente para evitar bugs de timezone en mobile
+    const [fy, fm, fd] = (t.fecha || '2000-01-01').split('-').map(Number);
+    const [fh, fmin]   = (t.hora  || '00:00').split(':').map(Number);
+    const dt      = new Date(fy, fm - 1, fd, fh, fmin, 0);
+    const horaFmt = _horaFmtSafe(dt);
     const duracion = t.duracion ? `${t.duracion} min` : '50 min';
     const esEvento = (t.tipo || '').toLowerCase() === 'evento' || !t.paciente_id;
     const nombre   = t._nomPac || (esEvento ? (t.notas || 'Evento') : 'Paciente');
