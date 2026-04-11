@@ -2,6 +2,9 @@
 <html lang="es" data-theme="light">
 <head>
 <meta charset="UTF-8">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>PsicoApp</title>
 
@@ -437,6 +440,9 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); min-
      SCRIPTS GLOBALES
      ══════════════════════════════════════════ -->
 <script>
+if (location.hostname.includes("vercel.app")) {
+  location.replace("https://www.psicoapp.com.ar" + location.pathname + location.search);
+}
 /* ── REDIRECCIÓN AUTOMÁTICA DE RUTAS LEGACY ── */
 // Si alguien entra directamente a /psicoapp-historia.html, etc.,
 // se lo redirige a la SPA con la vista correcta.
