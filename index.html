@@ -532,6 +532,14 @@ window._psicoAuthReady = new Promise((resolve) => {
       console.warn('[Auth] Perfil check error (no crítico):', e.message);
     }
 
+    try {
+      if (typeof PlanService !== 'undefined' && typeof PlanService.iniciarRealtimePlan === 'function') {
+        await PlanService.iniciarRealtimePlan();
+      }
+    } catch (e) {
+      console.warn('[Auth] No se pudo iniciar realtime de plan:', e.message);
+    }
+
     _resolveOnce();
   }
 
@@ -611,9 +619,10 @@ window._syncWaUsos = async function() {
   try {
     const { data: { session } } = await sb.auth.getSession();
     if (!session) return;
-    let sus = {};
-    try { sus = JSON.parse(localStorage.getItem('suscripcion')) || {}; } catch {}
-    const usos = sus.usos?.whatsapp || 0;
+    const { count: usos } = await sb
+      .from('mensajes_wa')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', session.user.id);
     await sb.from('profiles').update({ wa_usos: usos }).eq('id', session.user.id);
   } catch(e) {
     console.warn('[WA] No se pudo sincronizar wa_usos:', e.message);
