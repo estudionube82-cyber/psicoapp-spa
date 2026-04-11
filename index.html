@@ -689,14 +689,21 @@ const APP_SCRIPTS = [
 ];
 
 (function loadSequential(scripts, index) {
-  if (index >= scripts.length) return;
+  if (index >= scripts.length) {
+    // ✅ Todos los scripts cargados — avisar al router para que navegue
+    console.log('[PsicoApp] Todos los scripts cargados (' + scripts.length + ')');
+    if (typeof window._psicoOnScriptsReady === 'function') {
+      window._psicoOnScriptsReady();
+    }
+    return;
+  }
   const { src, level } = scripts[index];
   const s = document.createElement('script');
   s.src = src + '?v=' + APP_VERSION;
   s.onload  = () => loadSequential(scripts, index + 1);
   s.onerror = () => {
     console[level]('[PsicoApp] No se pudo cargar: ' + src);
-    loadSequential(scripts, index + 1); // continuar aunque falle
+    loadSequential(scripts, index + 1);
   };
   document.body.appendChild(s);
 })(APP_SCRIPTS, 0);

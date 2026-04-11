@@ -242,9 +242,12 @@ const PsicoRouter = (() => {
       navigate(e.state?.view || 'dashboard');
     });
 
-    /* Primera vista desde URL — espera a que auth esté confirmado */
-    // IMPORTANTE: DOMContentLoaded puede ya haber disparado en mobile
-    // (los scripts cargan de forma diferida). Usamos readyState como fallback.
+    /* Primera vista desde URL
+       ─────────────────────────────────────────────────────────────
+       _psicoOnScriptsReady es llamado por el loader de index.html
+       cuando TODOS los scripts terminaron de cargar.
+       Recién ahí todas las vistas están registradas y se puede navegar.
+       ───────────────────────────────────────────────────────────── */
     const _initNavegar = () => {
       const params  = new URLSearchParams(window.location.search);
       const initial = VALID_VIEWS.includes(params.get('v')) ? params.get('v') : 'dashboard';
@@ -301,15 +304,10 @@ const PsicoRouter = (() => {
       });
     }; // fin _initNavegar
 
-    // Si el DOM ya está listo (caso mobile: scripts cargan tarde), ejecutar ahora.
-    // Si no, esperar DOMContentLoaded.
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', _initNavegar);
-    } else {
-      // DOM ya cargado — llamar en el próximo tick para que todas las vistas
-      // hayan terminado de registrarse con PsicoRouter.register()
-      setTimeout(_initNavegar, 0);
-    }
+    // El loader de index.html llama a _psicoOnScriptsReady cuando
+    // todos los scripts terminaron. Recién entonces todas las vistas
+    // están registradas y se puede navegar de forma segura.
+    window._psicoOnScriptsReady = _initNavegar;
   }
 
   /* ── Exponer API pública ─────────────────────────────────── */
