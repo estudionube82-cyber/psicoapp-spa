@@ -532,6 +532,14 @@ window._psicoAuthReady = new Promise((resolve) => {
       console.warn('[Auth] Perfil check error (no crítico):', e.message);
     }
 
+    try {
+      if (typeof PlanService !== 'undefined' && typeof PlanService.iniciarRealtimePlan === 'function') {
+        await PlanService.iniciarRealtimePlan();
+      }
+    } catch (e) {
+      console.warn('[Auth] No se pudo iniciar realtime de plan:', e.message);
+    }
+
     _resolveOnce();
   }
 
@@ -611,9 +619,10 @@ window._syncWaUsos = async function() {
   try {
     const { data: { session } } = await sb.auth.getSession();
     if (!session) return;
-    let sus = {};
-    try { sus = JSON.parse(localStorage.getItem('suscripcion')) || {}; } catch {}
-    const usos = sus.usos?.whatsapp || 0;
+    const { count: usos } = await sb
+      .from('mensajes_wa')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', session.user.id);
     await sb.from('profiles').update({ wa_usos: usos }).eq('id', session.user.id);
   } catch(e) {
     console.warn('[WA] No se pudo sincronizar wa_usos:', e.message);
@@ -693,6 +702,44 @@ async function abrirSoporte() {
    cada uno espera que el anterior termine.
    ══════════════════════════════════════════ */
 const APP_VERSION = Date.now();
+
+/* ══════════════════════════════════════════
+   SERVICE WORKER — registro + auto-update
+   ══════════════════════════════════════════ */
+(function registerPsicoSW() {
+  if (!('serviceWorker' in navigator)) return;
+
+  let refreshing = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (refreshing) return;
+    refreshing = true;
+    window.location.reload();
+  });
+
+  function skipWaiting(reg) {
+    if (reg?.waiting) {
+      reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+    }
+  }
+
+  navigator.serviceWorker.register('/sw.js?v=' + APP_VERSION).then((reg) => {
+    if (reg.waiting) skipWaiting(reg);
+
+    reg.addEventListener('updatefound', () => {
+      const newWorker = reg.installing;
+      if (!newWorker) return;
+      newWorker.addEventListener('statechange', () => {
+        if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+          skipWaiting(reg);
+        }
+      });
+    });
+
+    setInterval(() => reg.update().catch(() => {}), 5 * 60 * 1000);
+  }).catch((err) => {
+    console.warn('[SW] Error al registrar service worker:', err?.message || err);
+  });
+})();
 
 const APP_SCRIPTS = [
   // Router central — DEBE ir primero
