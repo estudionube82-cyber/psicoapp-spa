@@ -1,49 +1,88 @@
-const CACHE_VERSION = 'psicoapp-v5';
-const STATIC_ASSETS = [
-  '/config.js',
-  '/psicoapp-limites.js',
-  '/logo-psicoapp.png',
-  '/icon-192.png',
-  '/icon-512.png',
-  '/icon-scanner.png',
-];
+const CACHE_VERSION = 'psicoapp-v6';
+const CACHE_NAME = `${CACHE_VERSION}-runtime`;
 
-self.addEventListener('install', e => {
-  self.skipWaiting();
-  e.waitUntil(
-    caches.open(CACHE_VERSION).then(c => c.addAll(STATIC_ASSETS))
-  );
+function isSupabaseRequest(url) {
+  return url.includes('supabase.co') || url.includes('/functions/v1');
+}
+
+function isNetworkFirst(request) {
+  if (request.mode === 'navigate') return true;
+  const dest = request.destination;
+  return dest === 'document' || dest === 'script' || dest === 'style';
+}
+
+function isStaleWhileRevalidate(request) {
+  const dest = request.destination;
+  return dest === 'image' || dest === 'font';
+}
+
+self.addEventListener('install', (event) => {
+  event.waitUntil(self.skipWaiting());
 });
 
-self.addEventListener('activate', e => {
-  e.waitUntil(
-    caches.keys().then(keys =>
+self.addEventListener('activate', (event) => {
+  event.waitUntil(
+    caches.keys().then((keys) =>
       Promise.all(
         keys
-          .filter(k => k !== CACHE_VERSION)
-          .map(k => caches.delete(k))
+          .filter((key) => !key.startsWith(CACHE_VERSION))
+          .map((key) => caches.delete(key))
       )
     ).then(() => self.clients.claim())
   );
 });
 
-// HTML y Supabase → siempre red (datos frescos)
-// Assets estáticos → cache first
-self.addEventListener('fetch', e => {
-  const url = e.request.url;
-  if (
-    url.includes('.html') ||
-    url.includes('supabase.co') ||
-    url.includes('functions/v1')
-  ) {
-    e.respondWith(fetch(e.request).catch(() => caches.match(e.request)));
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
+});
+
+self.addEventListener('fetch', (event) => {
+  const { request } = event;
+  if (request.method !== 'GET') return;
+
+  const url = request.url;
+  if (isSupabaseRequest(url)) {
+    event.respondWith(fetch(request));
     return;
   }
-  e.respondWith(
-    caches.match(e.request).then(cached => cached || fetch(e.request).then(resp => {
-      const clone = resp.clone();
-      caches.open(CACHE_VERSION).then(c => c.put(e.request, clone));
-      return resp;
-    }))
+
+  if (isNetworkFirst(request)) {
+    event.respondWith(
+      fetch(request)
+        .then((response) => {
+          if (response && response.ok) {
+            const copy = response.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));
+          }
+          return response;
+        })
+        .catch(() => caches.match(request))
+    );
+    return;
+  }
+
+  if (isStaleWhileRevalidate(request)) {
+    event.respondWith(
+      caches.match(request).then((cached) => {
+        const networkFetch = fetch(request)
+          .then((response) => {
+            if (response && response.ok) {
+              const copy = response.clone();
+              caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));
+            }
+            return response;
+          })
+          .catch(() => cached);
+
+        return cached || networkFetch;
+      })
+    );
+    return;
+  }
+
+  event.respondWith(
+    fetch(request).catch(() => caches.match(request))
   );
 });
