@@ -485,7 +485,22 @@ function toggleTheme() {
  * el loop login ↔ dashboard.
  * ─────────────────────────────────────────────────────────── */
 window._psicoAuthReady = new Promise((resolve) => {
-  sb.auth.getSession().then(async ({ data }) => {
+
+  // Timeout de seguridad: si getSession tarda más de 8s en mobile, redirigir al login
+  const _authTimeout = setTimeout(() => {
+    console.warn('[Auth] Timeout esperando sesión → login');
+    window.location.replace('/login.html');
+  }, 8000);
+
+  sb.auth.getSession().then(async ({ data, error }) => {
+    clearTimeout(_authTimeout);
+
+    if (error) {
+      console.warn('[Auth] Error getSession:', error.message);
+      window.location.replace('/login.html');
+      return;
+    }
+
     const session = data?.session;
 
     if (!session) {
@@ -497,7 +512,6 @@ window._psicoAuthReady = new Promise((resolve) => {
     window._psicoUserId = session.user.id;
 
     // ── FALLBACK: verificar/crear perfil si no existe ────────
-    // Cubre usuarios registrados antes del trigger SQL.
     try {
       const { data: perfilExistente } = await sb
         .from('profiles')
@@ -506,7 +520,6 @@ window._psicoAuthReady = new Promise((resolve) => {
         .maybeSingle();
 
       if (!perfilExistente) {
-        // Perfil no existe → crearlo con valores seguros
         await sb.from('profiles').insert({
           id:         session.user.id,
           email:      session.user.email,
@@ -519,10 +532,11 @@ window._psicoAuthReady = new Promise((resolve) => {
       console.warn('[Auth] No se pudo verificar/crear perfil:', e.message);
     }
 
-    // Plan cargado bajo demanda desde PlanService (Edge Function getUserPlan)
-    // No se guarda en localStorage — el backend es la única fuente de verdad
-
     resolve(); // auth confirmado → el router puede navegar
+  }).catch(e => {
+    clearTimeout(_authTimeout);
+    console.warn('[Auth] getSession exception:', e.message);
+    window.location.replace('/login.html');
   });
 });
 

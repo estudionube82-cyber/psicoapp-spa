@@ -243,13 +243,12 @@ const PsicoRouter = (() => {
     });
 
     /* Primera vista desde URL — espera a que auth esté confirmado */
-    document.addEventListener('DOMContentLoaded', () => {
+    // IMPORTANTE: DOMContentLoaded puede ya haber disparado en mobile
+    // (los scripts cargan de forma diferida). Usamos readyState como fallback.
+    const _initNavegar = () => {
       const params  = new URLSearchParams(window.location.search);
       const initial = VALID_VIEWS.includes(params.get('v')) ? params.get('v') : 'dashboard';
 
-      // _psicoAuthReady es una Promise creada en index.html que se resuelve
-      // solo cuando getSession() confirmó sesión válida. Esto elimina la
-      // race condition: el router nunca navega antes de que auth esté listo.
       const authReady = window._psicoAuthReady || Promise.resolve();
 
       authReady.then(async () => {
@@ -293,7 +292,6 @@ const PsicoRouter = (() => {
           try {
             if (typeof PlanService !== 'undefined') {
               const p = await PlanService.getPlan();
-              // expires_at en el pasado + plan degradado a free = plan vencido
               if (p.plan === 'free' && p.expires_at && new Date(p.expires_at) < new Date()) {
                 setTimeout(() => _bannerPlanVencido(), 1500);
               }
@@ -301,7 +299,17 @@ const PsicoRouter = (() => {
           } catch(e) { /* silencioso */ }
         }
       });
-    });
+    }; // fin _initNavegar
+
+    // Si el DOM ya está listo (caso mobile: scripts cargan tarde), ejecutar ahora.
+    // Si no, esperar DOMContentLoaded.
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', _initNavegar);
+    } else {
+      // DOM ya cargado — llamar en el próximo tick para que todas las vistas
+      // hayan terminado de registrarse con PsicoRouter.register()
+      setTimeout(_initNavegar, 0);
+    }
   }
 
   /* ── Exponer API pública ─────────────────────────────────── */
