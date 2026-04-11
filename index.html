@@ -619,11 +619,11 @@ window._syncWaUsos = async function() {
   try {
     const { data: { session } } = await sb.auth.getSession();
     if (!session) return;
-    const { count: usos } = await sb
+    const { count } = await sb
       .from('mensajes_wa')
       .select('id', { count: 'exact', head: true })
       .eq('user_id', session.user.id);
-    await sb.from('profiles').update({ wa_usos: usos }).eq('id', session.user.id);
+    await sb.from('profiles').update({ wa_usos: count }).eq('id', session.user.id);
   } catch(e) {
     console.warn('[WA] No se pudo sincronizar wa_usos:', e.message);
   }
