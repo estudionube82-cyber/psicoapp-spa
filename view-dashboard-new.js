@@ -977,11 +977,19 @@ function _dnRenderTurnos(turnos, hoy) {
 async function _dnRenderNombre(turnosHoy) {
   const perfil = await PsicoRouter.store.ensurePerfil().catch(() => ({}));
   const nombre = perfil.nombre_completo || perfil.nombre || 'Psicólogo/a';
-  const fotoBase = perfil.foto_url || perfil.foto || null;
-  // Cache-buster solo para URLs HTTP, nunca para data: (base64)
-  const foto = fotoBase && !fotoBase.startsWith('data:') && !fotoBase.includes('?t=')
-    ? fotoBase + '?t=' + Date.now()
-    : fotoBase;
+  const fotoBase =
+    perfil.avatar_url ||
+    perfil.foto_url ||
+    perfil.foto ||
+    null;
+
+  let foto = null;
+
+  if (fotoBase && typeof fotoBase === 'string' && fotoBase.startsWith('http')) {
+    foto = fotoBase.includes('?t=')
+      ? fotoBase
+      : fotoBase + '?t=' + Date.now();
+  }
 
   /* Nombre en profile header */
   const nameEl = document.getElementById('dn-ph-name');
@@ -1002,6 +1010,7 @@ async function _dnRenderNombre(turnosHoy) {
   }
 
   /* Avatar: foto real o iniciales */
+  console.log('[Perfil DEBUG]', perfil);
   const avatarEl = document.getElementById('dn-ph-avatar');
   if (avatarEl) {
     if (foto) {
