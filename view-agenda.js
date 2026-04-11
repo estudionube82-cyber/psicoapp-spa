@@ -74,6 +74,15 @@
       timeZone: 'America/Argentina/Buenos_Aires'
     });
   }
+  // ── Construye un Date LOCAL desde string 'YYYY-MM-DD' sin conversión UTC ──
+  // new Date('2025-04-11') → UTC midnight → Argentina = 21:00 del 10 → BUG
+  // parseDateLocal('2025-04-11') → medianoche local → correcto
+  function parseDateLocal(str) {
+    console.log('[Agenda FIX] parseDateLocal ejecutado:', str);
+    if (!str) return new Date();
+    const [y, m, d] = str.split('-').map(Number);
+    return new Date(y, m - 1, d, 0, 0, 0, 0);
+  }
 
   function turnosDeFecha(fecha) {
     const key = fmtDate(fecha);
@@ -90,7 +99,8 @@
     return nombrePaciente(t);
   }
   function lunesDe(d) {
-    const lunes = new Date(d);
+    // Si d es string 'YYYY-MM-DD', parsear local para evitar desfase UTC
+    const lunes = typeof d === 'string' ? parseDateLocal(d) : new Date(d);
     lunes.setDate(lunes.getDate() - ((lunes.getDay() + 6) % 7));
     lunes.setHours(0,0,0,0);
     return lunes;
@@ -157,6 +167,11 @@
       _turnosDesde = desde;
       _turnosHasta = hasta;
       console.log(`[Agenda] Turnos cargados: ${_todosTurnos.length} entre ${desde} y ${hasta}`);
+      if (_todosTurnos.length > 0) {
+        const t0 = _todosTurnos[0];
+        console.log('[Agenda FIX] turno original:', t0.fecha);
+        console.log('[Agenda FIX] turno parseado:', parseDateLocal(t0.fecha));
+      }
     } catch(e) {
       console.error('[Agenda] cargarTurnos:', e.message);
       _todosTurnos = [];
@@ -799,7 +814,7 @@
     ['dia','semana','mes'].forEach(v => {
       agQ(`ag-btn-${v}`).addEventListener('click', () => {
         // Al entrar en vista día siempre mostrar HOY, nunca el inicio de semana
-        if (v === 'dia') _fechaActual = new Date(getTodayLocal());
+        if (v === 'dia') _fechaActual = parseDateLocal(getTodayLocal());
         setView(v);
       });
     });
@@ -857,8 +872,8 @@
 
     // ── Botón HOY ──────────────────────────────────────────
     agQ('ag-btn-hoy').addEventListener('click', () => {
-      _fechaActual = new Date(getTodayLocal());
-      _hoy         = new Date(getTodayLocal());
+      _fechaActual = parseDateLocal(getTodayLocal());
+      _hoy         = parseDateLocal(getTodayLocal());
       setView('dia');
     });
 
@@ -1230,7 +1245,7 @@
     // En vista día: si se pasa fecha explícita (ej: desde mes) usarla,
     // si no, siempre mostrar HOY — nunca el lunes de la semana
     if (v === 'dia') {
-      _fechaActual = opcionFecha ? new Date(opcionFecha) : new Date(getTodayLocal());
+      _fechaActual = opcionFecha ? parseDateLocal(opcionFecha) : parseDateLocal(getTodayLocal());
     }
     _currentView = v;
     ['dia','semana','mes'].forEach(x => {
@@ -1937,8 +1952,9 @@
 
     /* onEnter — refresca datos en cada visita, NO re-renderiza el DOM */
     async onEnter() {
-      _hoy         = new Date(getTodayLocal());
-      _fechaActual = new Date(getTodayLocal());
+      _hoy         = parseDateLocal(getTodayLocal());
+      _fechaActual = parseDateLocal(getTodayLocal());
+      console.log('[Agenda FIX] HOY:', getTodayLocal());
 
       // Leer preferencias del psicólogo
       HORAS = _buildHoras(); // reconstruir rango horario con preferencias actuales
