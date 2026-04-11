@@ -8,8 +8,10 @@
 /* ══════════════════════════════════════════
    ESTILOS — inyectados una sola vez
    ══════════════════════════════════════════ */
-(function injectDashNewStyles() {
-  if (document.getElementById('view-dashboard-styles')) return;
+function injectDashNewStyles() {
+  // Siempre reemplazar: así los cambios de CSS se aplican sin hard-reload
+  const old = document.getElementById('view-dashboard-styles');
+  if (old) old.remove();
   const style = document.createElement('style');
   style.id = 'view-dashboard-styles';
   style.textContent = `
@@ -49,14 +51,15 @@
 
 /* ── MINI SUMMARY ── */
 #view-dashboard .dn-mini-summary {
-  margin: 10px 16px 0;
-  background: rgba(124,58,237,0.07);
-  border: 1px solid rgba(124,58,237,0.14);
-  border-radius: 12px;
-  padding: 9px 14px;
-  font-size: 12px; font-weight: 600; color: var(--primary, #7C3AED);
-  display: flex; align-items: center; gap: 6px;
-  min-height: 36px;
+  margin: 14px 16px 0;
+  background: linear-gradient(90deg, rgba(124,58,237,0.10), rgba(236,72,153,0.07));
+  border: 1.5px solid rgba(124,58,237,0.18);
+  border-radius: 14px;
+  padding: 11px 16px;
+  font-size: 12px; font-weight: 700; color: var(--primary, #7C3AED);
+  display: flex; align-items: center; gap: 8px;
+  min-height: 40px;
+  box-shadow: 0 2px 8px rgba(124,58,237,0.06);
 }
 
 /* ── KPI GRID ── */
@@ -71,37 +74,45 @@
 }
 #view-dashboard .dn-kpi {
   background: var(--surface);
-  border-radius: 16px;
-  padding: 16px 14px;
-  box-shadow: var(--shadow-sm);
+  border-radius: 18px;
+  padding: 18px 16px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.07);
   cursor: pointer;
-  transition: transform .15s, box-shadow .15s;
-  border: 1.5px solid transparent;
-  border-left: 4px solid transparent;
+  transition: transform .18s cubic-bezier(.34,1.56,.64,1), box-shadow .18s;
+  border: 1.5px solid var(--border);
+  position: relative; overflow: hidden;
 }
-#view-dashboard .dn-kpi:hover {
-  transform: translateY(-3px) scale(1.01);
-  box-shadow: var(--shadow-md);
+#view-dashboard .dn-kpi::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+  border-radius: 18px 18px 0 0;
+  opacity: 0; transition: opacity .18s;
 }
+#view-dashboard .dn-kpi.violet::before { background: linear-gradient(90deg,#7C3AED,#A78BFA); }
+#view-dashboard .dn-kpi.amber::before  { background: linear-gradient(90deg,#F59E0B,#FCD34D); }
+#view-dashboard .dn-kpi.teal::before   { background: linear-gradient(90deg,#14B8A6,#5EEAD4); }
+#view-dashboard .dn-kpi.rose::before   { background: linear-gradient(90deg,#EC4899,#F9A8D4); }
+#view-dashboard .dn-kpi:hover { transform: translateY(-4px) scale(1.02); box-shadow: 0 8px 28px rgba(0,0,0,0.13); }
+#view-dashboard .dn-kpi:hover::before  { opacity: 1; }
 #view-dashboard .dn-kpi-icon-wrap {
-  width: 36px; height: 36px; border-radius: 10px;
+  width: 40px; height: 40px; border-radius: 12px;
   display: flex; align-items: center; justify-content: center;
-  font-size: 17px; margin-bottom: 12px;
+  font-size: 19px; margin-bottom: 14px;
 }
-#view-dashboard .dn-kpi-icon-wrap.violet { background: rgba(124,58,237,0.12); }
-#view-dashboard .dn-kpi-icon-wrap.amber  { background: rgba(251,191,36,0.12); }
-#view-dashboard .dn-kpi-icon-wrap.teal   { background: rgba(20,184,166,0.12); }
-#view-dashboard .dn-kpi-icon-wrap.rose   { background: rgba(236,72,153,0.10); }
+#view-dashboard .dn-kpi-icon-wrap.violet { background: linear-gradient(135deg,rgba(124,58,237,0.15),rgba(167,139,250,0.08)); }
+#view-dashboard .dn-kpi-icon-wrap.amber  { background: linear-gradient(135deg,rgba(251,191,36,0.18),rgba(252,211,77,0.08)); }
+#view-dashboard .dn-kpi-icon-wrap.teal   { background: linear-gradient(135deg,rgba(20,184,166,0.15),rgba(94,234,212,0.08)); }
+#view-dashboard .dn-kpi-icon-wrap.rose   { background: linear-gradient(135deg,rgba(236,72,153,0.14),rgba(249,168,212,0.07)); }
 #view-dashboard .dn-kpi-value {
-  font-size: 22px; font-weight: 800; color: var(--text); line-height: 1;
+  font-size: 23px; font-weight: 900; color: var(--text); line-height: 1; letter-spacing: -0.5px;
 }
 #view-dashboard .dn-kpi-label {
-  font-size: 11px; font-weight: 600; color: var(--text-muted); margin-top: 4px;
+  font-size: 11px; font-weight: 600; color: var(--text-muted); margin-top: 4px; letter-spacing: 0.2px;
 }
 #view-dashboard .dn-kpi-tag {
-  display: inline-block; margin-top: 6px;
-  font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 20px;
+  display: inline-block; margin-top: 8px;
+  font-size: 10px; font-weight: 800; padding: 3px 9px; border-radius: 20px;
   background: rgba(124,58,237,0.10); color: var(--primary, #7C3AED);
+  letter-spacing: 0.2px;
 }
 #view-dashboard .dn-kpi-tag.muted {
   background: var(--surface2, var(--border)); color: var(--text-muted);
@@ -297,50 +308,91 @@
 
 #view-dashboard .dn-pad { height: 40px; }
 
-/* ── PROFILE HEADER (nuevo) ── */
+/* ── PROFILE HEADER — Premium SaaS hero ── */
 #view-dashboard .dn-profile-header {
-  display: flex; align-items: center; gap: 14px;
-  padding: 20px 20px 16px;
-  background: linear-gradient(180deg, rgba(236,72,153,0.08), rgba(124,58,237,0.05));
-  border-bottom: 1px solid rgba(124,58,237,0.10);
+  position: relative; overflow: hidden;
+  padding: 28px 20px 24px;
+  background: linear-gradient(135deg, #1E0A3C 0%, #3B1278 45%, #6D28D9 80%, #A21CAF 100%);
+  border-bottom: none;
+}
+/* ruido decorativo sutil */
+#view-dashboard .dn-profile-header::before {
+  content: '';
+  position: absolute; inset: 0; z-index: 0;
+  background:
+    radial-gradient(ellipse 60% 70% at 80% -20%, rgba(236,72,153,0.35) 0%, transparent 65%),
+    radial-gradient(ellipse 40% 50% at -10% 100%, rgba(124,58,237,0.25) 0%, transparent 60%);
+  pointer-events: none;
+}
+/* círculo decorativo fondo */
+#view-dashboard .dn-profile-header::after {
+  content: '';
+  position: absolute; top: -60px; right: -60px;
+  width: 220px; height: 220px; border-radius: 50%; z-index: 0;
+  background: rgba(255,255,255,0.04);
+  pointer-events: none;
+}
+/* fila top: avatar + texto + btn */
+#view-dashboard .dn-ph-top-row {
+  display: flex; align-items: center; gap: 16px;
+  position: relative; z-index: 1;
 }
 #view-dashboard .dn-ph-avatar {
-  width: 48px; height: 48px; border-radius: 50%; flex-shrink: 0;
-  background: linear-gradient(135deg, #5B2FA8, #A78BFA);
-  color: white; font-size: 17px; font-weight: 800;
+  width: 72px; height: 72px; border-radius: 50%; flex-shrink: 0;
+  background: linear-gradient(135deg, #7C3AED, #EC4899);
+  color: white; font-size: 28px; font-weight: 900;
   display: flex; align-items: center; justify-content: center;
-  overflow: hidden; border: 2px solid rgba(124,58,237,0.2);
+  overflow: hidden;
+  border: 3px solid rgba(255,255,255,0.25);
+  box-shadow: 0 0 0 6px rgba(236,72,153,0.18), 0 8px 24px rgba(0,0,0,0.35);
 }
 #view-dashboard .dn-ph-avatar img {
   width: 100%; height: 100%; object-fit: cover; border-radius: 50%;
 }
 #view-dashboard .dn-ph-body { flex: 1; min-width: 0; }
 #view-dashboard .dn-ph-greeting {
-  font-size: 11px; font-weight: 700; color: var(--text-muted);
-  text-transform: uppercase; letter-spacing: 1px;
+  font-size: 10px; font-weight: 800; color: rgba(255,255,255,0.55);
+  text-transform: uppercase; letter-spacing: 2px; margin-bottom: 2px;
 }
 #view-dashboard .dn-ph-name {
-  font-size: 18px; font-weight: 800; color: var(--text);
-  margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  font-size: 24px; font-weight: 900; color: #fff; line-height: 1.1;
+  letter-spacing: -0.5px;
+  text-shadow: 0 2px 8px rgba(0,0,0,0.3);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 #view-dashboard .dn-ph-context {
-  font-size: 11px; font-weight: 600; color: var(--text-muted); margin-top: 3px;
-}
-#view-dashboard .dn-ph-frase {
-  font-size: 11px; font-style: italic; color: var(--text-muted);
-  margin-top: 6px; line-height: 1.5; opacity: 0.7; max-width: 420px;
-}
-#view-dashboard .dn-ph-frase-autor {
-  font-size: 10px; font-weight: 700; color: var(--primary, #7C3AED);
-  margin-top: 3px; opacity: 0.8;
+  font-size: 12px; font-weight: 600; color: rgba(255,255,255,0.65);
+  margin-top: 4px;
 }
 #view-dashboard .dn-ph-right {
-  display: flex; align-items: center; gap: 8px; flex-shrink: 0;
+  display: flex; align-items: flex-start; gap: 8px; flex-shrink: 0; align-self: flex-start;
 }
 #view-dashboard .dn-ph-theme-btn {
-  width: 34px; height: 34px; border-radius: 10px;
-  background: var(--surface2, var(--border)); border: none; cursor: pointer;
+  width: 36px; height: 36px; border-radius: 10px;
+  background: rgba(255,255,255,0.12); backdrop-filter: blur(8px);
+  border: 1px solid rgba(255,255,255,0.2); cursor: pointer;
   display: flex; align-items: center; justify-content: center; font-size: 16px;
+  transition: background .15s;
+}
+#view-dashboard .dn-ph-theme-btn:hover { background: rgba(255,255,255,0.2); }
+/* frase — como pull-quote */
+#view-dashboard .dn-ph-quote-wrap {
+  position: relative; z-index: 1;
+  margin-top: 18px;
+  border-left: 3px solid rgba(236,72,153,0.7);
+  padding: 8px 14px;
+  background: rgba(255,255,255,0.07);
+  backdrop-filter: blur(6px);
+  border-radius: 0 12px 12px 0;
+}
+#view-dashboard .dn-ph-frase {
+  font-size: 13px; font-style: italic; font-weight: 500;
+  color: rgba(255,255,255,0.90); line-height: 1.55;
+  margin: 0;
+}
+#view-dashboard .dn-ph-frase-autor {
+  font-size: 11px; font-weight: 800; color: #F9A8D4;
+  margin-top: 5px; letter-spacing: 0.3px;
 }
 
 /* ── PROGRESO DEL DÍA ── */
@@ -375,7 +427,8 @@
 }
   `;
   document.head.appendChild(style);
-})();
+}
+injectDashNewStyles(); // Ejecutar al cargar el script
 
 
 /* ══════════════════════════════════════════
@@ -431,20 +484,22 @@ function _dnRenderHTML(container) {
 
   <!-- PROFILE HEADER -->
   <div class="dn-profile-header">
-    <div class="dn-ph-avatar" id="dn-ph-avatar">?</div>
-    <div class="dn-ph-body">
-      <div class="dn-ph-greeting" id="dn-ph-greeting">${_dnSaludo()}</div>
-      <div class="dn-ph-name" id="dn-ph-name">…</div>
-      <div class="dn-ph-context" id="dn-ph-context">Cargando agenda…</div>
-      <div class="dn-ph-frase">
-        "${_dnFraseHoy.texto}"
-        <div class="dn-ph-frase-autor">— ${_dnFraseHoy.autor}</div>
+    <div class="dn-ph-top-row">
+      <div class="dn-ph-avatar" id="dn-ph-avatar">?</div>
+      <div class="dn-ph-body">
+        <div class="dn-ph-greeting" id="dn-ph-greeting">${_dnSaludo()}</div>
+        <div class="dn-ph-name" id="dn-ph-name">…</div>
+        <div class="dn-ph-context" id="dn-ph-context">Cargando agenda…</div>
+      </div>
+      <div class="dn-ph-right">
+        <button class="dn-ph-theme-btn" onclick="toggleTheme()" title="Cambiar tema">
+          <span id="dn-toggle-thumb">${tema === 'dark' ? '🌙' : '☀️'}</span>
+        </button>
       </div>
     </div>
-    <div class="dn-ph-right">
-      <button class="dn-ph-theme-btn" onclick="toggleTheme()" title="Cambiar tema">
-        <span id="dn-toggle-thumb">${tema === 'dark' ? '🌙' : '☀️'}</span>
-      </button>
+    <div class="dn-ph-quote-wrap">
+      <div class="dn-ph-frase">"${_dnEsc(_dnFraseHoy.texto)}"</div>
+      <div class="dn-ph-frase-autor">— ${_dnEsc(_dnFraseHoy.autor)}</div>
     </div>
   </div>
 
@@ -545,9 +600,23 @@ function _dnRenderHTML(container) {
    CARGA DE DATOS
    ══════════════════════════════════════════ */
 async function _dnCargarDatos() {
+  console.log('[Dashboard] Iniciando carga...');
   try {
-    const uid = await PsicoRouter.store.ensureUserId();
-    if (!uid) return;
+    // Intentar obtener userId; reintentar hasta 3 veces si tarda
+    let uid = await PsicoRouter.store.ensureUserId();
+    if (!uid) {
+      await new Promise(r => setTimeout(r, 1200));
+      uid = await PsicoRouter.store.ensureUserId();
+    }
+    if (!uid) {
+      console.warn('[Dashboard] Sin sesión activa');
+      const el = document.getElementById('dn-kpi-grid');
+      if (el) el.innerHTML = '<div style="grid-column:1/-1;padding:20px;text-align:center;color:var(--text-muted);font-size:13px">🔒 Sesión no iniciada. Recargá la página.</div>';
+      const tEl = document.getElementById('dn-turnos-list');
+      if (tEl) tEl.innerHTML = '<div class="dn-empty">Recargá la página para iniciar sesión</div>';
+      return;
+    }
+    console.log('[Dashboard] UID ok:', uid);
 
     const hoy   = new Date();
     const _y    = hoy.getFullYear(), _m = hoy.getMonth();
@@ -578,6 +647,11 @@ async function _dnCargarDatos() {
       sb.from('turnos').select('id,fecha,hora,duracion,estado,tipo,notas,paciente_id').eq('user_id', uid).in('fecha', [fecha1, fecha2, fecha3]).order('fecha', { ascending: true }).order('hora', { ascending: true }),
     ]);
 
+    // Chequear errores individuales de Supabase (no tiran exception, ponen .error)
+    const queryErrors = [resPagos, resPagosAnt, resTurnosHoy, resTurnosMes, resTurnosMesAnt, resPacientes, resProximos]
+      .map(r => r.error?.message).filter(Boolean);
+    if (queryErrors.length) console.warn('[Dashboard] Query errors:', queryErrors);
+
     const pagos     = resPagos.data || [];
     const pagosAnt  = resPagosAnt.data || [];
     const pacientes = resPacientes.data || [];
@@ -603,6 +677,8 @@ async function _dnCargarDatos() {
 
     const completadosHoy = turnos.filter(t => ['realizado','completado'].includes((t.estado||'').toLowerCase())).length;
 
+    console.log('[Dashboard] Datos ok — pagos:', pagos.length, '| turnos hoy:', turnos.length, '| pacientes:', pacUnicos);
+
     // Ingresos por semana (para gráfico)
     const semanas = _dnIngresosSemanales(pagos, _y, _m);
 
@@ -615,9 +691,16 @@ async function _dnCargarDatos() {
     _dnRenderProximos(proximos);
     await _dnRenderNombre(turnos.length);
     await _dnRenderNotas();
+    console.log('[Dashboard] Render completo ✓');
 
   } catch(e) {
-    console.error('[DashboardNew]', e.message);
+    console.error('[Dashboard] ERROR:', e.message, e);
+    const kpiEl = document.getElementById('dn-kpi-grid');
+    if (kpiEl) kpiEl.innerHTML = '<div style="grid-column:1/-1;padding:20px;text-align:center;color:var(--text-muted);font-size:13px;font-weight:600">⚠️ ' + (e.message || 'Error') + '<br><small style="opacity:.6">Abrí la consola del navegador (F12) para más detalles</small></div>';
+    const turnosEl = document.getElementById('dn-turnos-list');
+    if (turnosEl) turnosEl.innerHTML = '<div class="dn-empty">⚠️ ' + (e.message || 'Error de conexión') + '</div>';
+    const summEl = document.getElementById('dn-mini-summary');
+    if (summEl) summEl.innerHTML = '⚠️ Error — abrí F12 para ver el detalle';
   }
 }
 
@@ -687,25 +770,25 @@ function _dnRenderKPIs(cobrado, cobradoAnt, pendienteCant, pendienteMonto, pacUn
   const el = document.getElementById('dn-kpi-grid');
   if (!el) return;
   el.innerHTML =
-    '<div class="dn-kpi" style="border-left-color:#10B981" onclick="navigate(\'pagos\')">' +
-      '<div class="dn-kpi-icon-wrap" style="background:rgba(16,185,129,0.12)">💰</div>' +
+    '<div class="dn-kpi teal" onclick="navigate(\'pagos\')">' +
+      '<div class="dn-kpi-icon-wrap teal">💰</div>' +
       '<div class="dn-kpi-value">' + _dnFmt(cobrado) + '</div>' +
       '<div class="dn-kpi-label">Cobrado este mes</div>' +
       '<div class="dn-kpi-tag">' + _dnTrend(cobrado, cobradoAnt) + '</div>' +
     '</div>' +
-    '<div class="dn-kpi" style="border-left-color:#7C3AED" onclick="navigate(\'agenda\')">' +
+    '<div class="dn-kpi violet" onclick="navigate(\'agenda\')">' +
       '<div class="dn-kpi-icon-wrap violet">🗓️</div>' +
       '<div class="dn-kpi-value">' + sesiones + '</div>' +
       '<div class="dn-kpi-label">Sesiones realizadas</div>' +
       '<div class="dn-kpi-tag">' + _dnTrend(sesiones, sesionesAnt) + '</div>' +
     '</div>' +
-    '<div class="dn-kpi" style="border-left-color:#F59E0B" onclick="window._dnIrPendientes()">' +
+    '<div class="dn-kpi amber" onclick="window._dnIrPendientes()">' +
       '<div class="dn-kpi-icon-wrap amber">⏳</div>' +
       '<div class="dn-kpi-value">' + pendienteCant + '</div>' +
       '<div class="dn-kpi-label">Pagos pendientes</div>' +
       '<div class="dn-kpi-tag muted">' + _dnFmt(pendienteMonto) + ' sin cobrar</div>' +
     '</div>' +
-    '<div class="dn-kpi" style="border-left-color:#EC4899" onclick="navigate(\'agenda\')">' +
+    '<div class="dn-kpi rose" onclick="navigate(\'agenda\')">' +
       '<div class="dn-kpi-icon-wrap rose">📅</div>' +
       '<div class="dn-kpi-value">' + turnosHoy + '</div>' +
       '<div class="dn-kpi-label">Turnos hoy</div>' +
@@ -996,13 +1079,11 @@ window._dnIrPendientes = function() {
 PsicoRouter.register('dashboard', {
 
   init(container) {
+    injectDashNewStyles(); // Re-inyectar siempre para que los cambios de CSS se vean
     _dnRenderHTML(container);
   },
 
   async onEnter() {
-    // Siempre traer perfil fresco (foto puede haber cambiado)
-    // Borramos solo el cache sin disparar storeUpdated para no crear loops
-    PsicoRouter.store.perfil = null;
     await _dnCargarDatos();
     clearInterval(_dn.refreshTimer);
     _dn.refreshTimer = setInterval(_dnCargarDatos, 5 * 60 * 1000);
