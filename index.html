@@ -485,58 +485,80 @@ function toggleTheme() {
  * el loop login ↔ dashboard.
  * ─────────────────────────────────────────────────────────── */
 window._psicoAuthReady = new Promise((resolve) => {
+  let _resolved = false;
 
-  // Timeout de seguridad: si getSession tarda más de 8s en mobile, redirigir al login
+  function _resolveOnce() {
+    if (_resolved) return;
+    _resolved = true;
+    clearTimeout(_authTimeout);
+    resolve();
+  }
+
+  // Timeout de seguridad — 12s para cubrir OAuth callback en mobile lento
   const _authTimeout = setTimeout(() => {
+    if (_resolved) return;
     console.warn('[Auth] Timeout esperando sesión → login');
     window.location.replace('/login.html');
-  }, 8000);
+  }, 12000);
 
-  sb.auth.getSession().then(async ({ data, error }) => {
-    clearTimeout(_authTimeout);
-
-    if (error) {
-      console.warn('[Auth] Error getSession:', error.message);
+  async function _verificarSesion(session) {
+    if (!session?.user?.id) {
+      console.warn('[Auth] Sin sesión válida → login');
       window.location.replace('/login.html');
       return;
     }
 
-    const session = data?.session;
-
-    if (!session) {
-      window.location.replace('/login.html');
-      return; // no resolver — la página cambia de todas formas
-    }
-
-    // Exponer userId para el store del router
     window._psicoUserId = session.user.id;
+    console.log('[Auth] ✅ Sesión válida:', session.user.email);
 
-    // ── FALLBACK: verificar/crear perfil si no existe ────────
+    // FALLBACK: crear perfil si no existe (usuarios pre-trigger)
     try {
       const { data: perfilExistente } = await sb
-        .from('profiles')
-        .select('id')
-        .eq('id', session.user.id)
-        .maybeSingle();
-
+        .from('profiles').select('id').eq('id', session.user.id).maybeSingle();
       if (!perfilExistente) {
         await sb.from('profiles').insert({
-          id:         session.user.id,
-          email:      session.user.email,
-          plan:       'free',
-          created_at: new Date().toISOString(),
+          id: session.user.id, email: session.user.email,
+          plan: 'free', created_at: new Date().toISOString(),
         });
         console.log('[Auth] ✅ Perfil creado automáticamente');
       }
     } catch(e) {
-      console.warn('[Auth] No se pudo verificar/crear perfil:', e.message);
+      console.warn('[Auth] Perfil check error (no crítico):', e.message);
     }
 
-    resolve(); // auth confirmado → el router puede navegar
+    _resolveOnce();
+  }
+
+  // ── Estrategia dual: getSession() + onAuthStateChange ──────
+  // getSession() cubre el caso normal (sesión en cookie/localStorage).
+  // onAuthStateChange(SIGNED_IN) cubre el callback OAuth donde el token
+  // llega en el hash de la URL y Supabase lo procesa de forma asíncrona.
+  sb.auth.onAuthStateChange((event, session) => {
+    if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && session && !_resolved) {
+      console.log('[Auth] onAuthStateChange:', event);
+      _verificarSesion(session);
+    }
+    if (event === 'SIGNED_OUT' && !_resolved) {
+      window.location.replace('/login.html');
+    }
+  });
+
+  sb.auth.getSession().then(({ data, error }) => {
+    if (error) {
+      console.warn('[Auth] getSession error:', error.message);
+      if (!_resolved) window.location.replace('/login.html');
+      return;
+    }
+    if (data?.session) {
+      _verificarSesion(data.session);
+    } else {
+      // Sin sesión en getSession → puede que onAuthStateChange la traiga
+      // (caso OAuth callback). Dejar que el timeout actúe si no llega.
+      console.log('[Auth] getSession: sin sesión, esperando onAuthStateChange...');
+    }
   }).catch(e => {
-    clearTimeout(_authTimeout);
     console.warn('[Auth] getSession exception:', e.message);
-    window.location.replace('/login.html');
+    if (!_resolved) window.location.replace('/login.html');
   });
 });
 
