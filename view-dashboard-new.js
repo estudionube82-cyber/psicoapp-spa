@@ -1010,6 +1010,7 @@ async function _dnRenderNombre(turnosHoy) {
   }
 
   /* Avatar: foto real o iniciales */
+  console.log('[Perfil DEBUG]', perfil);
   const avatarEl = document.getElementById('dn-ph-avatar');
   if (avatarEl) {
     if (foto) {
