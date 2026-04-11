@@ -694,6 +694,44 @@ async function abrirSoporte() {
    ══════════════════════════════════════════ */
 const APP_VERSION = Date.now();
 
+/* ══════════════════════════════════════════
+   SERVICE WORKER — registro + auto-update
+   ══════════════════════════════════════════ */
+(function registerPsicoSW() {
+  if (!('serviceWorker' in navigator)) return;
+
+  let refreshing = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (refreshing) return;
+    refreshing = true;
+    window.location.reload();
+  });
+
+  function skipWaiting(reg) {
+    if (reg?.waiting) {
+      reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+    }
+  }
+
+  navigator.serviceWorker.register('/sw.js?v=' + APP_VERSION).then((reg) => {
+    if (reg.waiting) skipWaiting(reg);
+
+    reg.addEventListener('updatefound', () => {
+      const newWorker = reg.installing;
+      if (!newWorker) return;
+      newWorker.addEventListener('statechange', () => {
+        if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+          skipWaiting(reg);
+        }
+      });
+    });
+
+    setInterval(() => reg.update().catch(() => {}), 5 * 60 * 1000);
+  }).catch((err) => {
+    console.warn('[SW] Error al registrar service worker:', err?.message || err);
+  });
+})();
+
 const APP_SCRIPTS = [
   // Router central — DEBE ir primero
   { src: 'app-router.js',           level: 'error' },
