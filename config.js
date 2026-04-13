@@ -6,7 +6,7 @@
 
 const PSICOAPP_CONFIG = {
   SUPA_URL: 'https://terlbqrcampdqtxjbihg.supabase.co',
-  SUPA_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRlcmxicXJjYW1wZHF0eGpiaWhnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI1NzU2NzksImV4cCI6MjA4ODE1MTY3OX0.c0Yhp4Q8Egs1UzWhtFLxQpJfEUi3nsR8t78tNYliZE8',
+  SUPA_KEY: 'sb_publishable_JcHln3pIHt3202QwfWUzow__AXTa3QP',
 
   // ── Links de pago Mercado Pago ──────────────────────────────
   // Reemplazá los valores por tus links reales generados en MP
