@@ -707,56 +707,25 @@ async function abrirSoporte() {
    Los scripts se cargan en orden estricto:
    cada uno espera que el anterior termine.
    ══════════════════════════════════════════ */
+
 const APP_VERSION = '1.0.0';
 
 /* ══════════════════════════════════════════
-   SERVICE WORKER — registro + auto-update
+   SERVICE WORKER — DESACTIVADO
    ══════════════════════════════════════════ */
 if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js')
-      .then(reg => console.log('SW registrado', reg))
-      .catch(err => console.error('SW error', err));
+  window.addEventListener('load', async () => {
+    try {
+      const regs = await navigator.serviceWorker.getRegistrations();
+      for (const reg of regs) {
+        await reg.unregister();
+      }
+      console.log('[SW] Todos los service workers fueron desregistrados');
+    } catch (err) {
+      console.warn('[SW] Error desregistrando service workers:', err);
+    }
   });
 }
-
-/* ══════════════════════════════════════════
-   SERVICE WORKER — registro + auto-update
-   ══════════════════════════════════════════ */
-(function registerPsicoSW() {
-  if (!('serviceWorker' in navigator)) return;
-
-  let refreshing = false;
-  navigator.serviceWorker.addEventListener('controllerchange', () => {
-    if (refreshing) return;
-    refreshing = true;
-    window.location.reload();
-  });
-
-  function skipWaiting(reg) {
-    if (reg?.waiting) {
-      reg.waiting.postMessage({ type: 'SKIP_WAITING' });
-    }
-  }
-
-  navigator.serviceWorker.register('/sw.js?v=' + APP_VERSION).then((reg) => {
-    if (reg.waiting) skipWaiting(reg);
-
-    reg.addEventListener('updatefound', () => {
-      const newWorker = reg.installing;
-      if (!newWorker) return;
-      newWorker.addEventListener('statechange', () => {
-        if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-          skipWaiting(reg);
-        }
-      });
-    });
-
-    setInterval(() => reg.update().catch(() => {}), 5 * 60 * 1000);
-  }).catch((err) => {
-    console.warn('[SW] Error al registrar service worker:', err?.message || err);
-  });
-})();
 
 const APP_SCRIPTS = [
   // Router central — DEBE ir primero

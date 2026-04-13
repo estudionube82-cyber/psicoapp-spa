@@ -1,74 +1,8 @@
-const CACHE_VERSION = 'psicoapp-v6';
-const CACHE_NAME = `${CACHE_VERSION}-runtime`;
-
-function isSupabaseRequest(url) {
-  return url.includes('supabase.co') || url.includes('/functions/v1');
-}
-
-function isNetworkFirst(request) {
-  if (request.mode === 'navigate') return true;
-  const dest = request.destination;
-  return dest === 'document' || dest === 'script' || dest === 'style';
-}
-
-function isStaleWhileRevalidate(request) {
-  const dest = request.destination;
-  return dest === 'image' || dest === 'font';
-}
-
-self.addEventListener('install', (event) => {
-  console.log('[SW] instalado');
+self.addEventListener('install', () => {
+  console.log('[SW] deshabilitado');
 });
 
 self.addEventListener('activate', (event) => {
-  event.waitUntil(self.clients.claim());
+  event.waitUntil(self.registration.unregister());
 });
-
-self.addEventListener('fetch', (event) => {
-  const { request } = event;
-  if (request.method !== 'GET') return;
-
-  const url = request.url;
-  if (isSupabaseRequest(url)) {
-    event.respondWith(fetch(request));
-    return;
-  }
-
-  if (isNetworkFirst(request)) {
-    event.respondWith(
-      fetch(request)
-        .then((response) => {
-          if (response && response.ok) {
-            const copy = response.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));
-          }
-          return response;
-        })
-        .catch(() => caches.match(request))
-    );
-    return;
-  }
-
-  if (isStaleWhileRevalidate(request)) {
-    event.respondWith(
-      caches.match(request).then((cached) => {
-        const networkFetch = fetch(request)
-          .then((response) => {
-            if (response && response.ok) {
-              const copy = response.clone();
-              caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));
-            }
-            return response;
-          })
-          .catch(() => cached);
-
-        return cached || networkFetch;
-      })
-    );
-    return;
-  }
-
-  event.respondWith(
-    fetch(request).catch(() => caches.match(request))
-  );
 });
