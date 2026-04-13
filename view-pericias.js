@@ -462,23 +462,30 @@ async function perCambiarEstado(nuevoEstado) {
     await _perCargar();
   } catch(e) {
     console.error('[Pericias] Error al cambiar estado:', e.message);
-    alert('⚠️ Error al actualizar el estado. Intentá de nuevo.');
+    paNetworkError('actualizar el estado');
   }
 }
 
-async function perEliminar() {
+function perEliminar() {
   if (!_perSeleccionada) return;
-  if (!confirm(`¿Eliminar la pericia "${_perSeleccionada.expediente}"?`)) return;
-  const uid = PsicoRouter.store.userId;
-  try {
-    const { error } = await sb.from('pericias').delete().eq('id', _perSeleccionada.id).eq('user_id', uid);
-    if (error) throw error;
-    perCerrarDetalle();
-    await _perCargar();
-  } catch(e) {
-    console.error('[Pericias] Error al eliminar:', e.message);
-    alert('⚠️ Error al eliminar la pericia. Intentá de nuevo.');
-  }
+  paConfirm({
+    icon: '⚖️',
+    title: '¿Eliminar pericia?',
+    msg: `Se eliminará la pericia "${escHtml(_perSeleccionada.expediente)}". Esta acción no se puede deshacer.`,
+    okLabel: 'Eliminar',
+    onOk: async () => {
+      const uid = PsicoRouter.store.userId;
+      try {
+        const { error } = await sb.from('pericias').delete().eq('id', _perSeleccionada.id).eq('user_id', uid);
+        if (error) throw error;
+        perCerrarDetalle();
+        await _perCargar();
+      } catch(e) {
+        console.error('[Pericias] Error al eliminar:', e.message);
+        paNetworkError('eliminar la pericia');
+      }
+    }
+  });
 }
 
 

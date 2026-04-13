@@ -9,7 +9,9 @@ const SUPA_URL         = Deno.env.get('SUPABASE_URL')!
 const SUPA_SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 const OPENAI_KEY       = Deno.env.get('OPENAI_API_KEY')!
 
-const IA_LIMITS: Record<string, number> = { free: 5, pro: 25, max: 80 }
+// Límites sincronizados con planService.js (PLAN_LIMITS.informesIA)
+// Si cambiás estos valores, actualizá también planService.js
+const IA_LIMITS: Record<string, number> = { free: 1, pro: 10, max: 25 }
 
 // ── Decodifica el JWT y extrae el user_id (sub) sin hacer llamadas a auth API ─
 function getUserIdFromJWT(token: string): string | null {

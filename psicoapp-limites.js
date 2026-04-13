@@ -1,8 +1,11 @@
 // ============================================================
-//  PSICOAPP — SISTEMA DE LÍMITES DE PLAN
-//  Incluir en todas las páginas que usen WA o IA:
-//  <script src="/config.js"></script>
-//  <script src="/psicoapp-limites.js"></script>
+//  ⚠️  MÓDULO DEPRECADO — NO USAR
+//
+//  Los límites de plan están definidos en planService.js (PLAN_LIMITS).
+//  La lógica de verificación está en suscripcion-control.js.
+//  Este archivo NO está cargado en index.html y no debe incluirse.
+//
+//  Se mantiene solo como referencia histórica.
 // ============================================================
 
 const PLANES = {

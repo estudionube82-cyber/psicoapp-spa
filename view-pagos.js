@@ -246,7 +246,7 @@ function _pvBindEvents() {
 
   _pvQ('#pv-fab-btn').addEventListener('click', () => {
     // Resetear form
-    _pvQ('#pv-f-fecha').value = new Date().toISOString().split('T')[0];
+    _pvQ('#pv-f-fecha').value = localDateString();
     _pvQ('#pv-f-monto').value = '';
     _pvQ('#pv-f-paciente').value = '';
     _pvQ('#pv-msg-error').style.display = 'none';
@@ -432,16 +432,23 @@ function _pvCerrarDetalle() {
   _pv.sel = null;
 }
 
-async function _pvEliminar() {
+function _pvEliminar() {
   if (!_pv.sel) return;
-  if (!confirm('¿Eliminar este pago?')) return;
-  try {
-    const { error } = await sb.from('pagos').delete().eq('id', _pv.sel.id);
-    if (error) throw error;
-    _pvCerrarDetalle();
-    _pvToast('🗑 Pago eliminado');
-    await _pvCargarTodo();
-  } catch(e) { _pvToast('⚠️ Error: ' + e.message); }
+  paConfirm({
+    icon: '💸',
+    title: '¿Eliminar pago?',
+    msg: 'Esta acción no se puede deshacer.',
+    okLabel: 'Eliminar',
+    onOk: async () => {
+      try {
+        const { error } = await sb.from('pagos').delete().eq('id', _pv.sel.id);
+        if (error) throw error;
+        _pvCerrarDetalle();
+        _pvToast('🗑 Pago eliminado');
+        await _pvCargarTodo();
+      } catch(e) { _pvToast('⚠️ Error: ' + e.message); }
+    }
+  });
 }
 
 

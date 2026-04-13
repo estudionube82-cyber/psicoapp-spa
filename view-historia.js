@@ -911,14 +911,22 @@ async function hcGuardarSesion() {
   }
 }
 
-async function hcEliminarSesion() {
-  if (!_hcEditandoId || !confirm('¿Eliminar esta sesión?')) return;
-  const { error } = await sb.from('sesiones_clinicas').delete().eq('id', _hcEditandoId).eq('user_id', _hcUserId);
-  if (error) { hcToast('❌ Error al eliminar'); return; }
-  hcCerrarModalSesion();
-  hcToast('🗑️ Sesión eliminada');
-  await _hcCargarSesiones();
-  hcVolverDetalle();
+function hcEliminarSesion() {
+  if (!_hcEditandoId) return;
+  paConfirm({
+    icon: '📋',
+    title: '¿Eliminar sesión?',
+    msg: 'Se eliminará el registro de esta sesión clínica. Esta acción no se puede deshacer.',
+    okLabel: 'Eliminar',
+    onOk: async () => {
+      const { error } = await sb.from('sesiones_clinicas').delete().eq('id', _hcEditandoId).eq('user_id', _hcUserId);
+      if (error) { hcToast('❌ Error al eliminar'); return; }
+      hcCerrarModalSesion();
+      hcToast('🗑️ Sesión eliminada');
+      await _hcCargarSesiones();
+      hcVolverDetalle();
+    }
+  });
 }
 
 

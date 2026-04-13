@@ -28,6 +28,19 @@ function paConfirm({ icon='🗑️', title='¿Estás seguro?', msg='Esta acción
   document.getElementById('pa-confirm-ok-btn').onclick = () => { close(); if(onOk) onOk(); };
 }
 
+// ── FECHA LOCAL (sin bug de timezone UTC) ─────────────────────
+// Uso: localDateString()           → fecha de hoy  "2026-04-13"
+//      localDateString(someDate)   → fecha del Date "2026-03-01"
+// NUNCA usar new Date().toISOString().split('T')[0] para fechas locales
+// porque después de las 21hs en Argentina (UTC-3) da el día siguiente.
+function localDateString(date) {
+  const d = date instanceof Date ? date : new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
 // ── DEBOUNCE BÚSQUEDA ──────────────────────────────────────────
 let _searchTimer = null;
 function debouncedFiltrar(fn, delay=280) {

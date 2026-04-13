@@ -355,8 +355,8 @@ async function _dashCargarDatos() {
     // ⚠️ toISOString() es UTC — usar métodos locales para no adelantar un día
     // en Argentina después de las 21 hs (UTC-3 → UTC sería el día siguiente).
     const fechaHoy = `${hoy.getFullYear()}-${String(hoy.getMonth()+1).padStart(2,'0')}-${String(hoy.getDate()).padStart(2,'0')}`;
-    const primerDiaMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1).toISOString().split('T')[0];
-    const ultimoDiaMes = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0).toISOString().split('T')[0];
+    const primerDiaMes = localDateString(new Date(hoy.getFullYear(), hoy.getMonth(), 1));
+    const ultimoDiaMes = localDateString(new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0));
 
     /* 4 queries en paralelo — incluye pacientes reales */
     const [resPagos, resTurnosHoy, resTurnosMes, resPacientes] = await Promise.all([
@@ -558,12 +558,12 @@ function _dashRenderTurnos(turnos, hoy) {
     const pac      = t.pacientes;
     const tipo     = (t.tipo || '').toLowerCase();
     const esEvento = tipo === 'evento' || !t.paciente_id;
-    const nombre   = esEvento
+    const nombre   = escHtml(esEvento
       ? (t.notas || 'Evento')
       : ((pac && (pac.nombre || pac.apellido))
           ? `${pac.nombre || ''} ${pac.apellido || ''}`.trim()
-          : 'Paciente');
-    const meta     = esEvento ? `Evento · ${duracion}` : `Sesión · ${duracion}`;
+          : 'Paciente'));
+    const meta     = esEvento ? `Evento · ${escHtml(duracion)}` : `Sesión · ${escHtml(duracion)}`;
     const icono    = esEvento ? '🟠' : '🟢';
     const tag      = esEvento
       ? '<span class="dt-tag tag-evento">EVENTO</span>'

@@ -759,15 +759,22 @@ function pacIrHistoriaClinica() {
   navigate('historia');
 }
 
-async function pacEliminarPaciente() {
+function pacEliminarPaciente() {
   if (!_pacSeleccionado) return;
-  if (!confirm(`¿Eliminar a ${_pacSeleccionado.nombre} ${_pacSeleccionado.apellido}?`)) return;
-  const _uid = PsicoRouter.store.userId;
-  await sb.from('pacientes').update({ activo: false }).eq('id', _pacSeleccionado.id).eq('user_id', _uid);
-  PsicoRouter.store.invalidatePacientes();
-  window.dispatchEvent(new CustomEvent('storeUpdated', { detail: { type: 'pacientes' } }));
-  pacCerrarDetalle();
-  await pacCargar();
+  paConfirm({
+    icon: '👤',
+    title: '¿Eliminar paciente?',
+    msg: `Se eliminará a <strong>${escHtml(_pacSeleccionado.nombre)} ${escHtml(_pacSeleccionado.apellido)}</strong> y no aparecerá más en la lista. Sus pagos e historia clínica se conservan.`,
+    okLabel: 'Eliminar',
+    onOk: async () => {
+      const _uid = PsicoRouter.store.userId;
+      await sb.from('pacientes').update({ activo: false }).eq('id', _pacSeleccionado.id).eq('user_id', _uid);
+      PsicoRouter.store.invalidatePacientes();
+      window.dispatchEvent(new CustomEvent('storeUpdated', { detail: { type: 'pacientes' } }));
+      pacCerrarDetalle();
+      await pacCargar();
+    }
+  });
 }
 
 function pacFormatFecha(f) {
@@ -781,7 +788,7 @@ async function pacCargarProximoTurno(pacienteId) {
   _pacProximoTurno = null;
   document.getElementById('pac-proximoTurnoPA').style.display = 'none';
   try {
-    const hoy = new Date().toISOString().split('T')[0];
+    const hoy = localDateString();
     const { data } = await sb
       .from('turnos')
       .select('id, fecha, hora')
@@ -849,14 +856,14 @@ function pacParsearFechaHora(texto) {
   }
   if (!fecha && /mañana/i.test(texto)) {
     const man = new Date(); man.setDate(man.getDate()+1);
-    fecha = man.toISOString().split('T')[0];
+    fecha = localDateString(man);
   }
   return { fecha, hora };
 }
 
 async function pacProcesarReprogramar() {
   const nuevaFechaTexto = document.getElementById('pac-reprogramarInput').value.trim();
-  if (!nuevaFechaTexto) { alert('Escribí la nueva fecha/hora primero'); return; }
+  if (!nuevaFechaTexto) { paNetworkError('reprogramar: escribí la nueva fecha/hora primero'); return; }
   const nombre = _pacActualIA ? _pacActualIA.nombre
     : document.getElementById('pac-det-nombre').textContent.split(' ')[0];
   const turnoActual = _pacProximoTurno

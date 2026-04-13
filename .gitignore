@@ -1,0 +1,25 @@
+# Credenciales — NUNCA subir al repo
+config.js
+
+# Dependencias
+node_modules/
+
+# Build output
+dist/
+.vercel/
+
+# Sistema operativo
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Archivos temporales y zips
+*.zip
+*.tar.gz
+~$*

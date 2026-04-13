@@ -7,13 +7,9 @@
  */
 
 /* ─── Límites por plan ─────────────────────────────────── */
+// Fuente de verdad: PlanService.getLimits() — definidos en planService.js
 function getPlanLimits(plan) {
-  const limits = {
-    free: { dias: 15, whatsapp: 20,  informesIA: 1  },
-    pro:  { dias: null, whatsapp: 100, informesIA: 3  },
-    max:  { dias: null, whatsapp: 250, informesIA: 25 },
-  };
-  return limits[plan] || limits.free;
+  return PlanService.getLimits(plan);
 }
 
 /* ─── Helpers internos ─────────────────────────────────── */

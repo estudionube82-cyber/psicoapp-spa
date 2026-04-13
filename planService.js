@@ -9,7 +9,19 @@ const PlanService = (() => {
   let _cacheTime = 0
   const CACHE_TTL = 5 * 60 * 1000 // 5 minutos
 
-  const IA_LIMITS = { free: 5, pro: 25, max: 80 }
+  // ── Fuente única de verdad para todos los límites de plan ──
+  const PLAN_LIMITS = {
+    free: { dias: 15, whatsapp: 20,  informesIA: 1  },
+    pro:  { dias: null, whatsapp: 100, informesIA: 10 },
+    max:  { dias: null, whatsapp: 250, informesIA: 25 },
+  }
+
+  // Alias legacy — se mantiene para no romper código que usa ia_limit
+  const IA_LIMITS = {
+    free: PLAN_LIMITS.free.informesIA,
+    pro:  PLAN_LIMITS.pro.informesIA,
+    max:  PLAN_LIMITS.max.informesIA,
+  }
 
   function _getSb() {
     if (typeof sb !== 'undefined') return sb
@@ -94,5 +106,9 @@ const PlanService = (() => {
     return plan.plan
   }
 
-  return { getPlan, invalidar, puedeUsarIA, nombrePlan }
+  function getLimits(plan) {
+    return PLAN_LIMITS[plan] || PLAN_LIMITS.free
+  }
+
+  return { getPlan, invalidar, puedeUsarIA, nombrePlan, getLimits, PLAN_LIMITS }
 })()

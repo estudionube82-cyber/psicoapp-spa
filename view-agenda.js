@@ -868,13 +868,70 @@
     const _pacHidden   = agQ('ag-f-paciente');
     const _pacWrap     = agQ('ag-pac-wrap');
 
-    // Renderiza la lista de pacientes filtrada dentro del wrap (flujo normal, sin position tricks)
+    // Mobile: true si el dispositivo tiene touch o es pantalla pequeña
+    const _isMobile = () => window.innerWidth < 768 || ('ontouchstart' in window);
+
+    // Oculta y resetea el dropdown (incluyendo position:fixed si aplica)
+    function _hideDropdown() {
+      _pacDropdown.style.display   = 'none';
+      _pacDropdown.style.position  = '';
+      _pacDropdown.style.top       = '';
+      _pacDropdown.style.left      = '';
+      _pacDropdown.style.width     = '';
+      _pacDropdown.style.zIndex    = '';
+      _pacDropdown.style.boxShadow = '';
+      _pacDropdown.style.border    = '';
+      _pacDropdown.style.borderRadius = '';
+      if (_pacWrap) _pacWrap.style.borderColor = 'var(--border,#E5E2F5)';
+    }
+
+    // Selección de paciente — separada para poder llamarse desde click Y touchend
+    function _selectPaciente(item) {
+      const p = _pacMatches[parseInt(item.dataset.i)];
+      if (!p) return;
+      const nombre = `${p.apellido || ''}, ${p.nombre || ''}`.trim().replace(/^,\s*/, '');
+      _pacHidden.value = p.id;
+      _pacSearch.value = nombre;
+      _hideDropdown();
+      if (_pacWrap) _pacWrap.style.borderColor = 'var(--primary,#5B2FA8)';
+    }
+
+    // En mobile: saca el dropdown del flujo del modal (position:fixed) para evitar
+    // que quede clipado por overflow-y:auto del .ag-modal o que el teclado lo tape.
+    function _posicionarDropdownMobile() {
+      if (!_isMobile()) return;
+      const wrapRect = _pacWrap.getBoundingClientRect();
+      const searchRect = _pacSearch.getBoundingClientRect();
+      const spaceBelow = window.innerHeight - searchRect.bottom;
+      const spaceAbove = searchRect.top;
+      const dropH = Math.min(260, _pacMatches.length * 46 + 16);
+
+      _pacDropdown.style.position   = 'fixed';
+      _pacDropdown.style.left       = wrapRect.left + 'px';
+      _pacDropdown.style.width      = wrapRect.width + 'px';
+      _pacDropdown.style.zIndex     = '9999';
+      _pacDropdown.style.maxHeight  = '260px';
+      _pacDropdown.style.overflowY  = 'auto';
+      _pacDropdown.style.background = 'var(--surface,#fff)';
+      _pacDropdown.style.border     = '1.5px solid var(--primary,#5B2FA8)';
+      _pacDropdown.style.borderRadius = '10px';
+      _pacDropdown.style.boxShadow  = '0 8px 32px rgba(91,47,168,0.18)';
+      _pacDropdown.style.webkitOverflowScrolling = 'touch';
+
+      // Mostrar debajo si hay espacio, sino arriba
+      if (spaceBelow >= dropH || spaceBelow >= spaceAbove) {
+        _pacDropdown.style.top = (searchRect.bottom + 4) + 'px';
+      } else {
+        _pacDropdown.style.top = (searchRect.top - dropH - 4) + 'px';
+      }
+    }
+
+    // Renderiza la lista de pacientes filtrada
     function _renderDropdown(mostrarTodos = false) {
       const q = (_pacSearch.value || '').toLowerCase().trim();
 
       if (!q && !mostrarTodos) {
-        _pacDropdown.style.display = 'none';
-        if (_pacWrap) _pacWrap.style.borderColor = 'var(--border,#E5E2F5)';
+        _hideDropdown();
         return;
       }
 
@@ -894,23 +951,24 @@
         _pacDropdown.innerHTML = _pacMatches.map((p, i) => {
           const nombre = `${p.apellido || ''}, ${p.nombre || ''}`.trim().replace(/^,\s*/, '');
           return `<div class="ag-pac-item" data-i="${i}"
-                       style="padding:11px 14px;cursor:pointer;font-size:13px;font-weight:600;
+                       style="padding:13px 14px;cursor:pointer;font-size:14px;font-weight:600;
                               border-bottom:1px solid var(--border,#E5E2F5);
                               color:var(--text,#1E1040);background:var(--surface,#fff);
+                              -webkit-tap-highlight-color:rgba(0,0,0,0);
                               transition:background .1s">
                     ${escHtml(nombre)}
                   </div>`;
         }).join('');
 
         _pacDropdown.querySelectorAll('.ag-pac-item').forEach(item => {
-          item.addEventListener('mousedown', e => e.preventDefault()); // evita blur antes del click
-          item.addEventListener('click', () => {
-            const p      = _pacMatches[parseInt(item.dataset.i)];
-            const nombre = `${p.apellido || ''}, ${p.nombre || ''}`.trim().replace(/^,\s*/, '');
-            _pacHidden.value = p.id;
-            _pacSearch.value = nombre;
-            _pacDropdown.style.display = 'none';
-            if (_pacWrap) _pacWrap.style.borderColor = 'var(--primary,#5B2FA8)';
+          // pointerdown preventDefault: evita blur en mouse Y en touch (reemplaza mousedown)
+          item.addEventListener('pointerdown', e => e.preventDefault());
+          // click: desktop y mobile (después de touchend)
+          item.addEventListener('click', () => _selectPaciente(item));
+          // touchend: selección inmediata en mobile, sin esperar el click sintético (300ms)
+          item.addEventListener('touchend', e => {
+            e.preventDefault(); // evita el click sintético duplicado
+            _selectPaciente(item);
           });
           item.addEventListener('mouseover', () => { item.style.background = 'var(--primary-light,#EDE9FE)'; });
           item.addEventListener('mouseout',  () => { item.style.background = 'var(--surface,#fff)'; });
@@ -919,6 +977,9 @@
 
       _pacDropdown.style.display = 'block';
       if (_pacWrap) _pacWrap.style.borderColor = 'var(--primary,#5B2FA8)';
+
+      // En mobile: position:fixed para escapar del overflow del modal
+      _posicionarDropdownMobile();
     }
 
     // Foco/Click/Touch → mostrar todos. Tipeo → filtrar.
@@ -927,10 +988,11 @@
     _pacSearch.addEventListener('touchstart', () => _renderDropdown(true), { passive: true });
     _pacSearch.addEventListener('input',      () => _renderDropdown(false));
     _pacSearch.addEventListener('blur',       () => {
+      // En mobile pointerdown ya previno el blur al tocar un item.
+      // Este timeout cubre el caso de click fuera del dropdown.
       setTimeout(() => {
-        _pacDropdown.style.display = 'none';
-        if (_pacWrap) _pacWrap.style.borderColor = 'var(--border,#E5E2F5)';
-      }, 200);
+        if (_pacDropdown.style.display !== 'none') _hideDropdown();
+      }, 250);
     });
 
     // ── Swipe horizontal para navegar (mobile) ──────────────
