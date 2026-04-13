@@ -17,25 +17,11 @@ function isStaleWhileRevalidate(request) {
 }
 
 self.addEventListener('install', (event) => {
-  event.waitUntil(self.skipWaiting());
+  console.log('[SW] instalado');
 });
 
 self.addEventListener('activate', (event) => {
-  event.waitUntil(
-    caches.keys().then((keys) =>
-      Promise.all(
-        keys
-          .filter((key) => !key.startsWith(CACHE_VERSION))
-          .map((key) => caches.delete(key))
-      )
-    ).then(() => self.clients.claim())
-  );
-});
-
-self.addEventListener('message', (event) => {
-  if (event.data && event.data.type === 'SKIP_WAITING') {
-    self.skipWaiting();
-  }
+  event.waitUntil(self.clients.claim());
 });
 
 self.addEventListener('fetch', (event) => {

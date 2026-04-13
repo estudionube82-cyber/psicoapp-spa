@@ -707,7 +707,18 @@ async function abrirSoporte() {
    Los scripts se cargan en orden estricto:
    cada uno espera que el anterior termine.
    ══════════════════════════════════════════ */
-const APP_VERSION = Date.now();
+const APP_VERSION = '1.0.0';
+
+/* ══════════════════════════════════════════
+   SERVICE WORKER — registro + auto-update
+   ══════════════════════════════════════════ */
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js')
+      .then(reg => console.log('SW registrado', reg))
+      .catch(err => console.error('SW error', err));
+  });
+}
 
 /* ══════════════════════════════════════════
    SERVICE WORKER — registro + auto-update
