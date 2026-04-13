@@ -20,6 +20,10 @@
   let _todosTurnos = [];
   let _todosPacientes = [];
   let _pacMatches     = [];   // resultados actuales del autocomplete
+  let _pacSearchEl    = null;
+  let _pacDropdownEl  = null;
+  let _pacHiddenEl    = null;
+  let _pacWrapEl      = null;
   let _fechaActual = new Date(getTodayLocal());
   let _hoy         = new Date(getTodayLocal());
   let _turnoSel    = null;
@@ -136,8 +140,106 @@
   // ────────────────────────────────────────────────────────
 
   function _rellenarSelectPaciente() {
-    /* No-op: el select fue reemplazado por el autocomplete.
-       Se conserva la firma para no romper los listeners de storeUpdated. */
+    // El "select" fue reemplazado por autocomplete custom.
+    // Mantener esta función como punto central para refresh + debug.
+    console.log('[PatientSelector] patients loaded:', _todosPacientes.length);
+    if (_pacSearchEl && _pacDropdownEl && _pacDropdownEl.style.display === 'block') {
+      _renderDropdownPacientes(true);
+    }
+  }
+
+  async function _asegurarPacientesCargados(intentos = 4, esperaMs = 180) {
+    for (let i = 0; i <= intentos; i++) {
+      if (Array.isArray(_todosPacientes) && _todosPacientes.length > 0) {
+        console.log('[PatientSelector] patients loaded:', _todosPacientes.length);
+        return _todosPacientes;
+      }
+      try {
+        _todosPacientes = await PsicoRouter.store.ensurePacientes();
+      } catch (_) { /* retry */ }
+      if (Array.isArray(_todosPacientes) && _todosPacientes.length > 0) {
+        console.log('[PatientSelector] patients loaded:', _todosPacientes.length);
+        return _todosPacientes;
+      }
+      await new Promise(r => setTimeout(r, esperaMs));
+    }
+    console.log('[PatientSelector] patients loaded:', (_todosPacientes || []).length);
+    return _todosPacientes || [];
+  }
+
+  function _renderDropdownPacientes(mostrarTodos = false) {
+    if (!_pacSearchEl || !_pacDropdownEl) return;
+
+    const q = (_pacSearchEl.value || '').toLowerCase().trim();
+    if (!q && !mostrarTodos) {
+      _pacDropdownEl.style.display = 'none';
+      if (_pacWrapEl) _pacWrapEl.style.borderColor = 'var(--border,#E5E2F5)';
+      return;
+    }
+
+    _pacMatches = q
+      ? _todosPacientes.filter(p => {
+          const full = `${p.nombre || ''} ${p.apellido || ''}`.toLowerCase();
+          const inv  = `${p.apellido || ''} ${p.nombre || ''}`.toLowerCase();
+          return full.includes(q) || inv.includes(q);
+        })
+      : [..._todosPacientes];
+
+    if (!_pacMatches.length) {
+      _pacDropdownEl.innerHTML = `<div style="padding:12px 14px;font-size:13px;
+        color:var(--text-muted,#7C6FAE)">
+        ${q ? '😕 Sin resultados para "' + escHtml(q) + '"' : 'No hay pacientes cargados'}</div>`;
+    } else {
+      _pacDropdownEl.innerHTML = _pacMatches.map((p, i) => {
+        const nombre = `${p.apellido || ''}, ${p.nombre || ''}`.trim().replace(/^,\s*/, '');
+        return `<div class="ag-pac-item" data-i="${i}"
+                     style="padding:11px 14px;cursor:pointer;font-size:13px;font-weight:600;
+                            border-bottom:1px solid var(--border,#E5E2F5);
+                            color:var(--text,#1E1040);background:var(--surface,#fff);
+                            transition:background .1s">
+                  ${escHtml(nombre)}
+                </div>`;
+      }).join('');
+
+      _pacDropdownEl.querySelectorAll('.ag-pac-item').forEach(item => {
+        item.addEventListener('mousedown', e => e.preventDefault()); // evita blur antes del click
+        item.addEventListener('click', () => {
+          const p = _pacMatches[parseInt(item.dataset.i)];
+          if (!p) return;
+          const nombre = `${p.apellido || ''}, ${p.nombre || ''}`.trim().replace(/^,\s*/, '');
+          if (_pacHiddenEl) _pacHiddenEl.value = p.id;
+          _pacSearchEl.value = nombre;
+          _pacDropdownEl.style.display = 'none';
+          if (_pacWrapEl) _pacWrapEl.style.borderColor = 'var(--primary,#5B2FA8)';
+        });
+        item.addEventListener('mouseover', () => { item.style.background = 'var(--primary-light,#EDE9FE)'; });
+        item.addEventListener('mouseout',  () => { item.style.background = 'var(--surface,#fff)'; });
+      });
+    }
+
+    _pacDropdownEl.style.display = 'block';
+    if (_pacWrapEl) _pacWrapEl.style.borderColor = 'var(--primary,#5B2FA8)';
+  }
+
+  function _initPatientSelector() {
+    _pacSearchEl   = agQ('ag-f-paciente-search');
+    _pacDropdownEl = agQ('ag-f-paciente-dropdown');
+    _pacHiddenEl   = agQ('ag-f-paciente');
+    _pacWrapEl     = agQ('ag-pac-wrap');
+    if (!_pacSearchEl || !_pacDropdownEl) return;
+    if (_pacSearchEl.dataset.bound === '1') return;
+    _pacSearchEl.dataset.bound = '1';
+
+    _pacSearchEl.addEventListener('focus',      () => _renderDropdownPacientes(true));
+    _pacSearchEl.addEventListener('click',      () => _renderDropdownPacientes(true));
+    _pacSearchEl.addEventListener('touchstart', () => _renderDropdownPacientes(true), { passive: true });
+    _pacSearchEl.addEventListener('input',      () => _renderDropdownPacientes(false));
+    _pacSearchEl.addEventListener('blur',       () => {
+      setTimeout(() => {
+        if (_pacDropdownEl) _pacDropdownEl.style.display = 'none';
+        if (_pacWrapEl) _pacWrapEl.style.borderColor = 'var(--border,#E5E2F5)';
+      }, 200);
+    });
   }
 
   /**
@@ -857,6 +959,7 @@
         PsicoRouter.store.ensurePacientes().then(p => {
           _todosPacientes = p;
           _rellenarSelectPaciente();
+          _renderDropdownPacientes(true);
         });
       }
     });
@@ -877,76 +980,8 @@
       setView('dia');
     });
 
-    // ── Buscador de paciente ────────────────────────────────
-    const _pacSearch   = agQ('ag-f-paciente-search');
-    const _pacDropdown = agQ('ag-f-paciente-dropdown');
-    const _pacHidden   = agQ('ag-f-paciente');
-    const _pacWrap     = agQ('ag-pac-wrap');
-
-    // Renderiza la lista de pacientes filtrada dentro del wrap (flujo normal, sin position tricks)
-    function _renderDropdown(mostrarTodos = false) {
-      const q = (_pacSearch.value || '').toLowerCase().trim();
-
-      if (!q && !mostrarTodos) {
-        _pacDropdown.style.display = 'none';
-        if (_pacWrap) _pacWrap.style.borderColor = 'var(--border,#E5E2F5)';
-        return;
-      }
-
-      _pacMatches = q
-        ? _todosPacientes.filter(p => {
-            const full = `${p.nombre || ''} ${p.apellido || ''}`.toLowerCase();
-            const inv  = `${p.apellido || ''} ${p.nombre || ''}`.toLowerCase();
-            return full.includes(q) || inv.includes(q);
-          })
-        : [..._todosPacientes];
-
-      if (!_pacMatches.length) {
-        _pacDropdown.innerHTML = `<div style="padding:12px 14px;font-size:13px;
-          color:var(--text-muted,#7C6FAE)">
-          ${q ? '😕 Sin resultados para "' + escHtml(q) + '"' : 'No hay pacientes cargados'}</div>`;
-      } else {
-        _pacDropdown.innerHTML = _pacMatches.map((p, i) => {
-          const nombre = `${p.apellido || ''}, ${p.nombre || ''}`.trim().replace(/^,\s*/, '');
-          return `<div class="ag-pac-item" data-i="${i}"
-                       style="padding:11px 14px;cursor:pointer;font-size:13px;font-weight:600;
-                              border-bottom:1px solid var(--border,#E5E2F5);
-                              color:var(--text,#1E1040);background:var(--surface,#fff);
-                              transition:background .1s">
-                    ${escHtml(nombre)}
-                  </div>`;
-        }).join('');
-
-        _pacDropdown.querySelectorAll('.ag-pac-item').forEach(item => {
-          item.addEventListener('mousedown', e => e.preventDefault()); // evita blur antes del click
-          item.addEventListener('click', () => {
-            const p      = _pacMatches[parseInt(item.dataset.i)];
-            const nombre = `${p.apellido || ''}, ${p.nombre || ''}`.trim().replace(/^,\s*/, '');
-            _pacHidden.value = p.id;
-            _pacSearch.value = nombre;
-            _pacDropdown.style.display = 'none';
-            if (_pacWrap) _pacWrap.style.borderColor = 'var(--primary,#5B2FA8)';
-          });
-          item.addEventListener('mouseover', () => { item.style.background = 'var(--primary-light,#EDE9FE)'; });
-          item.addEventListener('mouseout',  () => { item.style.background = 'var(--surface,#fff)'; });
-        });
-      }
-
-      _pacDropdown.style.display = 'block';
-      if (_pacWrap) _pacWrap.style.borderColor = 'var(--primary,#5B2FA8)';
-    }
-
-    // Foco/Click/Touch → mostrar todos. Tipeo → filtrar.
-    _pacSearch.addEventListener('focus',      () => _renderDropdown(true));
-    _pacSearch.addEventListener('click',      () => _renderDropdown(true));
-    _pacSearch.addEventListener('touchstart', () => _renderDropdown(true), { passive: true });
-    _pacSearch.addEventListener('input',      () => _renderDropdown(false));
-    _pacSearch.addEventListener('blur',       () => {
-      setTimeout(() => {
-        _pacDropdown.style.display = 'none';
-        if (_pacWrap) _pacWrap.style.borderColor = 'var(--border,#E5E2F5)';
-      }, 200);
-    });
+    // ── Buscador de paciente (autocomplete custom) ─────────
+    _initPatientSelector();
 
     // ── Swipe horizontal para navegar (mobile) ──────────────
     let _swipeX = 0, _swipeY = 0;
@@ -1554,11 +1589,13 @@
     // Auto-mostrar lista de pacientes al abrir el modal (modo turno)
     if (_modoModal === 'turno') {
       setTimeout(() => {
-        const ps = agQ('ag-f-paciente-search');
-        if (ps) {
-          ps.focus();
-          _renderDropdown(true);
-        }
+        _asegurarPacientesCargados().then(() => {
+          const ps = agQ('ag-f-paciente-search');
+          if (ps) {
+            ps.focus();
+            _renderDropdownPacientes(true);
+          }
+        });
       }, 120);
     }
   }
