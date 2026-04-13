@@ -20,6 +20,10 @@
   let _todosTurnos = [];
   let _todosPacientes = [];
   let _pacMatches     = [];   // resultados actuales del autocomplete
+  let _pacSearchEl    = null;
+  let _pacDropdownEl  = null;
+  let _pacHiddenEl    = null;
+  let _pacWrapEl      = null;
   let _fechaActual = new Date(getTodayLocal());
   let _hoy         = new Date(getTodayLocal());
   let _turnoSel    = null;
@@ -74,6 +78,15 @@
       timeZone: 'America/Argentina/Buenos_Aires'
     });
   }
+  // ── Construye un Date LOCAL desde string 'YYYY-MM-DD' sin conversión UTC ──
+  // new Date('2025-04-11') → UTC midnight → Argentina = 21:00 del 10 → BUG
+  // parseDateLocal('2025-04-11') → medianoche local → correcto
+  function parseDateLocal(str) {
+    console.log('[Agenda FIX] parseDateLocal ejecutado:', str);
+    if (!str) return new Date();
+    const [y, m, d] = str.split('-').map(Number);
+    return new Date(y, m - 1, d, 0, 0, 0, 0);
+  }
 
   function turnosDeFecha(fecha) {
     const key = fmtDate(fecha);
@@ -90,7 +103,8 @@
     return nombrePaciente(t);
   }
   function lunesDe(d) {
-    const lunes = new Date(d);
+    // Si d es string 'YYYY-MM-DD', parsear local para evitar desfase UTC
+    const lunes = typeof d === 'string' ? parseDateLocal(d) : new Date(d);
     lunes.setDate(lunes.getDate() - ((lunes.getDay() + 6) % 7));
     lunes.setHours(0,0,0,0);
     return lunes;
@@ -126,8 +140,167 @@
   // ────────────────────────────────────────────────────────
 
   function _rellenarSelectPaciente() {
-    /* No-op: el select fue reemplazado por el autocomplete.
-       Se conserva la firma para no romper los listeners de storeUpdated. */
+    // El "select" fue reemplazado por autocomplete custom.
+    // Mantener esta función como punto central para refresh + debug.
+    console.log('[PatientSelector] patients loaded:', _todosPacientes.length);
+    if (_pacSearchEl && _pacDropdownEl && _pacDropdownEl.style.display === 'block') {
+      _renderDropdownPacientes(true);
+    }
+  }
+
+  async function _asegurarPacientesCargados(intentos = 4, esperaMs = 180) {
+    for (let i = 0; i <= intentos; i++) {
+      if (Array.isArray(_todosPacientes) && _todosPacientes.length > 0) {
+        console.log('[PatientSelector] patients loaded:', _todosPacientes.length);
+        return _todosPacientes;
+      }
+      try {
+        _todosPacientes = await PsicoRouter.store.ensurePacientes();
+      } catch (_) { /* retry */ }
+      if (Array.isArray(_todosPacientes) && _todosPacientes.length > 0) {
+        console.log('[PatientSelector] patients loaded:', _todosPacientes.length);
+        return _todosPacientes;
+      }
+      await new Promise(r => setTimeout(r, esperaMs));
+    }
+    console.log('[PatientSelector] patients loaded:', (_todosPacientes || []).length);
+    return _todosPacientes || [];
+  }
+
+  // ── Helpers mobile para el selector de pacientes ────────────
+  const _isMobileDevice = () => window.innerWidth < 768 || ('ontouchstart' in window);
+
+  // Oculta y resetea el dropdown (incluyendo position:fixed si aplica)
+  function _hideDropdownPacientes() {
+    if (!_pacDropdownEl) return;
+    _pacDropdownEl.style.display    = 'none';
+    _pacDropdownEl.style.position   = '';
+    _pacDropdownEl.style.top        = '';
+    _pacDropdownEl.style.left       = '';
+    _pacDropdownEl.style.width      = '';
+    _pacDropdownEl.style.zIndex     = '';
+    _pacDropdownEl.style.boxShadow  = '';
+    _pacDropdownEl.style.border     = '';
+    _pacDropdownEl.style.borderRadius = '';
+    _pacDropdownEl.style.maxHeight  = '';
+    _pacDropdownEl.style.overflowY  = '';
+    if (_pacWrapEl) _pacWrapEl.style.borderColor = 'var(--border,#E5E2F5)';
+  }
+
+  // Selección de paciente extraída para reutilizar desde click Y touchend
+  function _selectPacienteItem(item) {
+    const p = _pacMatches[parseInt(item.dataset.i)];
+    if (!p) return;
+    const nombre = `${p.apellido || ''}, ${p.nombre || ''}`.trim().replace(/^,\s*/, '');
+    if (_pacHiddenEl) _pacHiddenEl.value = p.id;
+    _pacSearchEl.value = nombre;
+    _hideDropdownPacientes();
+    if (_pacWrapEl) _pacWrapEl.style.borderColor = 'var(--primary,#5B2FA8)';
+  }
+
+  // En mobile: position:fixed para escapar del overflow-y:auto del .ag-modal
+  function _posicionarDropdownMobile() {
+    if (!_isMobileDevice() || !_pacWrapEl || !_pacSearchEl) return;
+    const wrapRect   = _pacWrapEl.getBoundingClientRect();
+    const searchRect = _pacSearchEl.getBoundingClientRect();
+    const dropH      = Math.min(260, _pacMatches.length * 46 + 16);
+    const spaceBelow = window.innerHeight - searchRect.bottom;
+    const spaceAbove = searchRect.top;
+
+    _pacDropdownEl.style.position     = 'fixed';
+    _pacDropdownEl.style.left         = wrapRect.left + 'px';
+    _pacDropdownEl.style.width        = wrapRect.width + 'px';
+    _pacDropdownEl.style.zIndex       = '9999';
+    _pacDropdownEl.style.maxHeight    = '260px';
+    _pacDropdownEl.style.overflowY    = 'auto';
+    _pacDropdownEl.style.background   = 'var(--surface,#fff)';
+    _pacDropdownEl.style.border       = '1.5px solid var(--primary,#5B2FA8)';
+    _pacDropdownEl.style.borderRadius = '10px';
+    _pacDropdownEl.style.boxShadow    = '0 8px 32px rgba(91,47,168,0.18)';
+    _pacDropdownEl.style.webkitOverflowScrolling = 'touch';
+    // Abrir debajo si hay espacio, sino arriba del input
+    _pacDropdownEl.style.top = (spaceBelow >= dropH || spaceBelow >= spaceAbove)
+      ? (searchRect.bottom + 4) + 'px'
+      : (searchRect.top - dropH - 4) + 'px';
+  }
+
+  function _renderDropdownPacientes(mostrarTodos = false) {
+    if (!_pacSearchEl || !_pacDropdownEl) return;
+
+    const q = (_pacSearchEl.value || '').toLowerCase().trim();
+    if (!q && !mostrarTodos) {
+      _hideDropdownPacientes();
+      return;
+    }
+
+    _pacMatches = q
+      ? _todosPacientes.filter(p => {
+          const full = `${p.nombre || ''} ${p.apellido || ''}`.toLowerCase();
+          const inv  = `${p.apellido || ''} ${p.nombre || ''}`.toLowerCase();
+          return full.includes(q) || inv.includes(q);
+        })
+      : [..._todosPacientes];
+
+    if (!_pacMatches.length) {
+      _pacDropdownEl.innerHTML = `<div style="padding:12px 14px;font-size:13px;
+        color:var(--text-muted,#7C6FAE)">
+        ${q ? '😕 Sin resultados para "' + escHtml(q) + '"' : 'No hay pacientes cargados'}</div>`;
+    } else {
+      _pacDropdownEl.innerHTML = _pacMatches.map((p, i) => {
+        const nombre = `${p.apellido || ''}, ${p.nombre || ''}`.trim().replace(/^,\s*/, '');
+        return `<div class="ag-pac-item" data-i="${i}"
+                     style="padding:13px 14px;cursor:pointer;font-size:14px;font-weight:600;
+                            border-bottom:1px solid var(--border,#E5E2F5);
+                            color:var(--text,#1E1040);background:var(--surface,#fff);
+                            -webkit-tap-highlight-color:rgba(0,0,0,0);
+                            transition:background .1s">
+                  ${escHtml(nombre)}
+                </div>`;
+      }).join('');
+
+      _pacDropdownEl.querySelectorAll('.ag-pac-item').forEach(item => {
+        // pointerdown preventDefault: evita blur en mouse Y en touch (reemplaza mousedown)
+        item.addEventListener('pointerdown', e => e.preventDefault());
+        // click: cubre desktop y mobile (fallback)
+        item.addEventListener('click', () => _selectPacienteItem(item));
+        // touchend: selección inmediata en iOS/Android sin esperar el click sintético (300ms)
+        item.addEventListener('touchend', e => {
+          e.preventDefault();
+          _selectPacienteItem(item);
+        });
+        item.addEventListener('mouseover', () => { item.style.background = 'var(--primary-light,#EDE9FE)'; });
+        item.addEventListener('mouseout',  () => { item.style.background = 'var(--surface,#fff)'; });
+      });
+    }
+
+    _pacDropdownEl.style.display = 'block';
+    if (_pacWrapEl) _pacWrapEl.style.borderColor = 'var(--primary,#5B2FA8)';
+    // En mobile: position:fixed para escapar del overflow del modal
+    _posicionarDropdownMobile();
+  }
+
+  function _initPatientSelector() {
+    _pacSearchEl   = agQ('ag-f-paciente-search');
+    _pacDropdownEl = agQ('ag-f-paciente-dropdown');
+    _pacHiddenEl   = agQ('ag-f-paciente');
+    _pacWrapEl     = agQ('ag-pac-wrap');
+    if (!_pacSearchEl || !_pacDropdownEl) return;
+    if (_pacSearchEl.dataset.bound === '1') return;
+    _pacSearchEl.dataset.bound = '1';
+
+    _pacSearchEl.addEventListener('focus',      () => _renderDropdownPacientes(true));
+    _pacSearchEl.addEventListener('click',      () => _renderDropdownPacientes(true));
+    _pacSearchEl.addEventListener('touchstart', () => _renderDropdownPacientes(true), { passive: true });
+    _pacSearchEl.addEventListener('input',      () => _renderDropdownPacientes(false));
+    _pacSearchEl.addEventListener('blur',       () => {
+      // pointerdown ya previno el blur al tocar un ítem.
+      // Este timeout cubre únicamente el tap fuera del dropdown.
+      setTimeout(() => {
+        if (_pacDropdownEl && _pacDropdownEl.style.display !== 'none') {
+          _hideDropdownPacientes();
+        }
+      }, 250);
+    });
   }
 
   /**
@@ -157,6 +330,11 @@
       _turnosDesde = desde;
       _turnosHasta = hasta;
       console.log(`[Agenda] Turnos cargados: ${_todosTurnos.length} entre ${desde} y ${hasta}`);
+      if (_todosTurnos.length > 0) {
+        const t0 = _todosTurnos[0];
+        console.log('[Agenda FIX] turno original:', t0.fecha);
+        console.log('[Agenda FIX] turno parseado:', parseDateLocal(t0.fecha));
+      }
     } catch(e) {
       console.error('[Agenda] cargarTurnos:', e.message);
       _todosTurnos = [];
@@ -799,7 +977,7 @@
     ['dia','semana','mes'].forEach(v => {
       agQ(`ag-btn-${v}`).addEventListener('click', () => {
         // Al entrar en vista día siempre mostrar HOY, nunca el inicio de semana
-        if (v === 'dia') _fechaActual = new Date(getTodayLocal());
+        if (v === 'dia') _fechaActual = parseDateLocal(getTodayLocal());
         setView(v);
       });
     });
@@ -842,6 +1020,7 @@
         PsicoRouter.store.ensurePacientes().then(p => {
           _todosPacientes = p;
           _rellenarSelectPaciente();
+          _renderDropdownPacientes(true);
         });
       }
     });
@@ -857,143 +1036,13 @@
 
     // ── Botón HOY ──────────────────────────────────────────
     agQ('ag-btn-hoy').addEventListener('click', () => {
-      _fechaActual = new Date(getTodayLocal());
-      _hoy         = new Date(getTodayLocal());
+      _fechaActual = parseDateLocal(getTodayLocal());
+      _hoy         = parseDateLocal(getTodayLocal());
       setView('dia');
     });
 
-    // ── Buscador de paciente ────────────────────────────────
-    const _pacSearch   = agQ('ag-f-paciente-search');
-    const _pacDropdown = agQ('ag-f-paciente-dropdown');
-    const _pacHidden   = agQ('ag-f-paciente');
-    const _pacWrap     = agQ('ag-pac-wrap');
-
-    // Mobile: true si el dispositivo tiene touch o es pantalla pequeña
-    const _isMobile = () => window.innerWidth < 768 || ('ontouchstart' in window);
-
-    // Oculta y resetea el dropdown (incluyendo position:fixed si aplica)
-    function _hideDropdown() {
-      _pacDropdown.style.display   = 'none';
-      _pacDropdown.style.position  = '';
-      _pacDropdown.style.top       = '';
-      _pacDropdown.style.left      = '';
-      _pacDropdown.style.width     = '';
-      _pacDropdown.style.zIndex    = '';
-      _pacDropdown.style.boxShadow = '';
-      _pacDropdown.style.border    = '';
-      _pacDropdown.style.borderRadius = '';
-      if (_pacWrap) _pacWrap.style.borderColor = 'var(--border,#E5E2F5)';
-    }
-
-    // Selección de paciente — separada para poder llamarse desde click Y touchend
-    function _selectPaciente(item) {
-      const p = _pacMatches[parseInt(item.dataset.i)];
-      if (!p) return;
-      const nombre = `${p.apellido || ''}, ${p.nombre || ''}`.trim().replace(/^,\s*/, '');
-      _pacHidden.value = p.id;
-      _pacSearch.value = nombre;
-      _hideDropdown();
-      if (_pacWrap) _pacWrap.style.borderColor = 'var(--primary,#5B2FA8)';
-    }
-
-    // En mobile: saca el dropdown del flujo del modal (position:fixed) para evitar
-    // que quede clipado por overflow-y:auto del .ag-modal o que el teclado lo tape.
-    function _posicionarDropdownMobile() {
-      if (!_isMobile()) return;
-      const wrapRect = _pacWrap.getBoundingClientRect();
-      const searchRect = _pacSearch.getBoundingClientRect();
-      const spaceBelow = window.innerHeight - searchRect.bottom;
-      const spaceAbove = searchRect.top;
-      const dropH = Math.min(260, _pacMatches.length * 46 + 16);
-
-      _pacDropdown.style.position   = 'fixed';
-      _pacDropdown.style.left       = wrapRect.left + 'px';
-      _pacDropdown.style.width      = wrapRect.width + 'px';
-      _pacDropdown.style.zIndex     = '9999';
-      _pacDropdown.style.maxHeight  = '260px';
-      _pacDropdown.style.overflowY  = 'auto';
-      _pacDropdown.style.background = 'var(--surface,#fff)';
-      _pacDropdown.style.border     = '1.5px solid var(--primary,#5B2FA8)';
-      _pacDropdown.style.borderRadius = '10px';
-      _pacDropdown.style.boxShadow  = '0 8px 32px rgba(91,47,168,0.18)';
-      _pacDropdown.style.webkitOverflowScrolling = 'touch';
-
-      // Mostrar debajo si hay espacio, sino arriba
-      if (spaceBelow >= dropH || spaceBelow >= spaceAbove) {
-        _pacDropdown.style.top = (searchRect.bottom + 4) + 'px';
-      } else {
-        _pacDropdown.style.top = (searchRect.top - dropH - 4) + 'px';
-      }
-    }
-
-    // Renderiza la lista de pacientes filtrada
-    function _renderDropdown(mostrarTodos = false) {
-      const q = (_pacSearch.value || '').toLowerCase().trim();
-
-      if (!q && !mostrarTodos) {
-        _hideDropdown();
-        return;
-      }
-
-      _pacMatches = q
-        ? _todosPacientes.filter(p => {
-            const full = `${p.nombre || ''} ${p.apellido || ''}`.toLowerCase();
-            const inv  = `${p.apellido || ''} ${p.nombre || ''}`.toLowerCase();
-            return full.includes(q) || inv.includes(q);
-          })
-        : [..._todosPacientes];
-
-      if (!_pacMatches.length) {
-        _pacDropdown.innerHTML = `<div style="padding:12px 14px;font-size:13px;
-          color:var(--text-muted,#7C6FAE)">
-          ${q ? '😕 Sin resultados para "' + escHtml(q) + '"' : 'No hay pacientes cargados'}</div>`;
-      } else {
-        _pacDropdown.innerHTML = _pacMatches.map((p, i) => {
-          const nombre = `${p.apellido || ''}, ${p.nombre || ''}`.trim().replace(/^,\s*/, '');
-          return `<div class="ag-pac-item" data-i="${i}"
-                       style="padding:13px 14px;cursor:pointer;font-size:14px;font-weight:600;
-                              border-bottom:1px solid var(--border,#E5E2F5);
-                              color:var(--text,#1E1040);background:var(--surface,#fff);
-                              -webkit-tap-highlight-color:rgba(0,0,0,0);
-                              transition:background .1s">
-                    ${escHtml(nombre)}
-                  </div>`;
-        }).join('');
-
-        _pacDropdown.querySelectorAll('.ag-pac-item').forEach(item => {
-          // pointerdown preventDefault: evita blur en mouse Y en touch (reemplaza mousedown)
-          item.addEventListener('pointerdown', e => e.preventDefault());
-          // click: desktop y mobile (después de touchend)
-          item.addEventListener('click', () => _selectPaciente(item));
-          // touchend: selección inmediata en mobile, sin esperar el click sintético (300ms)
-          item.addEventListener('touchend', e => {
-            e.preventDefault(); // evita el click sintético duplicado
-            _selectPaciente(item);
-          });
-          item.addEventListener('mouseover', () => { item.style.background = 'var(--primary-light,#EDE9FE)'; });
-          item.addEventListener('mouseout',  () => { item.style.background = 'var(--surface,#fff)'; });
-        });
-      }
-
-      _pacDropdown.style.display = 'block';
-      if (_pacWrap) _pacWrap.style.borderColor = 'var(--primary,#5B2FA8)';
-
-      // En mobile: position:fixed para escapar del overflow del modal
-      _posicionarDropdownMobile();
-    }
-
-    // Foco/Click/Touch → mostrar todos. Tipeo → filtrar.
-    _pacSearch.addEventListener('focus',      () => _renderDropdown(true));
-    _pacSearch.addEventListener('click',      () => _renderDropdown(true));
-    _pacSearch.addEventListener('touchstart', () => _renderDropdown(true), { passive: true });
-    _pacSearch.addEventListener('input',      () => _renderDropdown(false));
-    _pacSearch.addEventListener('blur',       () => {
-      // En mobile pointerdown ya previno el blur al tocar un item.
-      // Este timeout cubre el caso de click fuera del dropdown.
-      setTimeout(() => {
-        if (_pacDropdown.style.display !== 'none') _hideDropdown();
-      }, 250);
-    });
+    // ── Buscador de paciente (autocomplete custom) ─────────
+    _initPatientSelector();
 
     // ── Swipe horizontal para navegar (mobile) ──────────────
     let _swipeX = 0, _swipeY = 0;
@@ -1292,7 +1341,7 @@
     // En vista día: si se pasa fecha explícita (ej: desde mes) usarla,
     // si no, siempre mostrar HOY — nunca el lunes de la semana
     if (v === 'dia') {
-      _fechaActual = opcionFecha ? new Date(opcionFecha) : new Date(getTodayLocal());
+      _fechaActual = opcionFecha ? parseDateLocal(opcionFecha) : parseDateLocal(getTodayLocal());
     }
     _currentView = v;
     ['dia','semana','mes'].forEach(x => {
@@ -1601,11 +1650,13 @@
     // Auto-mostrar lista de pacientes al abrir el modal (modo turno)
     if (_modoModal === 'turno') {
       setTimeout(() => {
-        const ps = agQ('ag-f-paciente-search');
-        if (ps) {
-          ps.focus();
-          _renderDropdown(true);
-        }
+        _asegurarPacientesCargados().then(() => {
+          const ps = agQ('ag-f-paciente-search');
+          if (ps) {
+            ps.focus();
+            _renderDropdownPacientes(true);
+          }
+        });
       }, 120);
     }
   }
@@ -1999,8 +2050,9 @@
 
     /* onEnter — refresca datos en cada visita, NO re-renderiza el DOM */
     async onEnter() {
-      _hoy         = new Date(getTodayLocal());
-      _fechaActual = new Date(getTodayLocal());
+      _hoy         = parseDateLocal(getTodayLocal());
+      _fechaActual = parseDateLocal(getTodayLocal());
+      console.log('[Agenda FIX] HOY:', getTodayLocal());
 
       // Leer preferencias del psicólogo
       HORAS = _buildHoras(); // reconstruir rango horario con preferencias actuales

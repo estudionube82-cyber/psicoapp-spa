@@ -7,7 +7,8 @@
 const PlanService = (() => {
   let _cache = null
   let _cacheTime = 0
-  const CACHE_TTL = 5 * 60 * 1000 // 5 minutos
+  const CACHE_TTL = 60 * 1000 // 60 segundos (máximo)
+  let _planChannel = null
 
   // ── Fuente única de verdad para todos los límites de plan ──
   const PLAN_LIMITS = {
@@ -96,6 +97,32 @@ const PlanService = (() => {
     _cacheTime = 0
   }
 
+  function invalidatePlanCache() {
+    invalidar()
+  }
+
+  async function iniciarRealtimePlan() {
+    try {
+      const client = _getSb()
+      if (!client || _planChannel) return
+
+      _planChannel = client
+        .channel('plan_changes')
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'users_plan' },
+          (payload) => {
+            console.log('[Realtime] cambio en plan detectado', payload)
+            invalidatePlanCache()
+            window.dispatchEvent(new CustomEvent('storeUpdated', { detail: { type: 'plan' } }))
+          }
+        )
+        .subscribe()
+    } catch (err) {
+      console.warn('PlanService realtime error:', err)
+    }
+  }
+
   async function puedeUsarIA() {
     const plan = await getPlan()
     return plan.status === 'active' && plan.ia_used < plan.ia_limit
@@ -110,5 +137,14 @@ const PlanService = (() => {
     return PLAN_LIMITS[plan] || PLAN_LIMITS.free
   }
 
-  return { getPlan, invalidar, puedeUsarIA, nombrePlan, getLimits, PLAN_LIMITS }
+  return {
+    getPlan,
+    invalidar,
+    invalidatePlanCache,
+    iniciarRealtimePlan,
+    puedeUsarIA,
+    nombrePlan,
+    getLimits,
+    PLAN_LIMITS,
+  }
 })()
