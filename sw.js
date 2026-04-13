@@ -1,49 +1,29 @@
-const CACHE_VERSION = 'psicoapp-v5';
-const STATIC_ASSETS = [
-  '/config.js',
-  '/psicoapp-limites.js',
-  '/logo-psicoapp.png',
-  '/icon-192.png',
-  '/icon-512.png',
-  '/icon-scanner.png',
-];
+// HOTFIX de emergencia:
+// Este Service Worker se auto-desactiva para estabilizar la SPA.
 
-self.addEventListener('install', e => {
+self.addEventListener('install', () => {
   self.skipWaiting();
-  e.waitUntil(
-    caches.open(CACHE_VERSION).then(c => c.addAll(STATIC_ASSETS))
-  );
 });
 
-self.addEventListener('activate', e => {
-  e.waitUntil(
-    caches.keys().then(keys =>
-      Promise.all(
-        keys
-          .filter(k => k !== CACHE_VERSION)
-          .map(k => caches.delete(k))
-      )
-    ).then(() => self.clients.claim())
-  );
-});
+self.addEventListener('activate', (event) => {
+  event.waitUntil((async () => {
+    try {
+      const cacheNames = await caches.keys();
+      await Promise.all(cacheNames.map((cacheName) => caches.delete(cacheName)));
+    } catch (err) {
+      console.warn('[SW] Error limpiando cachés:', err);
+    }
 
-// HTML y Supabase → siempre red (datos frescos)
-// Assets estáticos → cache first
-self.addEventListener('fetch', e => {
-  const url = e.request.url;
-  if (
-    url.includes('.html') ||
-    url.includes('supabase.co') ||
-    url.includes('functions/v1')
-  ) {
-    e.respondWith(fetch(e.request).catch(() => caches.match(e.request)));
-    return;
-  }
-  e.respondWith(
-    caches.match(e.request).then(cached => cached || fetch(e.request).then(resp => {
-      const clone = resp.clone();
-      caches.open(CACHE_VERSION).then(c => c.put(e.request, clone));
-      return resp;
-    }))
-  );
+    await self.registration.unregister();
+    await self.clients.claim();
+
+    const clients = await self.clients.matchAll({
+      type: 'window',
+      includeUncontrolled: true,
+    });
+
+    for (const client of clients) {
+      client.navigate(client.url);
+    }
+  })());
 });
