@@ -829,7 +829,7 @@ async function _chequearPagoExitoso() {
 window.onViewEnter_cuenta = initCuenta;
 
 /* ══ PAGO VIA MERCADOPAGO ══ */
-function irAPago(plan) {
+async function irAPago(plan) {
   const btnIds = {
     pro:            '#vc-btn-upgrade-pro',
     max:            '#vc-btn-upgrade-max',
@@ -840,20 +840,32 @@ function irAPago(plan) {
     max:            '💎 Activar Max',
     extra_whatsapp: '➕ Comprar 100 mensajes WhatsApp extra ($5.000)',
   };
-  const links = {
-    pro:            PSICOAPP_CONFIG.LINK_PAGO_PRO,
-    max:            PSICOAPP_CONFIG.LINK_PAGO_MAX,
-    extra_whatsapp: PSICOAPP_CONFIG.LINK_PAGO_EXTRA,
-  };
-
-  const btn  = document.querySelector(btnIds[plan]);
-  const link = links[plan];
-
-  if (!link || link.includes('TU_LINK') || link === '') {
-    vcToast('❌ Link de pago no configurado. Contactá al administrador.');
-    return;
-  }
-
+  const btn = document.querySelector(btnIds[plan]);
   if (btn) { btn.disabled = true; btn.textContent = '⏳ Redirigiendo…'; }
-  window.location.href = link;
+
+  try {
+    const { data: { session } } = await sb.auth.getSession();
+    if (!session?.user?.id) {
+      vcToast('❌ Sesión inválida. Volvé a iniciar sesión.');
+      return;
+    }
+
+    const res = await fetch('/api/create-preference', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ user_id: session.user.id, plan }),
+    });
+
+    const data = await res.json();
+    if (!res.ok || !data?.init_point) {
+      vcToast('❌ No se pudo iniciar el pago. Intentá nuevamente.');
+      return;
+    }
+
+    window.location.href = data.init_point;
+  } catch (e) {
+    vcToast('❌ Error al conectar con Mercado Pago.');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = labels[plan]; }
+  }
 }
