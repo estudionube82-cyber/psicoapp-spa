@@ -82,7 +82,6 @@
   // new Date('2025-04-11') → UTC midnight → Argentina = 21:00 del 10 → BUG
   // parseDateLocal('2025-04-11') → medianoche local → correcto
   function parseDateLocal(str) {
-    console.log('[Agenda FIX] parseDateLocal ejecutado:', str);
     if (!str) return new Date();
     const [y, m, d] = str.split('-').map(Number);
     return new Date(y, m - 1, d, 0, 0, 0, 0);
@@ -140,9 +139,6 @@
   // ────────────────────────────────────────────────────────
 
   function _rellenarSelectPaciente() {
-    // El "select" fue reemplazado por autocomplete custom.
-    // Mantener esta función como punto central para refresh + debug.
-    console.log('[PatientSelector] patients loaded:', _todosPacientes.length);
     if (_pacSearchEl && _pacDropdownEl && _pacDropdownEl.style.display === 'block') {
       _renderDropdownPacientes(true);
     }
@@ -150,20 +146,11 @@
 
   async function _asegurarPacientesCargados(intentos = 4, esperaMs = 180) {
     for (let i = 0; i <= intentos; i++) {
-      if (Array.isArray(_todosPacientes) && _todosPacientes.length > 0) {
-        console.log('[PatientSelector] patients loaded:', _todosPacientes.length);
-        return _todosPacientes;
-      }
-      try {
-        _todosPacientes = await PsicoRouter.store.ensurePacientes();
-      } catch (_) { /* retry */ }
-      if (Array.isArray(_todosPacientes) && _todosPacientes.length > 0) {
-        console.log('[PatientSelector] patients loaded:', _todosPacientes.length);
-        return _todosPacientes;
-      }
+      if (Array.isArray(_todosPacientes) && _todosPacientes.length > 0) return _todosPacientes;
+      try { _todosPacientes = await PsicoRouter.store.ensurePacientes(); } catch (_) { /* retry */ }
+      if (Array.isArray(_todosPacientes) && _todosPacientes.length > 0) return _todosPacientes;
       await new Promise(r => setTimeout(r, esperaMs));
     }
-    console.log('[PatientSelector] patients loaded:', (_todosPacientes || []).length);
     return _todosPacientes || [];
   }
 
@@ -329,12 +316,6 @@
       _todosTurnos = data || [];
       _turnosDesde = desde;
       _turnosHasta = hasta;
-      console.log(`[Agenda] Turnos cargados: ${_todosTurnos.length} entre ${desde} y ${hasta}`);
-      if (_todosTurnos.length > 0) {
-        const t0 = _todosTurnos[0];
-        console.log('[Agenda FIX] turno original:', t0.fecha);
-        console.log('[Agenda FIX] turno parseado:', parseDateLocal(t0.fecha));
-      }
     } catch(e) {
       console.error('[Agenda] cargarTurnos:', e.message);
       _todosTurnos = [];
@@ -652,6 +633,11 @@
       .ag-det-btn.done    { background:#D1FAE5; color:#065F46; }
       .ag-det-btn.cancel  { background:var(--bg,#F8F7FF); color:var(--text-muted,#7C6FAE); border:1px solid var(--border,#E5E2F5); }
       .ag-det-btn.delete  { background:#FEE2E2; color:#B91C1C; }
+      .ag-det-btn.cobrar  { background:#FEF3C7; color:#92400E; }
+      .ag-det-btn.hist    { background:var(--primary-light,#EDE9FE); color:var(--primary,#5B2FA8); }
+      .ag-det-btn.wa      { background:#DCFCE7; color:#166534; }
+      .ag-det-btn.absent  { background:#FEE2E2; color:#B91C1C; }
+      .ag-det-actions + .ag-det-actions { margin-top:8px; }
       .ag-badge { display:inline-flex; align-items:center; gap:3px; font-size:10px; font-weight:700; padding:3px 8px; border-radius:20px; margin-top:4px; }
       .ag-badge.pend   { background:#FEF3C7; color:#92400E; }
       .ag-badge.conf   { background:#D1FAE5; color:#065F46; }
@@ -921,12 +907,26 @@
         <div class="ag-modal-handle"></div>
         <div class="ag-det-header" id="ag-det-header"></div>
         <div id="ag-det-body"></div>
+
+        <!-- FILA 1: flujo de estado del turno -->
         <div class="ag-det-actions">
           <button class="ag-det-btn confirm" id="ag-det-confirmar">✓ Confirmar</button>
           <button class="ag-det-btn done"    id="ag-det-realizada">✅ Realizada</button>
+          <button class="ag-det-btn absent"  id="ag-det-ausente"   style="display:none">✗ Ausente</button>
+        </div>
+
+        <!-- FILA 2: acciones contextuales (solo turnos con paciente) -->
+        <div class="ag-det-actions" id="ag-det-ctx-actions" style="display:none">
+          <button class="ag-det-btn cobrar" id="ag-det-cobrar">💰 Cobrar</button>
+          <button class="ag-det-btn hist"   id="ag-det-historia">📋 Historia</button>
+          <button class="ag-det-btn wa"     id="ag-det-wa" style="display:none">📱 WA</button>
+        </div>
+
+        <!-- FILA 3: acciones secundarias -->
+        <div class="ag-det-actions" style="margin-top:8px">
           <button class="ag-det-btn" id="ag-det-gcal"
-            style="background:#E8F5E9;color:#2E7D32;border:1.5px solid #A5D6A7;display:none">
-            📅 Enviar a Google Cal
+            style="background:#E8F5E9;color:#2E7D32;border:1.5px solid #A5D6A7;display:none;flex:none;padding:11px 14px">
+            📅 Google Cal
           </button>
           <button class="ag-det-btn delete"  id="ag-det-eliminar">🗑 Eliminar</button>
           <button class="ag-det-btn cancel"  id="ag-det-cerrar">Cerrar</button>
@@ -992,6 +992,10 @@
 
     agQ('ag-det-confirmar').addEventListener('click', () => cambiarEstado('confirmado'));
     agQ('ag-det-realizada').addEventListener('click', () => cambiarEstado('realizado'));
+    agQ('ag-det-ausente').addEventListener('click',   () => cambiarEstado('cancelado'));
+    agQ('ag-det-cobrar').addEventListener('click',   _cobrarRapido);
+    agQ('ag-det-historia').addEventListener('click', _irAHistoriaPaciente);
+    agQ('ag-det-wa').addEventListener('click',       _waContextual);
     agQ('ag-det-eliminar').addEventListener('click', eliminarTurno);
     agQ('ag-det-cerrar').addEventListener('click', cerrarDetalle);
     agQ('ag-det-gcal').addEventListener('click', _gcalSyncManual);
@@ -1710,7 +1714,6 @@
 
       // ── Google Calendar: buscar el ID del turno recién creado y sincronizar ──
       if (typeof GCal !== 'undefined' && GCal.isConnected()) {
-        console.log('[GCal] Conectado, buscando turno recién insertado...');
         try {
           const { data: rows, error: fetchErr } = await sb.from('turnos')
             .select('id')
@@ -1721,23 +1724,13 @@
             .limit(1);
           if (fetchErr) throw fetchErr;
           const turnoId = rows?.[0]?.id;
-          console.log('[GCal] turnoId encontrado:', turnoId);
           if (turnoId) {
-            // await para ver el error si falla
             _gcalSyncNew(turnoId, insertData, insertData.paciente_id)
-              .catch(e => {
-                console.error('[GCal] _gcalSyncNew falló:', e);
-                toast('❌ GCal error: ' + e.message);
-              });
-          } else {
-            console.warn('[GCal] No se encontró el turno recién insertado');
+              .catch(e => toast('❌ GCal error: ' + e.message));
           }
         } catch(ge) {
-          console.error('[GCal] Error buscando turno:', ge);
           toast('⚠️ GCal: no se pudo obtener ID del turno: ' + ge.message);
         }
-      } else {
-        console.log('[GCal] No conectado — GCal disponible:', typeof GCal !== 'undefined', '— isConnected:', typeof GCal !== 'undefined' && GCal.isConnected());
       }
 
       // ── WhatsApp: envío de confirmación (no bloquea si falla) ──
@@ -1821,32 +1814,47 @@
       pendiente:  '<span class="ag-badge pend">⏳ Pendiente</span>',
       confirmado: '<span class="ag-badge conf">✓ Confirmado</span>',
       realizado:  '<span class="ag-badge done">✅ Realizado</span>',
-      cancelado:  '<span class="ag-badge cancel">❌ Cancelado</span>',
+      cancelado:  '<span class="ag-badge cancel">✗ Ausente/Cancelado</span>',
     };
 
     let body = detRow('🕐', 'Duración', `${t.duracion || 50} min`);
-    body += detRow('📋', 'Estado', badgeMap[t.estado] || t.estado || '—');
+    body += detRow('📋', 'Estado', badgeMap[t.estado] || escHtml(t.estado || '—'), true);
     if (t.notas) body += detRow('📝', 'Notas', t.notas);
     agQ('ag-det-body').innerHTML = body;
 
-    agQ('ag-det-confirmar').style.display = t.estado === 'pendiente'  ? '' : 'none';
-    agQ('ag-det-realizada').style.display = t.estado !== 'realizado'  ? '' : 'none';
+    // ── Fila 1: botones de estado ──────────────────────────────
+    const esPendiente  = t.estado === 'pendiente';
+    const esRealizado  = t.estado === 'realizado';
+    const esCancelado  = t.estado === 'cancelado';
+    agQ('ag-det-confirmar').style.display = esPendiente ? '' : 'none';
+    agQ('ag-det-realizada').style.display = !esRealizado ? '' : 'none';
+    agQ('ag-det-ausente').style.display   = (!esCancelado && !esRealizado) ? '' : 'none';
 
-    // Mostrar botón GCal solo si está conectado y el turno no tiene evento ya
+    // ── Fila 2: acciones contextuales (solo turnos con paciente) ──
+    const esTurno = t.tipo !== 'evento';
+    const ctxActions = agQ('ag-det-ctx-actions');
+    if (ctxActions) ctxActions.style.display = esTurno ? '' : 'none';
+    if (esTurno) {
+      const pac = _todosPacientes.find(p => p.id === t.paciente_id);
+      const tieneWA = !!(pac?.telefono);
+      agQ('ag-det-wa').style.display = tieneWA ? '' : 'none';
+    }
+
+    // ── Fila 3: GCal ──────────────────────────────────────────
     const gcalBtn = agQ('ag-det-gcal');
     if (gcalBtn) {
       const gcalOn = typeof GCal !== 'undefined' && GCal.isConnected();
       gcalBtn.style.display = gcalOn ? '' : 'none';
-      gcalBtn.textContent = t.gcal_event_id ? '🔄 Re-sync Google Cal' : '📅 Enviar a Google Cal';
+      gcalBtn.textContent = t.gcal_event_id ? '🔄 Re-sync Google Cal' : '📅 Google Cal';
     }
 
     agQ('ag-overlay-det').classList.add('open');
   }
 
-  function detRow(icon, label, val) {
+  function detRow(icon, label, val, isHTML = false) {
     return `<div class="ag-det-row">
               <div class="ag-det-icon">${icon}</div>
-              <div><div class="ag-det-lbl">${escHtml(label)}</div><div class="ag-det-val">${escHtml(val)}</div></div>
+              <div><div class="ag-det-lbl">${escHtml(label)}</div><div class="ag-det-val">${isHTML ? val : escHtml(val)}</div></div>
             </div>`;
   }
 
@@ -1867,6 +1875,51 @@
     } catch(e) {
       toast('⚠️ Error al actualizar: ' + e.message);
     }
+  }
+
+  // ── Cobro rápido desde detalle: navega a Pagos con paciente pre-cargado ──
+  function _cobrarRapido() {
+    if (!_turnoSel || _turnoSel.tipo === 'evento') return;
+    const pac = _todosPacientes.find(p => p.id === _turnoSel.paciente_id);
+    localStorage.setItem('pv_prefill', JSON.stringify({
+      paciente_id: _turnoSel.paciente_id,
+      fecha:       _turnoSel.fecha,
+      nombre:      pac ? `${pac.apellido || ''}, ${pac.nombre || ''}`.replace(/^,\s*/, '') : '',
+    }));
+    cerrarDetalle();
+    PsicoRouter.navigate('pagos');
+  }
+
+  // ── Historia: navega directamente al detalle del paciente ──
+  function _irAHistoriaPaciente() {
+    if (!_turnoSel || _turnoSel.tipo === 'evento') return;
+    const pac = _todosPacientes.find(p => p.id === _turnoSel.paciente_id);
+    if (!pac) { toast('⚠️ Paciente no encontrado'); return; }
+    PsicoRouter.store.pacienteSeleccionado = pac;
+    cerrarDetalle();
+    PsicoRouter.navigate('historia');
+  }
+
+  // ── WhatsApp contextual: abre wa.me con mensaje pre-armado ──
+  function _waContextual() {
+    if (!_turnoSel || _turnoSel.tipo === 'evento') return;
+    const pac = _todosPacientes.find(p => p.id === _turnoSel.paciente_id);
+    const tel = pac?.telefono;
+    if (!tel) { toast('⚠️ Sin teléfono registrado'); return; }
+
+    let telNorm = tel.replace(/\D/g, '');
+    if (telNorm.startsWith('0')) telNorm = telNorm.slice(1);
+    if (!telNorm.startsWith('54')) telNorm = '54' + telNorm;
+    if (telNorm.startsWith('54') && !telNorm.startsWith('549')) telNorm = '549' + telNorm.slice(2);
+
+    const nombre = pac.nombre || 'Paciente';
+    const [y, m, d] = (_turnoSel.fecha || '').split('-');
+    const fechaLinda = d && m && y ? `${d}/${m}/${y}` : _turnoSel.fecha || '';
+    const horaLinda  = (_turnoSel.hora || '').slice(0, 5);
+    const msg = encodeURIComponent(
+      `Hola ${nombre}, te recuerdo tu turno del ${fechaLinda} a las ${horaLinda}. ¡Hasta pronto!`
+    );
+    window.open(`https://wa.me/${telNorm}?text=${msg}`, '_blank');
   }
 
   async function eliminarTurno() {
@@ -2052,7 +2105,6 @@
     async onEnter() {
       _hoy         = parseDateLocal(getTodayLocal());
       _fechaActual = parseDateLocal(getTodayLocal());
-      console.log('[Agenda FIX] HOY:', getTodayLocal());
 
       // Leer preferencias del psicólogo
       HORAS = _buildHoras(); // reconstruir rango horario con preferencias actuales

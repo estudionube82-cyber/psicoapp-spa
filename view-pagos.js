@@ -481,6 +481,22 @@ PsicoRouter.register('pagos', {
 
     /* Siempre re-carga pagos frescos; usa caché de pacientes del store */
     await _pvCargarTodo();
+
+    /* Pre-fill desde Agenda (botón "Cobrar" en detalle de turno) */
+    const prefillRaw = localStorage.getItem('pv_prefill');
+    if (prefillRaw) {
+      localStorage.removeItem('pv_prefill');
+      try {
+        const pre = JSON.parse(prefillRaw);
+        if (pre.paciente_id) {
+          _pvQ('#pv-f-paciente').value = pre.paciente_id;
+          _pvQ('#pv-f-fecha').value    = pre.fecha || localDateString();
+          _pvQ('#pv-f-monto').value    = '';
+          _pvQ('#pv-msg-error').style.display = 'none';
+          _pvQ('#pv-overlay').classList.add('open');
+        }
+      } catch (_) { /* JSON malformado, ignorar */ }
+    }
   },
 
   onLeave() {
