@@ -530,7 +530,7 @@
 
       /* FAB */
       #ag-fab {
-        position:fixed; bottom:72px; right:20px; width:52px; height:52px;
+        position:fixed; bottom:calc(72px + env(safe-area-inset-bottom,0px)); right:20px; width:52px; height:52px;
         background:var(--primary,#5B2FA8); border-radius:16px; border:none;
         display:flex; align-items:center; justify-content:center;
         box-shadow:0 8px 24px rgba(91,47,168,.35); cursor:pointer;
@@ -542,7 +542,7 @@
       /* FAB mini-menú */
       #ag-fab-menu {
         position: fixed;
-        bottom: 132px;
+        bottom: calc(132px + env(safe-area-inset-bottom,0px));
         right: 20px;
         display: flex;
         flex-direction: column;
@@ -587,7 +587,7 @@
       /* Modal */
       .ag-overlay {
         position:fixed; inset:0; background:rgba(0,0,0,.5);
-        z-index:60; display:none; align-items:flex-end; justify-content:center;
+        z-index:300; display:none; align-items:flex-end; justify-content:center;
       }
       .ag-overlay.open { display:flex; }
       .ag-modal {
@@ -1650,6 +1650,7 @@
     errEl.textContent   = '';
 
     agQ('ag-overlay').classList.add('open');
+    document.body.classList.add('modal-open');
 
     // Auto-mostrar lista de pacientes al abrir el modal (modo turno)
     if (_modoModal === 'turno') {
@@ -1667,6 +1668,7 @@
 
   function cerrarModal() {
     agQ('ag-overlay').classList.remove('open');
+    document.body.classList.remove('modal-open');
   }
 
   // ────────────────────────────────────────────────────────
