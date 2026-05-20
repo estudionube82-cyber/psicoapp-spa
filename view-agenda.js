@@ -1851,6 +1851,7 @@
     }
 
     agQ('ag-overlay-det').classList.add('open');
+    document.body.classList.add('modal-open');
   }
 
   function detRow(icon, label, val, isHTML = false) {
@@ -1862,6 +1863,7 @@
 
   function cerrarDetalle() {
     agQ('ag-overlay-det').classList.remove('open');
+    document.body.classList.remove('modal-open');
     _turnoSel = null;
   }
 
@@ -2135,6 +2137,7 @@
     onLeave() {
       agQ('ag-overlay')?.classList.remove('open');
       agQ('ag-overlay-det')?.classList.remove('open');
+      document.body.classList.remove('modal-open');
       _turnoSel = null;
       detenerLineaHoraActual(); // ← limpiar setInterval de la línea
     },
