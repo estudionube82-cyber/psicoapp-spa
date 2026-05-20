@@ -602,7 +602,7 @@
       .ag-field label { display:block; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.5px; color:var(--text-muted,#7C6FAE); margin-bottom:5px; }
       .ag-field select, .ag-field input, .ag-field textarea {
         width:100%; padding:10px 12px; border-radius:10px;
-        border:1.5px solid var(--border,#E5E2F5); font-size:14px; font-weight:500;
+        border:1.5px solid var(--border,#E5E2F5); font-size:16px; font-weight:500;
         background:var(--bg,#F8F7FF); color:var(--text,#1E1040); font-family:inherit;
         outline:none; transition:border .15s; box-sizing:border-box;
       }
@@ -837,12 +837,12 @@
                         max-height:220px;overflow-y:auto">
             </div>
             <div style="display:flex;align-items:center;gap:8px;padding:0 12px">
-              <span style="font-size:14px;color:var(--text-muted,#7C6FAE)">🔍</span>
+              <span style="font-size:16px;color:var(--text-muted,#7C6FAE);pointer-events:none;flex-shrink:0">🔍</span>
               <input type="text" id="ag-f-paciente-search"
                      placeholder="Buscar por nombre o apellido…"
                      autocomplete="off"
                      inputmode="search"
-                     style="flex:1;padding:11px 0;border:none;font-size:14px;font-weight:500;
+                     style="flex:1;padding:11px 0;border:none;font-size:16px;font-weight:500;
                             background:transparent;color:var(--text,#1E1040);
                             font-family:inherit;outline:none">
             </div>

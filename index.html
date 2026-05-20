@@ -50,6 +50,7 @@
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body { max-width: 100vw; overflow-x: hidden; }
 body { font-family: var(--font); background: var(--bg); color: var(--text); min-height: 100vh; }
 
 /* ══════════════════════════════════════════
@@ -311,6 +312,12 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); min-
 
 /* ── Modal abierto: ocultar bottom nav para no solapar formulario ── */
 body.modal-open .bottom-nav {
+  transform: translateY(120%);
+  opacity: 0;
+  pointer-events: none;
+}
+/* ── Teclado iOS abierto: ocultar bottom nav (via visualViewport JS) ── */
+.bottom-nav.keyboard-open {
   transform: translateY(120%);
   opacity: 0;
   pointer-events: none;
@@ -660,6 +667,18 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('bn-mas-btn').addEventListener('click', bnMoreOpen);
   document.getElementById('bn-more-overlay').addEventListener('click', bnMoreClose);
 
+  /* ── visualViewport: ocultar bottom nav cuando el teclado iOS sube ── */
+  if (window.visualViewport) {
+    const _bnav = document.querySelector('.bottom-nav');
+    window.visualViewport.addEventListener('resize', () => {
+      if (!_bnav) return;
+      /* Si la altura visible cae por debajo del 80% del innerHeight,
+         asumimos teclado abierto. El umbral del 80% cubre todos los
+         iPhones sin dispararse por un resize menor de UI. */
+      const kbOpen = window.visualViewport.height < window.innerHeight * 0.80;
+      _bnav.classList.toggle('keyboard-open', kbOpen);
+    });
+  }
 });
 
 /* ── SOPORTE POR EMAIL ── */
