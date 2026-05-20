@@ -62,7 +62,7 @@
 .per-field       { margin-bottom: 14px; }
 .per-field-label { font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; }
 .per-field-req   { color: var(--primary); }
-.per-field-input { width: 100%; border: 1.5px solid var(--border); border-radius: 14px; padding: 13px 16px; font-size: 15px; font-family: var(--font); color: var(--text); background: var(--bg); outline: none; transition: border-color .2s, background .2s; }
+.per-field-input { width: 100%; border: 1.5px solid var(--border); border-radius: 14px; padding: 13px 16px; font-size: 16px; font-family: var(--font); color: var(--text); background: var(--bg); outline: none; transition: border-color .2s, background .2s; }
 .per-field-input:focus { border-color: var(--primary); background: var(--surface); }
 .per-two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .per-btn-save { width: 100%; background: var(--primary); color: white; border: none; border-radius: 14px; padding: 16px; font-size: 16px; font-weight: 700; font-family: var(--font); cursor: pointer; margin-top: 8px; transition: opacity .2s; }

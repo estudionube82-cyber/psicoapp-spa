@@ -32,7 +32,7 @@
 #view-informes .inf-pac-avatar { width:36px; height:36px; border-radius:10px; background:var(--primary); color:white; display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:800; flex-shrink:0; }
 #view-informes .inf-pac-name { font-size:14px; font-weight:700; color:var(--text); }
 #view-informes .inf-pac-tel { font-size:11px; color:var(--text-muted); }
-#view-informes .inf-search { width:100%; border:none; border-bottom:1px solid var(--border); padding:12px 16px; font-size:14px; font-family:var(--font); background:var(--surface); color:var(--text); outline:none; }
+#view-informes .inf-search { width:100%; border:none; border-bottom:1px solid var(--border); padding:12px 16px; font-size:16px; font-family:var(--font); background:var(--surface); color:var(--text); outline:none; }
 
 /* Chip paciente seleccionado */
 #view-informes .inf-pac-chip { display:none; align-items:center; gap:10px; padding:12px 16px; cursor:pointer; }

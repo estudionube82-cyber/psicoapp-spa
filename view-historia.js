@@ -33,7 +33,7 @@
 #view-historia .hc-stat-num { font-size:20px; font-weight:800; color:var(--primary); }
 #view-historia .hc-stat-label { font-size:10px; color:var(--text-muted); font-weight:600; margin-top:2px; }
 #view-historia .hc-search-wrap { margin:0 16px 12px; display:flex; align-items:center; gap:8px; background:var(--surface); border-radius:14px; padding:0 14px; border:1.5px solid var(--border); box-shadow:var(--shadow-sm); }
-#view-historia .hc-search-wrap input { flex:1; border:none; background:transparent; padding:12px 0; font-size:14px; font-family:var(--font); color:var(--text); outline:none; }
+#view-historia .hc-search-wrap input { flex:1; border:none; background:transparent; padding:12px 0; font-size:16px; font-family:var(--font); color:var(--text); outline:none; }
 #view-historia .hc-pac-card { display:flex; align-items:center; gap:12px; background:var(--surface); border-radius:14px; margin:0 16px 8px; padding:13px 14px; box-shadow:var(--shadow-sm); border:1px solid var(--border); cursor:pointer; transition:transform .12s; }
 #view-historia .hc-pac-card:active { transform:scale(0.98); }
 #view-historia .hc-pac-avatar { width:42px; height:42px; border-radius:50%; color:white; font-size:15px; font-weight:800; display:flex; align-items:center; justify-content:center; flex-shrink:0; }

@@ -63,7 +63,7 @@
 .pv-field { margin-bottom: 14px; }
 .pv-field-label { font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; }
 .pv-req { color: var(--primary); }
-.pv-input { width: 100%; border: 1.5px solid var(--border); border-radius: 14px; padding: 14px 16px; font-size: 15px; font-family: var(--font); color: var(--text); background: var(--bg); outline: none; }
+.pv-input { width: 100%; border: 1.5px solid var(--border); border-radius: 14px; padding: 14px 16px; font-size: 16px; font-family: var(--font); color: var(--text); background: var(--bg); outline: none; }
 .pv-input:focus { border-color: var(--primary); }
 .pv-two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px; }
 .pv-btn-guardar { width: 100%; background: var(--primary); color: white; border: none; border-radius: 14px; padding: 16px; font-size: 15px; font-weight: 700; font-family: var(--font); cursor: pointer; margin-top: 4px; }
