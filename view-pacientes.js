@@ -36,11 +36,12 @@
 #view-pacientes .pac-search-icon {
   position: absolute; left: 12px; top: 50%;
   transform: translateY(-50%); font-size: 15px; color: var(--text-muted);
+  pointer-events: none;
 }
 #view-pacientes .pac-search-input {
   width: 100%; background: var(--bg); border: 1.5px solid var(--border);
-  border-radius: 12px; padding: 10px 14px 10px 36px;
-  font-size: 14px; font-family: var(--font); color: var(--text); outline: none;
+  border-radius: 12px; padding: 10px 14px 10px 40px;
+  font-size: 16px; font-family: var(--font); color: var(--text); outline: none;
 }
 #view-pacientes .pac-search-input:focus { border-color: var(--primary); }
 
@@ -301,7 +302,7 @@
       <label class="pac-field-label">Notas / Motivo de consulta</label>
       <textarea class="pac-field-input" id="pac-f-notas"
         placeholder="Derivación, motivo de consulta..."
-        style="resize:none;min-height:72px;font-size:15px;line-height:1.5"></textarea>
+        style="resize:none;min-height:72px;font-size:16px;line-height:1.5"></textarea>
     </div>
     <button class="pac-btn-crear" id="pac-btnCrear">
       ✓ Crear paciente
